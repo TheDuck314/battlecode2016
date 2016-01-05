@@ -8,7 +8,7 @@ public class BotSoldier extends Globals {
 	public static MapLocation motherLocation;
 
 	public static void loop() {
-		updateMotherId();
+		updateMotherId(8);
 		while (true) {
 			try {
 			    turn();
@@ -19,8 +19,8 @@ public class BotSoldier extends Globals {
 		}
 	}
 	
-	public static void updateMotherId() {
-		RobotInfo[] infos = rc.senseNearbyRobots(8, us);
+	public static void updateMotherId(int range) {
+		RobotInfo[] infos = rc.senseNearbyRobots(range, us);
 		for (RobotInfo info : infos) {
 			if (info.type == RobotType.ARCHON) {
 				motherId = info.ID;
@@ -31,7 +31,15 @@ public class BotSoldier extends Globals {
 	}
 	
 	public static void updateMotherLocation() throws GameActionException {
-		motherLocation = rc.senseRobot(motherId).location;
+//		motherLocation = rc.senseRobot(motherId).location;
+//		if (motherLocation.distanceSquaredTo(here) > mySensorRadiusSquared) {
+//			System.out.println("Strange motherLocation" + motherLocation);
+//		}
+		if (rc.canSenseRobot(motherId)) {
+			motherLocation = rc.senseRobot(motherId).location;
+		} else {
+			updateMotherId(mySensorRadiusSquared);
+		}
 	}
 	
 	public static void shootEnemies() throws GameActionException {
