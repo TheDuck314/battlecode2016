@@ -44,12 +44,13 @@ public class BotSoldier extends Globals {
 	}
 	
 	public static boolean shootEnemy() throws GameActionException {
-		MapLocation enemyArchonLocation = null;
-		MapLocation zombieDensShooting = null;
+		MapLocation bestLoc = null;
 		RobotInfo[] infos = rc.senseNearbyRobots(myAttackRadiusSquared, them);
 		for (RobotInfo info : infos) {
-			if (info.type == RobotType.ARCHON) {
-				enemyArchonLocation = info.location;
+			if (info.type == RobotType.ARCHON && bestLoc == null) {
+				if (bestLoc == null) {
+					bestLoc = info.location;
+				}
 			} else {
 				rc.attackLocation(info.location);
 				return true;
@@ -58,18 +59,16 @@ public class BotSoldier extends Globals {
 		infos = rc.senseNearbyRobots(myAttackRadiusSquared, Team.ZOMBIE);
 		for (RobotInfo info : infos) {
 			 if (info.type == RobotType.ZOMBIEDEN) {
-				 zombieDensShooting = info.location;
+				 if (bestLoc == null) {
+					 bestLoc = info.location;
+				 }
 			 } else {
 				 rc.attackLocation(info.location);
 				 return true;
 			 }
 		}
-		if (enemyArchonLocation != null) {
-			rc.attackLocation(enemyArchonLocation);
-			return true;
-		}
-		if (zombieDensShooting != null) {
-			rc.attackLocation(zombieDensShooting);
+		if (bestLoc != null) {
+			rc.attackLocation(bestLoc);
 			return true;
 		}
 		return false;
