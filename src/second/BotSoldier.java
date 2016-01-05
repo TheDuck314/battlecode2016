@@ -4,8 +4,9 @@ import battlecode.common.*;;
 
 public class BotSoldier extends Globals {
 	
-	public static int motherId;
-	public static MapLocation motherLocation;
+	public static int motherId = 0;
+	public static MapLocation motherLocation = null;
+	public static boolean isHappyShooting = false;
 
 	public static void loop() {
 		updateMotherId(8);
@@ -42,36 +43,56 @@ public class BotSoldier extends Globals {
 		}
 	}
 	
-	public static void shootEnemies() throws GameActionException {
+	public static boolean shootEnemy() throws GameActionException {
 		MapLocation enemyArchonLocation = null;
+		MapLocation zombieDensShooting = null;
 		RobotInfo[] infos = rc.senseNearbyRobots(myAttackRadiusSquared, them);
 		for (RobotInfo info : infos) {
 			if (info.type == RobotType.ARCHON) {
 				enemyArchonLocation = info.location;
 			} else {
 				rc.attackLocation(info.location);
-				return;
+				return true;
 			}
 		}
 		infos = rc.senseNearbyRobots(myAttackRadiusSquared, Team.ZOMBIE);
 		for (RobotInfo info : infos) {
-			 rc.attackLocation(info.location);
-			 return;
+			 if (info.type == RobotType.ZOMBIEDEN) {
+				 zombieDensShooting = info.location;
+			 } else {
+				 rc.attackLocation(info.location);
+				 return true;
+			 }
 		}
 		if (enemyArchonLocation != null) {
 			rc.attackLocation(enemyArchonLocation);
-			return;
+			return true;
+		}
+		if (zombieDensShooting != null) {
+			rc.attackLocation(zombieDensShooting);
+			return true;
+		}
+		return false;
+	}
+
+	public static void followMother() throws GameActionException {
+		if (rc.isCoreReady()) {
+			updateMotherLocation();
+			Bug.goTo(motherLocation);
 		}
 	}
 	
 	private static void turn() throws GameActionException {
 		update();
-		updateMotherLocation();
 		if (rc.isWeaponReady()) {
-			shootEnemies();
+			if (shootEnemy() && rc.getHealth() == myType.maxHealth) {
+				isHappyShooting = true;
+			} else {
+				isHappyShooting = false;
+			}
 		}
-		if (rc.isCoreReady()) {
-			Bug.goTo(motherLocation);
+		if (!isHappyShooting) {
+			followMother();
 		}
 	}
 }
