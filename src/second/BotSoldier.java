@@ -84,13 +84,13 @@ public class BotSoldier extends Globals {
 	private static void turn() throws GameActionException {
 		update();
 		if (rc.isWeaponReady()) {
-			if (shootEnemy() && rc.getHealth() == myType.maxHealth) {
+			if (shootEnemy()) {
 				isHappyShooting = true;
 			} else {
 				isHappyShooting = false;
 			}
 		}
-		if (!isHappyShooting) {
+		if (rc.getHealth() != myType.maxHealth || !isHappyShooting) {
 			followMother();
 		}
 	}
