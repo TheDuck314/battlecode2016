@@ -1,5 +1,6 @@
 package turret;
 
+import turret.FastMath;
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
@@ -54,10 +55,13 @@ public class BotArchon extends Globals {
 		if (bestLoc != null) {
 			Bug.goTo(bestLoc);
 		} else {
-//			Direction dir = Direction.values()[FastMath.rand256() % 8];
-//			if (rc.canMove(dir)) {
-//				rc.move(dir);
-//			}
+			int rdn = FastMath.rand256();
+			if (rdn < 8) {
+				Direction dir = Direction.values()[rdn];
+				if (rc.canMove(dir)) {
+					rc.move(dir);
+				}
+			}
 		}
 	}
 	
@@ -71,11 +75,17 @@ public class BotArchon extends Globals {
 		spawnType = RobotType.TURRET;
 
 		if (!rc.hasBuildRequirements(spawnType)) return;
-		
-		for (Direction dir : Direction.values()) {
-			if (rc.canBuild(dir, spawnType)) {
-				rc.build(dir, spawnType);
-				return;
+
+		double parts = rc.getTeamParts();
+		if (parts > 120 || parts > FastMath.rand256()) {
+			for (Direction dir : Direction.values()) {
+				MapLocation tl = here.add(dir);
+				if (0 == (tl.x + tl.y) % 2 && rc.canBuild(dir, spawnType)) {
+					System.out.println("here " +  here.x + " " + here.y);
+					System.out.println("build " +  tl.x + " " + tl.y);
+					rc.build(dir, spawnType);
+					return;
+				}
 			}
 		}
 	}
