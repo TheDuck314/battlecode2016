@@ -40,6 +40,11 @@ public class BotSoldier extends Globals {
 			 rc.attackLocation(info.location);
 			 return;
 		}
+		infos = rc.senseNearbyRobots(myAttackRadiusSquared, Team.ZOMBIE);
+		for (RobotInfo info : infos) {
+			 rc.attackLocation(info.location);
+			 return;
+		}
 	}
 	
 	private static void turn() throws GameActionException {
