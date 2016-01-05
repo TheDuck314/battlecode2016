@@ -2,6 +2,7 @@ package first;
 
 import battlecode.common.MapLocation;
 import battlecode.common.RobotController;
+import battlecode.common.RobotType;
 import battlecode.common.Team;
 
 public class Globals {
@@ -9,11 +10,17 @@ public class Globals {
 	public static MapLocation here;
 	public static Team us;
 	public static Team them;
+	public static int myID;
+	public static RobotType myType;
+	public static int myAttackRadiusSquared;
 	
 	public static void init(RobotController theRC) {
 		rc = theRC;
 		us = rc.getTeam();
 		them = us.opponent();
+		myID = rc.getID();
+		myType = rc.getType();
+		myAttackRadiusSquared = myType.attackRadiusSquared;
 	}
 	
 	public static void update() {
