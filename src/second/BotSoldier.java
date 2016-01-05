@@ -3,7 +3,7 @@ package second;
 import battlecode.common.*;;
 
 public class BotSoldier extends Globals {
-	
+
 	public static int motherId = 0;
 	public static MapLocation motherLocation = null;
 	public static boolean isHappyShooting = false;
@@ -12,14 +12,14 @@ public class BotSoldier extends Globals {
 		updateMotherId(8);
 		while (true) {
 			try {
-			    turn();
+				turn();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
 			Clock.yield();
 		}
 	}
-	
+
 	public static void updateMotherId(int range) {
 		RobotInfo[] infos = rc.senseNearbyRobots(range, us);
 		for (RobotInfo info : infos) {
@@ -30,7 +30,7 @@ public class BotSoldier extends Globals {
 			}
 		}
 	}
-	
+
 	public static void updateMotherLocation() throws GameActionException {
 		if (rc.canSenseRobot(motherId)) {
 			motherLocation = rc.senseRobot(motherId).location;
@@ -38,7 +38,7 @@ public class BotSoldier extends Globals {
 			updateMotherId(mySensorRadiusSquared);
 		}
 	}
-	
+
 	public static boolean shootEnemy() throws GameActionException {
 		MapLocation bestLoc = null;
 		RobotInfo[] infos = rc.senseNearbyRobots(myAttackRadiusSquared, them);
@@ -54,14 +54,14 @@ public class BotSoldier extends Globals {
 		}
 		infos = rc.senseNearbyRobots(myAttackRadiusSquared, Team.ZOMBIE);
 		for (RobotInfo info : infos) {
-			 if (info.type == RobotType.ZOMBIEDEN) {
-				 if (bestLoc == null) {
-					 bestLoc = info.location;
-				 }
-			 } else {
-				 rc.attackLocation(info.location);
-				 return true;
-			 }
+			if (info.type == RobotType.ZOMBIEDEN) {
+				if (bestLoc == null) {
+					bestLoc = info.location;
+				}
+			} else {
+				rc.attackLocation(info.location);
+				return true;
+			}
 		}
 		if (bestLoc != null) {
 			rc.attackLocation(bestLoc);
@@ -76,7 +76,7 @@ public class BotSoldier extends Globals {
 			Bug.goTo(motherLocation);
 		}
 	}
-	
+
 	private static void turn() throws GameActionException {
 		update();
 		if (rc.isWeaponReady()) {
