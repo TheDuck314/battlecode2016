@@ -32,10 +32,6 @@ public class BotSoldier extends Globals {
 	}
 	
 	public static void updateMotherLocation() throws GameActionException {
-//		motherLocation = rc.senseRobot(motherId).location;
-//		if (motherLocation.distanceSquaredTo(here) > mySensorRadiusSquared) {
-//			System.out.println("Strange motherLocation" + motherLocation);
-//		}
 		if (rc.canSenseRobot(motherId)) {
 			motherLocation = rc.senseRobot(motherId).location;
 		} else {
