@@ -2,9 +2,7 @@ package first;
 
 import battlecode.common.*;
 
-import java.util.Random;
-
-public class RobotPlayer {
+public class RobotPlayer extends Globals {
 
     /**
      * run() is the method that is called when a robot is instantiated in the Battlecode world.
@@ -12,7 +10,9 @@ public class RobotPlayer {
      * @throws Exception 
      **/
     @SuppressWarnings("unused")
-    public static void run(RobotController rc) throws Exception {
+    public static void run(RobotController theRC) throws Exception {
+    	rc = theRC;
+    	
 		switch (rc.getType()) {
 		    case ARCHON:
 				BotArchon.loop();
