@@ -2,7 +2,7 @@ package first;
 
 import battlecode.common.Clock;
 
-public class BotSoldier {
+public class BotSoldier extends Globals {
 	public static void loop() {
 		while (true) {
 			try {
@@ -15,6 +15,6 @@ public class BotSoldier {
 	}
 	
 	private static void turn() {
-		
+		rc.senseNearbyRobots(8, us);
 	}
 }
