@@ -35,15 +35,24 @@ public class BotSoldier extends Globals {
 	}
 	
 	public static void shootEnemies() throws GameActionException {
+		MapLocation enemyArchonLocation = null;
 		RobotInfo[] infos = rc.senseNearbyRobots(myAttackRadiusSquared, them);
 		for (RobotInfo info : infos) {
-			 rc.attackLocation(info.location);
-			 return;
+			if (info.type == RobotType.ARCHON) {
+				enemyArchonLocation = info.location;
+			} else {
+				rc.attackLocation(info.location);
+				return;
+			}
 		}
 		infos = rc.senseNearbyRobots(myAttackRadiusSquared, Team.ZOMBIE);
 		for (RobotInfo info : infos) {
 			 rc.attackLocation(info.location);
 			 return;
+		}
+		if (enemyArchonLocation != null) {
+			rc.attackLocation(enemyArchonLocation);
+			return;
 		}
 	}
 	
