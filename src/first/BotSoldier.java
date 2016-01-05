@@ -8,7 +8,7 @@ public class BotSoldier extends Globals {
 	public static MapLocation motherLocation;
 
 	public static void loop() {
-		setMotherId();
+		updateMotherId();
 		while (true) {
 			try {
 			    turn();
@@ -19,7 +19,7 @@ public class BotSoldier extends Globals {
 		}
 	}
 	
-	public static void setMotherId() {
+	public static void updateMotherId() {
 		RobotInfo[] infos = rc.senseNearbyRobots(8, us);
 		for (RobotInfo info : infos) {
 			if (info.type == RobotType.ARCHON) {
@@ -30,6 +30,13 @@ public class BotSoldier extends Globals {
 		}
 	}
 	
-	private static void turn() {
+	public static void updateMotherLocation() throws GameActionException {
+		motherLocation = rc.senseRobot(motherId).location;
+	}
+	
+	private static void turn() throws GameActionException {
+		update();
+		updateMotherLocation();
+		Bug.goTo(motherLocation);
 	}
 }
