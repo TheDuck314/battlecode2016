@@ -73,12 +73,17 @@ public class BotArchon extends Globals {
 	
 	private static void tryRepairAlly() throws GameActionException {
 		RobotInfo[] healableAllies = rc.senseNearbyRobots(RobotType.ARCHON.attackRadiusSquared, us);
+		MapLocation bestLoc = null;
+		double lowestHealth = 10000;
 		for (RobotInfo ally : healableAllies) {
 			if (ally.type == RobotType.ARCHON) continue;
-			if (ally.health < ally.maxHealth) {
-				rc.repair(ally.location);
-				return;
+			if (ally.health < ally.maxHealth && ally.health < lowestHealth) {
+				bestLoc = ally.location;
+				lowestHealth = ally.health;
 			}
+		}
+		if (bestLoc != null) {
+			rc.repair(bestLoc);
 		}
 	}
 	
