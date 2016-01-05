@@ -38,7 +38,7 @@ public class Bug extends Globals {
 	}
 	
 
-	static boolean tryMoveInDirection(Direction dir) throws GameActionException {
+	public static boolean tryMoveInDirection(Direction dir) throws GameActionException {
 		if (rc.canMove(dir)) {
 			rc.move(dir);
 			return true;

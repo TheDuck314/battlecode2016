@@ -61,11 +61,39 @@ public class BotArchon extends Globals {
 		}
 	}
 	
+	private static RobotType spawnType = RobotType.SOLDIER;
+	
 	private static void trySpawn() throws GameActionException {
 		if (!rc.isCoreReady()) return;
+		
+		rc.setIndicatorString(2, "trySpawn: turn " + rc.getRoundNum());
+		
+		if (spawnType == RobotType.SOLDIER) {
+			RobotInfo[] nearbyEnemies = rc.senseNearbyRobots(mySensorRadiusSquared, them);
+			if (nearbyEnemies.length > 0) {
+				rc.setIndicatorString(0, "saw an enemy, going to spawn a viper!");
+				spawnType = RobotType.VIPER;
+			}
+		}
+		if (spawnType == RobotType.SOLDIER || spawnType == RobotType.VIPER) {
+			RobotInfo[] nearbyZombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+			if (nearbyZombies.length > 0) {
+				rc.setIndicatorString(0, "saw a zombie, will spawn a guard!");
+				spawnType = RobotType.GUARD;
+			}
+		}
+
+		if ((spawnType == RobotType.SOLDIER || spawnType == RobotType.GUARD)
+				&& rc.getTeamParts() < 70) {
+			return;				
+		}
+
+		if (!rc.hasBuildRequirements(spawnType)) return;
+		
 		for (Direction dir : Direction.values()) {
-			if (rc.canBuild(dir, RobotType.SOLDIER)) {
-				rc.build(dir, RobotType.SOLDIER);
+			if (rc.canBuild(dir, spawnType)) {
+				rc.build(dir, spawnType);
+				spawnType = RobotType.SOLDIER;
 				return;
 			}
 		}
