@@ -1,8 +1,6 @@
 package second;
 
-import battlecode.common.GameActionException;
-import battlecode.common.GameConstants;
-import battlecode.common.MapLocation;
+import battlecode.common.*;
 
 public class Messages extends Globals {
 	public static int intFromMapLocation(MapLocation loc) {
@@ -26,7 +24,7 @@ public class Messages extends Globals {
 		rc.broadcastSignal(computeSignalStrength(radiusSq));
 	}
 	
-	public static void sendMessageSignal(int data1, int data2, int radiusSq) {
-		rc.broadcastMessageSignal(arg0, arg1, arg2);
+	public static void sendMessageSignal(int data1, int data2, int radiusSq) throws GameActionException {
+		rc.broadcastMessageSignal(data1, data2, radiusSq);
 	}
 }
