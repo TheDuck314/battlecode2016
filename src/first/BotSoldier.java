@@ -34,16 +34,20 @@ public class BotSoldier extends Globals {
 		motherLocation = rc.senseRobot(motherId).location;
 	}
 	
-	public static MapLocation findEnemies() {
+	public static void shootEnemies() throws GameActionException {
 		RobotInfo[] infos = rc.senseNearbyRobots(myAttackRadiusSquared, them);
 		for (RobotInfo info : infos) {
-			return info.location;
+			 rc.attackLocation(info.location);
+			 return;
 		}
 	}
 	
 	private static void turn() throws GameActionException {
 		update();
 		updateMotherLocation();
+		if (rc.isWeaponReady()) {
+			shootEnemies();
+		}
 		if (rc.isCoreReady()) {
 			Bug.goTo(motherLocation);
 		}
