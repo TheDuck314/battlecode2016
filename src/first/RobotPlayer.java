@@ -11,7 +11,7 @@ public class RobotPlayer extends Globals {
      **/
     @SuppressWarnings("unused")
     public static void run(RobotController theRC) throws Exception {
-    	rc = theRC;
+    	Globals.init(theRC);
     	
 		switch (rc.getType()) {
 		    case ARCHON:
