@@ -13,6 +13,7 @@ public class Globals {
 	public static int myID;
 	public static RobotType myType;
 	public static int myAttackRadiusSquared;
+	public static int mySensorRadiusSquared;
 	
 	public static void init(RobotController theRC) {
 		rc = theRC;
@@ -21,6 +22,7 @@ public class Globals {
 		myID = rc.getID();
 		myType = rc.getType();
 		myAttackRadiusSquared = myType.attackRadiusSquared;
+		mySensorRadiusSquared = myType.sensorRadiusSquared;
 	}
 	
 	public static void update() {
