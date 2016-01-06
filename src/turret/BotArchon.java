@@ -24,6 +24,7 @@ public class BotArchon extends Globals {
 	}
 	
 	private static void turn() throws GameActionException {
+		countTurret();
 		trySpawn();
 		tryRepairAlly();
 		tryConvertNeutrals();
@@ -52,20 +53,40 @@ public class BotArchon extends Globals {
 			}			
 		}
 		
-		if (bestLoc != null) {
-			Bug.goTo(bestLoc);
-		} else {
+		if (nTurret >= nTurretMax) {
 			int rdn = FastMath.rand256();
-			if (rdn < 8) {
-				Direction dir = Direction.values()[rdn];
-				if (rc.canMove(dir)) {
-					rc.move(dir);
-				}
+			Direction dir = Direction.values()[rdn % 8];
+			if (rc.canMove(dir)) {
+				rc.move(dir);
+				return;
 			}
+		}
+		if (bestLoc != null) {
+			// Bug.goTo(bestLoc);
 		}
 	}
 	
 	private static RobotType spawnType = RobotType.SOLDIER;
+	
+	private static int nTurret = 0;
+	private static int nTurretMax = 4;
+	
+	private static void countTurret() throws GameActionException {
+		nTurret = 0;
+		RobotInfo[] infos = rc.senseNearbyRobots(2, us);
+		for (RobotInfo info : infos) {
+			if (info.type == RobotType.TURRET) {
+				nTurret += 1;
+			}
+		}
+		nTurretMax = nTurret;
+		for (Direction dir : Direction.values()) {
+			MapLocation tl = here.add(dir);
+			if (0 == (tl.x + tl.y) % 2 && rc.canMove(dir)) {
+				nTurretMax += 1;
+			}
+		}
+	}
 	
 	private static void trySpawn() throws GameActionException {
 		if (!rc.isCoreReady()) return;
@@ -77,12 +98,10 @@ public class BotArchon extends Globals {
 		if (!rc.hasBuildRequirements(spawnType)) return;
 
 		double parts = rc.getTeamParts();
-		if (parts > 120 || parts > FastMath.rand256()) {
+		if (nTurret <= 1 || parts > 180 || parts > FastMath.rand256()) {
 			for (Direction dir : Direction.values()) {
 				MapLocation tl = here.add(dir);
 				if (0 == (tl.x + tl.y) % 2 && rc.canBuild(dir, spawnType)) {
-					System.out.println("here " +  here.x + " " + here.y);
-					System.out.println("build " +  tl.x + " " + tl.y);
 					rc.build(dir, spawnType);
 					return;
 				}
