@@ -6,7 +6,7 @@ public class Messages extends Globals {
 	public static final int TURRET_TARGET_PREFIX = 23987;
 	
 	public static int intFromMapLocation(MapLocation loc) {
-		return ((loc.x + 16000) << 16) & (loc.y + 16000);
+		return ((loc.x + 16000) << 16) | (loc.y + 16000);
 	}
 	
 	public static MapLocation mapLocationFromInt(int data) {
