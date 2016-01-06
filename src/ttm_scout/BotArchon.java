@@ -60,7 +60,7 @@ public class BotArchon extends Globals {
 //			}
 		}
 		if (bestLoc != null) {
-			// Bug.goTo(bestLoc);
+			Bug.goTo(bestLoc);
 		}
 	}
 	
