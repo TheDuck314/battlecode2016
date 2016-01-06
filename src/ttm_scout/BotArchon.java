@@ -52,20 +52,18 @@ public class BotArchon extends Globals {
 				bestLoc = loc;
 			}			
 		}
-		
 		if (nTurret >= nTurretMax) {
-			int rdn = FastMath.rand256();
-			Direction dir = Direction.values()[rdn % 8];
-			if (rc.canMove(dir)) {
-				rc.move(dir);
-				return;
-			}
+//			int rdn = FastMath.rand256();
+//			Direction dir = Direction.values()[rdn % 8];
+//			if (Bug.tryMoveInDirection(dir)) {
+//				return;
+//			}
 		}
 		if (bestLoc != null) {
 			// Bug.goTo(bestLoc);
 		}
 	}
-
+	
 	private static void avoidEnemy() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 		Direction escapeDir = avoidEnemyDirection();
@@ -130,7 +128,7 @@ public class BotArchon extends Globals {
 		
 		rc.setIndicatorString(2, "trySpawn: turn " + rc.getRoundNum());
 		
-		RobotType spawnType = (spawnCount % 5 == 4 ? RobotType.SCOUT : RobotType.TURRET);
+		RobotType spawnType = (spawnCount % 5 == 1 ? RobotType.SCOUT : RobotType.TURRET);
 
 		if (!rc.hasBuildRequirements(spawnType)) return;
 
@@ -140,6 +138,13 @@ public class BotArchon extends Globals {
 			for (Direction dir : Direction.values()) {
 				MapLocation tl = here.add(dir);
 				if (0 == (tl.x + tl.y) % 2 && rc.canBuild(dir, spawnType)) {
+					rc.build(dir, spawnType);
+					++spawnCount;
+					return;
+				}
+			}
+			for (Direction dir : Direction.values()) {
+				if (rc.canBuild(dir, spawnType)) {
 					rc.build(dir, spawnType);
 					++spawnCount;
 					return;

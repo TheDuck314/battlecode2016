@@ -1,6 +1,7 @@
 package ttm_scout;
 
 import battlecode.common.Clock;
+import battlecode.common.Direction;
 import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotInfo;
@@ -9,6 +10,7 @@ import battlecode.common.Team;
 
 public class BotScout extends Globals {
 	public static void loop() {
+		FastMath.initRand(rc);
     	Debug.init("spotting");
 		while (true) {
 			try {
@@ -69,7 +71,33 @@ public class BotScout extends Globals {
 		}
 	}
 	
+	private static Direction[] goodDir = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST };
+	private static Direction[] badDir = { Direction.NORTH_EAST, Direction.SOUTH_EAST, Direction.NORTH_WEST, Direction.SOUTH_WEST };
+	
+	private static void tryMoveAround() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+		int rdn = FastMath.rand256();
+		for (int i = 0; i < 4; ++i) {
+			Direction dir = goodDir[(rdn + i) % 4];
+			if (rc.canMove(dir)) {
+				rc.move(dir);
+				return;
+			}
+		}
+		for (int i = 0; i < 4; ++i) {
+			Direction dir = badDir[(rdn + i) % 4];
+			if (rc.canMove(dir)) {
+				rc.move(dir);
+				return;
+			}
+		}
+	}
+	
 	private static void turn() throws GameActionException {
+		Globals.update();
 		signalAboutEnemies();
+		if (0 != (here.x + here.y) % 2) {
+			tryMoveAround();
+		}
 	}
 }
