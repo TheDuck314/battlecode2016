@@ -7,7 +7,6 @@ import battlecode.common.MapLocation;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
 import battlecode.common.Team;
-import turret_scout.FastMath;
 
 public class BotArchon extends Globals {
 	public static void loop() {
@@ -24,11 +23,12 @@ public class BotArchon extends Globals {
 	}
 	
 	private static void turn() throws GameActionException {
-		countTurret();
+		avoidEnemy();
 		trySpawn();
 		tryRepairAlly();
 		tryConvertNeutrals();
 		
+		countTurret();
 		exploreForNeutralsAndParts();
 	}
 	
@@ -66,6 +66,43 @@ public class BotArchon extends Globals {
 		}
 	}
 
+	private static void avoidEnemy() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+		Direction escapeDir = avoidEnemyDirection();
+		if (null != escapeDir) {
+//			System.out.println("Try escape!");
+			if (Bug.tryMoveInDirection(escapeDir)) {
+//				System.out.println("escape!");
+				return;
+			}
+		}
+	}
+	
+	private static Direction avoidEnemyDirection() {
+		Direction escapeDir = null;
+		if (escapeDir == null) {
+			RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+			for (RobotInfo e : enemies) {
+//				System.out.println("Got zombie in sight!");
+				if (e.location.distanceSquaredTo(here) <= e.type.attackRadiusSquared) {
+//					System.out.println("Got zombie in range!");
+					escapeDir = e.location.directionTo(here);
+				}
+			}
+		}
+		if (escapeDir == null) {
+			RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, them);
+			for (RobotInfo e : enemies) {
+//				System.out.println("Got enemy in sight!");
+				if (e.location.distanceSquaredTo(here) <= e.type.attackRadiusSquared) {
+//					System.out.println("Got enemy in range!");
+					escapeDir = e.location.directionTo(here);
+				}
+			}
+		}
+		return escapeDir;
+	}
+	
 	private static int spawnCount = 0;
 
 	private static int nTurret = 0;

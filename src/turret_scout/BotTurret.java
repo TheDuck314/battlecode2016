@@ -50,39 +50,35 @@ public class BotTurret extends Globals {
 
 	public static boolean shootEnemy() throws GameActionException {
 		MapLocation bestLoc = null;
+		double bestLocHealth = Double.MAX_VALUE;
 		RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, them);
 		for (RobotInfo enemy : enemies) {
 			if (!rc.canAttackLocation(enemy.location)) {
 				continue;
 			}
-			if (enemy.type == RobotType.ARCHON) {
-				if (bestLoc == null) {
-				    bestLoc = enemy.location;
-				}
-			} else {
-				rc.attackLocation(enemy.location);
-				return true;
-			}
-		}
-		RobotInfo[] zombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
-		for (RobotInfo zombie : zombies) {
-			if (!rc.canAttackLocation(zombie.location)) {
-				continue;
-			}
-			if (zombie.type == RobotType.ZOMBIEDEN) {
-				if (bestLoc == null) {
-					bestLoc = zombie.location;
-				}
-			} else {
-				rc.attackLocation(zombie.location);
-				return true;
+			if (enemy.health < bestLocHealth) {
+				bestLoc = enemy.location;
+				bestLocHealth = enemy.health;
 			}
 		}
 		if (bestLoc != null) {
 			rc.attackLocation(bestLoc);
 			return true;
 		}
-		
+		RobotInfo[] zombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+		for (RobotInfo zombie : zombies) {
+			if (!rc.canAttackLocation(zombie.location)) {
+				continue;
+			}
+			if (zombie.health < bestLocHealth) {
+				bestLoc = zombie.location;
+				bestLocHealth = zombie.health;
+			}
+		}
+		if (bestLoc != null) {
+			rc.attackLocation(bestLoc);
+			return true;
+		}
 		Debug.indicate("spotting", 0, "going to check for spotting messages; message queue length = " + currentSignals.length);
 		for (Signal sig : currentSignals) {
 			MapLocation target = Messages.tryParseTurretSignal(sig);
