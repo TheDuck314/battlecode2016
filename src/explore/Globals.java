@@ -23,6 +23,7 @@ public class Globals {
 		myType = rc.getType();
 		myAttackRadiusSquared = myType.attackRadiusSquared;
 		mySensorRadiusSquared = myType.sensorRadiusSquared;
+		here = rc.getLocation();
 	}
 	
 	public static void update() {

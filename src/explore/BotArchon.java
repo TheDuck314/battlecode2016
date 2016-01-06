@@ -6,11 +6,13 @@ import battlecode.common.GameActionException;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
+import battlecode.common.Signal;
 import battlecode.common.Team;
-import turret_scout.FastMath;
+import explore.Messages.PartsLocation;
 
 public class BotArchon extends Globals {
 	public static void loop() {
+		Debug.init("explore");
 		FastMath.initRand(rc);
 		while (true) {
 			try {
@@ -24,6 +26,10 @@ public class BotArchon extends Globals {
 	}
 	
 	private static void turn() throws GameActionException {
+		processSignals();
+		MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
+		Debug.indicate("edges", 0, String.format("map X = [%d, %d], mapY = [%d, %d]", MapEdges.minX, MapEdges.maxX, MapEdges.minY, MapEdges.maxY));
+		
 		countTurret();
 		trySpawn();
 		tryRepairAlly();
@@ -90,10 +96,11 @@ public class BotArchon extends Globals {
 	
 	private static void trySpawn() throws GameActionException {
 		if (!rc.isCoreReady()) return;
+		if(!(myID == 333 && spawnCount == 0)) return;
 		
 		rc.setIndicatorString(2, "trySpawn: turn " + rc.getRoundNum());
 		
-		RobotType spawnType = (spawnCount % 5 == 4 ? RobotType.SCOUT : RobotType.TURRET);
+		RobotType spawnType = RobotType.SCOUT; //(spawnCount % 5 == 4 ? RobotType.SCOUT : RobotType.TURRET);
 
 		if (!rc.hasBuildRequirements(spawnType)) return;
 
@@ -105,6 +112,9 @@ public class BotArchon extends Globals {
 				if (0 == (tl.x + tl.y) % 2 && rc.canBuild(dir, spawnType)) {
 					rc.build(dir, spawnType);
 					++spawnCount;
+					if (spawnType == RobotType.SCOUT) {
+						Messages.sendKnownMapEdges(2); // tell scout known map edges
+					}
 					return;
 				}
 			}
@@ -133,6 +143,44 @@ public class BotArchon extends Globals {
 		for (RobotInfo neutral : adjacentNeutrals) {
 			rc.activate(neutral.location);
 			return;
+		}
+	}
+	
+	private static void processSignals() {
+		Signal[] signals = rc.emptySignalQueue();
+		for (Signal sig : signals) {
+			if (sig.getTeam() != us) continue;
+			
+			int[] data = sig.getMessage();
+			if (data != null) {
+				switch(data[0] & Messages.CHANNEL_MASK) {
+				case Messages.CHANNEL_FOUND_PARTS:
+					PartsLocation partsLoc = Messages.parsePartsLocation(data);
+					Debug.indicate("explore", 0, "heard about " + partsLoc.numParts + " parts at " + partsLoc.location);
+					break;
+				case Messages.CHANNEL_ZOMBIE_DEN:
+					MapLocation zombieDenLoc = Messages.parseZombieDenLocation(data);
+					Debug.indicate("explore", 1, "heard about a zombie den at " + zombieDenLoc);
+					break;
+				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
+					MapLocation enemyTurretLoc = Messages.parseEnemyTurretWarning(data);
+					Debug.indicate("explore", 2, "heard about an enemy turret at " + enemyTurretLoc);
+					break;
+					
+				case Messages.CHANNEL_MAP_MIN_X:
+					Messages.processMapMinX(data);
+					break;
+				case Messages.CHANNEL_MAP_MAX_X:
+					Messages.processMapMaxX(data);
+					break;
+				case Messages.CHANNEL_MAP_MIN_Y:
+					Messages.processMapMinY(data);
+					break;
+				case Messages.CHANNEL_MAP_MAX_Y:
+					Messages.processMapMaxY(data);
+					break;
+				}
+			}
 		}
 	}
 }
