@@ -1,12 +1,6 @@
-package turret_scout;
+package ttm_scout;
 
-import battlecode.common.Clock;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotInfo;
-import battlecode.common.RobotType;
-import battlecode.common.Signal;
-import battlecode.common.Team;
+import battlecode.common.*;
 
 public class BotTurret extends Globals {
 
@@ -17,8 +11,9 @@ public class BotTurret extends Globals {
 	private static Signal[] currentSignals;
 
 	public static void loop() {
-		update();
+		FastMath.initRand(rc);
 		Debug.init("spotting");
+		initTurret();
 		while (true) {
 			try {
 				turn();
@@ -92,9 +87,47 @@ public class BotTurret extends Globals {
 		
 		return false;
 	}
+	
+	private static void initTurret() {
+		rc.emptySignalQueue();
+	}
+	
+	private static void turnTTM() throws GameActionException {
+		if (0 == (here.x + here.y) % 2) {
+			rc.unpack();
+			initTurret();
+			isTTM = false;
+		}
+		tryMoveAround();
+	}
+	
+	private static Direction[] goodDir = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST };
+	private static Direction[] badDir = { Direction.NORTH_EAST, Direction.SOUTH_EAST, Direction.NORTH_WEST, Direction.SOUTH_WEST };
+	
+	private static void tryMoveAround() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+		int rdn = FastMath.rand256();
+		for (int i = 0; i < 4; ++i) {
+			Direction dir = goodDir[(rdn + i) % 4];
+			if (rc.canMove(dir)) {
+				rc.move(dir);
+				return;
+			}
+		}
+		for (int i = 0; i < 4; ++i) {
+			Direction dir = badDir[(rdn + i) % 4];
+			if (rc.canMove(dir)) {
+				rc.move(dir);
+				return;
+			}
+		}
+	}
 
-	private static void turn() throws GameActionException {
-		Globals.update();
+	private static void turnTurret() throws GameActionException {
+		if (0 != (here.x + here.y) % 2) {
+			rc.pack();
+			isTTM = true;
+		}
 		currentSignals = rc.emptySignalQueue();
 		if (rc.isWeaponReady()) {
 			if (shootEnemy()) {
@@ -102,6 +135,17 @@ public class BotTurret extends Globals {
 			} else {
 				isHappyShooting = false;
 			}
+		}
+	}
+	
+	public static boolean isTTM = false;
+
+	private static void turn() throws GameActionException {
+		Globals.update();
+		if (isTTM) {
+			turnTTM();
+		} else {
+			turnTurret();
 		}
 	}
 }

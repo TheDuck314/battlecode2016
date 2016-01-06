@@ -1,4 +1,4 @@
-package turret;
+package ttm_scout;
 
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
@@ -10,17 +10,14 @@ public class Bug extends Globals {
 	private static boolean tracing = false;
 	private static MapLocation lastWall = null;
 	private static int closestDistWhileBugging = Integer.MAX_VALUE;
-	
-	public static void reset() {
-		dest = null;
-		tracing = false;
-	}
-	
+		
 	public static void goTo(MapLocation theDest) throws GameActionException {
 		if (!theDest.equals(dest)) {
 			dest = theDest;
 			tracing = false;
 		}
+		
+		
 		if (!tracing) {
 			// try to go direct; start bugging on failure
 			if (tryMoveInDirection(here.directionTo(dest))) {
@@ -39,6 +36,7 @@ public class Bug extends Globals {
 		}
 	    traceMove();
 	}
+	
 
 	public static boolean tryMoveInDirection(Direction dir) throws GameActionException {
 		if (rc.canMove(dir)) {
@@ -57,13 +55,14 @@ public class Bug extends Globals {
 		}
 		return false;
 	}
-
+	
+	
 	static void startTracing() {
 		tracing = true;
 		lastWall = here.add(here.directionTo(dest));
 		closestDistWhileBugging = here.distanceSquaredTo(dest);
 	}
-
+	
 	static void traceMove() throws GameActionException {
 		Direction tryDir = here.directionTo(lastWall);
 		for (int i = 0; i < 8; ++i) {
