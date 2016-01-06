@@ -24,11 +24,11 @@ public class BotArchon extends Globals {
 	
 	private static void turn() throws GameActionException {
 		avoidEnemy();
+		countTurret();
 		trySpawn();
 		tryRepairAlly();
 		tryConvertNeutrals();
-		
-		countTurret();
+
 		exploreForNeutralsAndParts();
 	}
 	
@@ -56,6 +56,12 @@ public class BotArchon extends Globals {
 //			int rdn = FastMath.rand256();
 //			Direction dir = Direction.values()[rdn % 8];
 //			if (Bug.tryMoveInDirection(dir)) {
+//				return;
+//			}
+		} else {
+//			Direction dir = saferDir();
+//			if (dir != null) {
+//				rc.move(dir);
 //				return;
 //			}
 		}
@@ -123,8 +129,32 @@ public class BotArchon extends Globals {
 		}
 	}
 	
+	private static Direction saferDir() throws GameActionException {
+		Direction bestDir = null;
+		int bestCount = nTurret; // need to count Turret first
+		RobotInfo[] infos = rc.senseNearbyRobots(9, us);
+		for (Direction dir : Direction.values()) {
+			if (!rc.canMove(dir)) {
+				continue;
+			}
+			MapLocation lc = here.add(dir);
+			int count = 0;
+			for (RobotInfo info : infos) {
+				if (info.type == RobotType.TURRET && info.location.distanceSquaredTo(lc) <= 2) {
+					count += 1;
+				}
+			}
+			if (count > bestCount) {
+				bestCount = count;
+				bestDir = dir;
+			}
+		}
+		return bestDir;
+	}
+	
 	private static void trySpawn() throws GameActionException {
 		if (!rc.isCoreReady()) return;
+		if (null != saferDir()) return;
 		
 		rc.setIndicatorString(2, "trySpawn: turn " + rc.getRoundNum());
 		
