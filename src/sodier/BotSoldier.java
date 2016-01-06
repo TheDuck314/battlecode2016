@@ -1,6 +1,6 @@
 package sodier;
 
-import battlecode.common.*;;
+import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 

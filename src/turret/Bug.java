@@ -16,8 +16,6 @@ public class Bug extends Globals {
 			dest = theDest;
 			tracing = false;
 		}
-		
-		
 		if (!tracing) {
 			// try to go direct; start bugging on failure
 			if (tryMoveInDirection(here.directionTo(dest))) {
@@ -36,7 +34,6 @@ public class Bug extends Globals {
 		}
 	    traceMove();
 	}
-	
 
 	public static boolean tryMoveInDirection(Direction dir) throws GameActionException {
 		if (rc.canMove(dir)) {
@@ -55,14 +52,13 @@ public class Bug extends Globals {
 		}
 		return false;
 	}
-	
-	
+
 	static void startTracing() {
 		tracing = true;
 		lastWall = here.add(here.directionTo(dest));
 		closestDistWhileBugging = here.distanceSquaredTo(dest);
 	}
-	
+
 	static void traceMove() throws GameActionException {
 		Direction tryDir = here.directionTo(lastWall);
 		for (int i = 0; i < 8; ++i) {

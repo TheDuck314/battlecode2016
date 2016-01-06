@@ -52,7 +52,6 @@ public class BotArchon extends Globals {
 				bestLoc = loc;
 			}			
 		}
-		
 		if (nTurret >= nTurretMax) {
 			int rdn = FastMath.rand256();
 			Direction dir = Direction.values()[rdn % 8];
@@ -62,7 +61,7 @@ public class BotArchon extends Globals {
 			}
 		}
 		if (bestLoc != null) {
-			// Bug.goTo(bestLoc);
+//			Bug.goTo(bestLoc);
 		}
 	}
 	
