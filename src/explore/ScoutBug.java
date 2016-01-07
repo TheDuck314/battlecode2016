@@ -2,7 +2,7 @@ package explore;
 
 import battlecode.common.*;
 
-public class SafeBug extends Globals {
+public class ScoutBug extends Globals {
 	private static MapLocation dest = null;
 	
 	private static boolean tracing = false;
@@ -11,13 +11,13 @@ public class SafeBug extends Globals {
 	private static int numTurnsWithNoWall = 0;
 	private static boolean[] isSquareSafe = new boolean[8];	
 	
-	public static void goTo(MapLocation theDest) throws GameActionException {
+	public static void goTo(MapLocation theDest, boolean[] safeSquares) throws GameActionException {
 		if (!theDest.equals(dest)) {
 			dest = theDest;
 			tracing = false;
 		}
-		
-		checkWhichSquaresAreSafe();
+
+		isSquareSafe = safeSquares;
 		
 		if (!tracing) {
 			// try to go direct; start bugging on failure
@@ -40,34 +40,6 @@ public class SafeBug extends Globals {
 	    if (numTurnsWithNoWall >= 3) {
 	    	tracing = false;
 	    }
-	}
-	
-	private static void checkWhichSquaresAreSafe() {
-		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
-
-		Debug.indicate("safebug", 2, "hostiles.length = " + hostiles.length);
-		Direction[] dirs = Direction.values();
-		for (int d = 0; d < 8; ++d) {
-			Direction dir = dirs[d];
-			if (rc.canMove(dir)) {
-				isSquareSafe[d] = true;
-				MapLocation dirLoc = here.add(dir);
-				rc.setIndicatorDot(dirLoc, 0, 255, 0);
-				for (RobotInfo hostile : hostiles) {
-					int unsafeRadiusSq = 8;
-					if (hostile.type.attackRadiusSquared > 8) unsafeRadiusSq = hostile.type.attackRadiusSquared;
-					if (hostile.location.distanceSquaredTo(dirLoc) <= unsafeRadiusSq) {
-						Debug.indicateAppend("safebug", 2, "; d=" + d + " is unsafe");
-						isSquareSafe[d] = false;
-						rc.setIndicatorDot(dirLoc, 255, 0, 0);
-						break;
-					}
-				}
-			} else {
-				isSquareSafe[d] = false;
-				rc.setIndicatorDot(here.add(dir), 255, 0, 0);
-			}
-		}
 	}
 
 	public static boolean tryMoveInDirection(Direction dir) throws GameActionException {

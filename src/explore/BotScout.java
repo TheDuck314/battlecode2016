@@ -19,6 +19,9 @@ public class BotScout extends Globals {
 	private static int exploreDestGridY;
 	private static boolean finishedExploring = false;
 	private static final int gridSpacing = 10;
+	private static final int DANGER_MEMORY_LENGTH = 5;
+	private static MapLocation[] dangerMemory = new MapLocation[DANGER_MEMORY_LENGTH];
+	private static int dangerMemoryPointer = 0;
 	
 	public static void loop() {
     	Debug.init("safebug");
@@ -236,6 +239,117 @@ public class BotScout extends Globals {
 		finishedExploring = true;
 	}
 	
+	
+	
+	private static boolean[] checkWhichSquaresAreSafe() {
+		boolean[] isSquareSafe = new boolean[8];
+		
+		Direction[] dirs = Direction.values();		
+		MapLocation[] dirLocs = new MapLocation[8];
+		for (int d = 0; d < 8; ++d) {
+			Direction dir = dirs[d];
+			isSquareSafe[d] = rc.canMove(dir);
+			dirLocs[d] = here.add(dir);
+			if (isSquareSafe[d]) {
+				rc.setIndicatorDot(dirLocs[d], 0, 255, 0);
+			} else {
+				rc.setIndicatorDot(dirLocs[d], 255, 0, 0);
+			}
+			if (isSquareSafe[d]) {
+				for (int i = 0; i < DANGER_MEMORY_LENGTH; ++i) {
+					if (dirLocs[d].equals(dangerMemory[i])) {
+						isSquareSafe[d] = false;
+						break;
+					}
+				}
+			}
+		}
+
+		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		Debug.indicate("safebug", 2, "hostiles.length = " + hostiles.length);
+		for (RobotInfo hostile : hostiles) {
+			RobotType hostileType = hostile.type;
+			if (!hostileType.canAttack()) {
+				continue;				
+			}
+			int hostileRangeSq = Math.max(hostileType.attackRadiusSquared, 8);
+			MapLocation hostileLoc = hostile.location;
+			for (int d = 0; d < 8; ++d) {
+				if (isSquareSafe[d]) {
+					if (dirLocs[d].distanceSquaredTo(hostileLoc) <= hostileRangeSq) {
+						isSquareSafe[d] = false;
+						rc.setIndicatorDot(dirLocs[d], 255, 0, 0);
+					}
+				}
+			}
+		}
+		
+		return isSquareSafe;
+	}
+	
+	private static boolean retreatIfNecessary() throws GameActionException {
+		if (!rc.isCoreReady()) return false;
+		
+		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		boolean mustRetreat = false;
+		for (RobotInfo hostile : hostiles) {
+			RobotType hostileType = hostile.type;
+			if (!hostileType.canAttack()) {
+				continue;				
+			}
+			int distSq = here.distanceSquaredTo(hostile.location);
+			if (distSq <= Math.max(hostileType.attackRadiusSquared, 8)) {
+				mustRetreat = true;
+				if (hostileType == RobotType.TURRET && distSq >= 36) {
+					Debug.indicate("safebug", 1, "dangerMemory[" + dangerMemoryPointer + "] = " + here);
+					dangerMemory[dangerMemoryPointer] = here;
+					dangerMemoryPointer = (dangerMemoryPointer + 1) % DANGER_MEMORY_LENGTH;
+				}
+				break;
+			}
+		}
+		
+		if (mustRetreat) {
+			Direction[] dirs = Direction.values();		
+			MapLocation[] dirLocs = new MapLocation[8];
+			int[] penalties = new int[8];
+			boolean[] canMove = new boolean[8];
+			for (int d = 0; d < 8; ++d) {
+				dirLocs[d] = here.add(dirs[d]);
+				canMove[d] = rc.canMove(dirs[d]);
+			}
+			
+			for (RobotInfo hostile : hostiles) {
+				RobotType hostileType = hostile.type;
+				if (!hostileType.canAttack()) {
+					continue;				
+				}
+				MapLocation hostileLoc = hostile.location;
+				int hostileRange = Math.max(hostileType.attackRadiusSquared, 8);
+				for (int d = 0; d < 8; ++d) {
+					if (canMove[d] && hostileLoc.distanceSquaredTo(dirLocs[d]) <= hostileRange) {
+						penalties[d]++;
+					}
+				}
+			}
+
+			Direction bestDir = null;
+			int minPenalty = 999999;
+			for (int d = 0; d < 8; ++d) {
+				if (canMove[d] && penalties[d] < minPenalty) {
+					minPenalty = penalties[d];
+					bestDir = dirs[d];
+				}
+			}
+			if (bestDir != null) {
+				rc.move(bestDir);
+				return true;
+			}
+		}
+		
+		return false;
+	}
+	
 	private static void explore() throws GameActionException {
 		if (finishedExploring) return;
 		
@@ -260,7 +374,7 @@ public class BotScout extends Globals {
 		rc.setIndicatorDot(exploreDest, 0, 255, 0);
 		if (rc.isCoreReady()) {
 			Debug.indicate("explore", 1, "going to exploreDest");
-			SafeBug.goTo(exploreDest);
+			ScoutBug.goTo(exploreDest, checkWhichSquaresAreSafe());
 		}
 	}
 	
@@ -269,6 +383,8 @@ public class BotScout extends Globals {
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
 		Debug.indicate("edges", 0, String.format("map X = [%d, %d], mapY = [%d, %d]", MapEdges.minX, MapEdges.maxX, MapEdges.minY, MapEdges.maxY));
 
+		retreatIfNecessary();
+		
 		trySendZombieDenLocation();
 		
 		
