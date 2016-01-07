@@ -23,7 +23,10 @@ public class BotScout extends Globals {
 		}
 	}
 	
+	private static int lastSignal = 3000;
+	
 	private static void signalAboutEnemies() throws GameActionException {
+		lastSignal += 1;
 		RobotInfo[] allies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
 		MapLocation[] turrets = new MapLocation[1000];
 		int numTurrets = 0;
@@ -69,6 +72,8 @@ public class BotScout extends Globals {
 		if (bestTarget != null) {
 			Debug.indicate("spotting", 0, "spotting target at " + bestTarget);
 			Messages.sendTurretTarget(bestTarget, 2*mySensorRadiusSquared);
+			lastSignal = 0;
+			return;
 		}
 	}
 	
@@ -177,6 +182,9 @@ public class BotScout extends Globals {
 		if (!rc.isCoreReady()) return;
 		if (0 == (here.x + here.y) % 2) {
 			tryMoveAround();
+			return;
+		}
+		if (lastSignal < 5) {
 			return;
 		}
 		countTurret();
