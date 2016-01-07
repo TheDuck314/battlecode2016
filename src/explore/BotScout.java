@@ -15,11 +15,13 @@ public class BotScout extends Globals {
 	private static MapLocation origin;
 	private static boolean[][] exploredGrid = new boolean[100][100];
 	private static MapLocation exploreDest = null;
+	private static int exploreDestGridX;
+	private static int exploreDestGridY;
 	private static boolean finishedExploring = false;
 	private static final int gridSpacing = 10;
 	
 	public static void loop() {
-    	Debug.init("explore");
+    	Debug.init("safebug");
     	origin = here;
     	exploredGrid[50][50] = true;    	
 		while (true) {
@@ -178,6 +180,8 @@ public class BotScout extends Globals {
 			MapLocation centerLoc = gridLocation(centerX, centerY);
 			if (!isFarOffMap(centerLoc)) {
 				exploreDest = moveOntoMap(centerLoc);
+				exploreDestGridX = centerX;
+				exploreDestGridY = centerY;
 				return;
 			}
 		}
@@ -188,6 +192,8 @@ public class BotScout extends Globals {
         
 		for (int radius = 1; radius <= 10; radius++) {
             MapLocation bestLoc = null;
+            int bestGridX = -1;
+            int bestGridY = -1;
             int bestDistSq = 999999;
 
             int gridX = centerX + radius * startDiag.dx;
@@ -204,6 +210,8 @@ public class BotScout extends Globals {
                             if (distSq < bestDistSq) {
                                 bestDistSq = distSq;
                                 bestLoc = gridLoc;
+                                bestGridX = gridX;
+                                bestGridY = gridY;
                             }
                         }
                     }
@@ -217,6 +225,8 @@ public class BotScout extends Globals {
 
             if (bestLoc != null) {
             	exploreDest = bestLoc;
+            	exploreDestGridX = bestGridX;
+            	exploreDestGridY = bestGridY;
 				rc.setIndicatorDot(exploreDest, 0, 255, 0);
 				return;
             }
@@ -235,9 +245,8 @@ public class BotScout extends Globals {
 				(here.equals(exploreDest) || 
 				here.isAdjacentTo(exploreDest) && rc.senseRobotAtLocation(exploreDest) != null)) {
 			// we reached the exploreDest
-			int gridX = nearestGridX(here);
-			int gridY = nearestGridY(here);
-			exploredGrid[gridX][gridY] = true;
+			exploredGrid[exploreDestGridX][exploreDestGridY] = true;
+			//Debug.indicate("explore", 2, String.format("set exploredGrid[%d][%d] = true", exploreDestGridX, exploreDestGridY));
 			exploreDest = null; // pick a new explore dest
 		}
 		
@@ -251,7 +260,7 @@ public class BotScout extends Globals {
 		rc.setIndicatorDot(exploreDest, 0, 255, 0);
 		if (rc.isCoreReady()) {
 			Debug.indicate("explore", 1, "going to exploreDest");
-			Bug.goTo(exploreDest);
+			SafeBug.goTo(exploreDest);
 		}
 	}
 	

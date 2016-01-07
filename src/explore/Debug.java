@@ -58,3 +58,5 @@ public class Debug extends Globals {
         Debug.indicateAppend("bytecodes", 0, message + ": " + Clock.getBytecodeNum() + "; ");
     }
 }
+
+

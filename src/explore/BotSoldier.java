@@ -84,12 +84,12 @@ public class BotSoldier extends Globals {
 
 	public static void followMother() throws GameActionException {
 		if (rc.isCoreReady()) {
-			updateMotherLocation();
+			if (rc.canSenseRobot(motherId)) {
+				receivedTarget = rc.senseRobot(motherId).location;
+			}
 			
-			if (receivedTarget != null && rc.getRoundNum() < 50 + targetReceivedRound) {
-				Bug.goTo(receivedTarget);
-			} else {
-			    Bug.goTo(motherLocation);
+			if (receivedTarget != null) {			
+			    DirectNav.politelySwarmToAvoidingArchons(receivedTarget);
 			}
 		}
 	}
