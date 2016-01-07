@@ -92,19 +92,13 @@ public class BotTurret extends Globals {
 		rc.emptySignalQueue();
 	}
 	
-	private static void turnTTM() throws GameActionException {
-		if (0 == (here.x + here.y) % 2) {
-			rc.unpack();
-			initTurret();
-			isTTM = false;
-		}
-		tryMoveAround();
-	}
+
+	private static MapLocation targetPosition = new MapLocation(1000, 1000);
 	
 	private static Direction[] goodDir = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST };
 	private static Direction[] badDir = { Direction.NORTH_EAST, Direction.SOUTH_EAST, Direction.NORTH_WEST, Direction.SOUTH_WEST };
-	
-	private static void tryMoveAround() throws GameActionException {
+
+	private static void trySettle() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 		int rdn = FastMath.rand256();
 		for (int i = 0; i < 4; ++i) {
@@ -123,10 +117,61 @@ public class BotTurret extends Globals {
 		}
 	}
 
+	private static MapLocation friendVec() {
+		RobotInfo[] friend = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		MapLocation vecSum = new MapLocation(0,0);
+		for (RobotInfo ri : friend) {
+			if (ri.type != RobotType.TURRET) {
+				continue;
+			}
+			MapLocation vec = FastMath.minusVec(ri.location, here);
+			vecSum = FastMath.addVec(vecSum, vec);
+		}
+		return vecSum;
+	}
+	
+	private static double computeArmyPos(MapLocation vecSum) {
+		MapLocation targetVec = FastMath.minusVec(targetPosition, here);
+		double mag = FastMath.dotVec(vecSum, targetVec) / Math.pow(FastMath.dotVec(targetVec, targetVec), 0.5);
+//		System.out.println("mag = " + mag);
+		return mag;
+	}
+	
+	private static void tryMoveToTarget() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+		Bug.goTo(targetPosition);
+	}
+
+	private static void turnTTM() throws GameActionException {
+		double ap = computeArmyPos(friendVec());
+		if (ap > 5) {
+			tryMoveToTarget();
+			return;
+		}
+		if (0 == (here.x + here.y) % 2) {
+			rc.unpack();
+			initTurret();
+			isTTM = false;
+			return;
+		}
+		if (ap > 0) {
+			tryMoveToTarget();
+			return;
+		}
+		trySettle();
+	}
+	
 	private static void turnTurret() throws GameActionException {
 		if (0 != (here.x + here.y) % 2) {
 			rc.pack();
 			isTTM = true;
+			return;
+		}
+		double ap = computeArmyPos(friendVec());
+		if (ap > 20) {
+			rc.pack();
+			isTTM = true;
+			return;
 		}
 		currentSignals = rc.emptySignalQueue();
 		if (rc.isWeaponReady()) {

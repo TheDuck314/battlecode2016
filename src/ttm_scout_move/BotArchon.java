@@ -59,11 +59,11 @@ public class BotArchon extends Globals {
 //				return;
 //			}
 		} else {
-//			Direction dir = saferDir();
-//			if (dir != null) {
-//				rc.move(dir);
-//				return;
-//			}
+			Direction dir = saferDir();
+			if (dir != null) {
+				rc.move(dir);
+				return;
+			}
 		}
 		if (bestLoc != null) {
 			Bug.goTo(bestLoc);

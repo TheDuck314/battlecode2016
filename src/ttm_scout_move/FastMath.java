@@ -1,6 +1,6 @@
 package ttm_scout_move;
 
-import battlecode.common.RobotController;
+import battlecode.common.*;
 
 //awful hacks for faster math
 public class FastMath {
@@ -36,6 +36,27 @@ public class FastMath {
 	// Could also make other versions with a smaller upper limit
 	public static int rand256() {
 		return lookupRand256.charAt(randIndex++);
+	}
+	
+	public static MapLocation addVec(MapLocation a, MapLocation b) {
+		return new MapLocation(a.x+b.x, a.y+b.y);
+	}
+	
+	public static MapLocation minusVec(MapLocation a, MapLocation b) {
+		return new MapLocation(a.x-b.x, a.y-b.y);
+	}
+	
+	public static MapLocation negateVec(MapLocation a) {
+		return new MapLocation(-a.x, -a.y);
+	}
+	
+	public static int dotVec(MapLocation a, MapLocation b) {
+		return a.x * b.x + a.y * b.y;
+	}
+	
+	public static Direction dirFromVec(MapLocation a) {
+		MapLocation origin = new MapLocation(0,0);
+		return origin.directionTo(a);
 	}
 
 	// Generate and test the lookup strings
