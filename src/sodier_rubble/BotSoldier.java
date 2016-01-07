@@ -73,7 +73,7 @@ public class BotSoldier extends Globals {
 	public static void followMother() throws GameActionException {
 		if (rc.isCoreReady()) {
 			updateMotherLocation();
-			Bug.goTo(motherLocation);
+			DirectNav.goTo(motherLocation);
 		}
 	}
 
