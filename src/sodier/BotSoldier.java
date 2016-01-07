@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 
-	public static int motherId = 0;
+	public static int motherId = -1;
 	public static MapLocation motherLocation = null;
 	public static boolean isHappyShooting = false;
 
@@ -21,6 +21,7 @@ public class BotSoldier extends Globals {
 	}
 
 	public static void updateMotherId(int range) {
+		motherId = -1;
 		RobotInfo[] infos = rc.senseNearbyRobots(range, us);
 		for (RobotInfo info : infos) {
 			if (info.type == RobotType.ARCHON) {
@@ -32,7 +33,7 @@ public class BotSoldier extends Globals {
 	}
 
 	public static void updateMotherLocation() throws GameActionException {
-		if (rc.canSenseRobot(motherId)) {
+		if (motherId > 0 && rc.canSenseRobot(motherId)) {
 			motherLocation = rc.senseRobot(motherId).location;
 		} else {
 			updateMotherId(mySensorRadiusSquared);
@@ -73,7 +74,9 @@ public class BotSoldier extends Globals {
 	public static void followMother() throws GameActionException {
 		if (rc.isCoreReady()) {
 			updateMotherLocation();
-			Bug.goTo(motherLocation);
+			if (null != motherLocation) {
+				Bug.goTo(motherLocation);
+			}
 		}
 	}
 
