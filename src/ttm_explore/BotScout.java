@@ -3,6 +3,7 @@ package ttm_explore;
 import battlecode.common.Clock;
 import battlecode.common.Direction;
 import battlecode.common.GameActionException;
+import battlecode.common.GameConstants;
 import battlecode.common.MapLocation;
 import battlecode.common.RobotInfo;
 import battlecode.common.RobotType;
@@ -79,25 +80,123 @@ public class BotScout extends Globals {
 		int rdn = FastMath.rand256();
 		for (int i = 0; i < 4; ++i) {
 			Direction dir = goodDir[(rdn + i) % 4];
-			if (rc.canMove(dir)) {
-				rc.move(dir);
+			if (DBug.tryMoveClearDir(dir)) {
 				return;
 			}
 		}
 		for (int i = 0; i < 4; ++i) {
 			Direction dir = badDir[(rdn + i) % 4];
-			if (rc.canMove(dir)) {
-				rc.move(dir);
+			if (DBug.tryMoveClearDir(dir)) {
 				return;
 			}
 		}
 	}
 	
+	private static Direction avoidEnemyDirection() {
+		Direction escapeDir = null;
+		if (escapeDir == null) {
+			RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+			for (RobotInfo e : enemies) {
+//				System.out.println("Got zombie in sight!");
+				if (e.location.distanceSquaredTo(here) <= e.type.attackRadiusSquared) {
+//					System.out.println("Got zombie in range!");
+					escapeDir = e.location.directionTo(here);
+				}
+			}
+		}
+		if (escapeDir == null) {
+			RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, them);
+			for (RobotInfo e : enemies) {
+//				System.out.println("Got enemy in sight!");
+				if (e.location.distanceSquaredTo(here) <= e.type.attackRadiusSquared) {
+//					System.out.println("Got enemy in range!");
+					escapeDir = e.location.directionTo(here);
+				}
+			}
+		}
+		return escapeDir;
+	}
+	
+	private static void avoidEnemy() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+		Direction escapeDir = avoidEnemyDirection();
+		if (null != escapeDir) {
+//			System.out.println("Try escape!");
+			if (Bug.tryMoveInDirection(escapeDir)) {
+//				System.out.println("escape!");
+				return;
+			}
+		}
+	}
+	
+	private static int nTurret = 0;
+	private static int nTurretMax = 4;
+	
+	private static void countTurret() throws GameActionException {
+		nTurret = 0;
+		RobotInfo[] infos = rc.senseNearbyRobots(2, us);
+		for (RobotInfo info : infos) {
+			if (info.type == RobotType.TURRET) {
+				nTurret += 1;
+			}
+		}
+		nTurretMax = nTurret;
+		for (Direction dir : Direction.values()) {
+			MapLocation tl = here.add(dir);
+			if (0 == (tl.x + tl.y) % 2 && rc.canMove(dir)) {
+				nTurretMax += 1;
+			}
+		}
+	}
+	
+	private static MapLocation friendVec() {
+		RobotInfo[] friend = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		MapLocation vecSum = new MapLocation(0,0);
+		for (RobotInfo ri : friend) {
+			if (ri.type == RobotType.TURRET) {
+				Direction dir = here.directionTo(ri.location);
+				vecSum = vecSum.add(dir);
+				continue;
+			} else if (ri.type == RobotType.SCOUT) {
+				Direction dir = ri.location.directionTo(here);
+				vecSum = vecSum.add(dir);
+				continue;
+			} else if (ri.type == RobotType.ARCHON) {
+				Direction dir = here.directionTo(ri.location);
+				vecSum = vecSum.add(dir);
+				continue;
+			}
+		}
+		return vecSum;
+	}
+	
 	private static void turn() throws GameActionException {
 		Globals.update();
 		signalAboutEnemies();
-		if (0 != (here.x + here.y) % 2) {
+		avoidEnemy();
+		if (!rc.isCoreReady()) return;
+		if (0 == (here.x + here.y) % 2) {
 			tryMoveAround();
+			return;
+		}
+		countTurret();
+		if (nTurret < nTurretMax) {
+			DBug.tryMoveInDirection(FastMath.dirFromVec(friendVec()));
+			return;
+		} else {
+			int rdn = FastMath.rand256();
+			for (int i = 0; i < 8; ++i) {
+				Direction dir = Direction.values()[rdn % 8];
+				if (rc.senseRubble(here.add(dir)) >= GameConstants.RUBBLE_SLOW_THRESH) {
+					rc.clearRubble(dir);
+					return;
+				}
+			}
+			Direction dir = Direction.values()[rdn % 8];
+			if (DBug.tryMoveInDirection(dir)) {
+				return;
+			}
+			return;
 		}
 	}
 }

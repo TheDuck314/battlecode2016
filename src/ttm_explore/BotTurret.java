@@ -143,21 +143,21 @@ public class BotTurret extends Globals {
 	}
 
 	private static void turnTTM() throws GameActionException {
-		double ap = computeArmyPos(friendVec());
-		if (ap > 5) {
-			tryMoveToTarget();
-			return;
-		}
+//		double ap = computeArmyPos(friendVec());
+//		if (ap > 5) {
+//			tryMoveToTarget();
+//			return;
+//		}
 		if (0 == (here.x + here.y) % 2) {
 			rc.unpack();
 			initTurret();
 			isTTM = false;
 			return;
 		}
-		if (ap > 0) {
-			tryMoveToTarget();
-			return;
-		}
+//		if (ap > 0) {
+//			tryMoveToTarget();
+//			return;
+//		}
 		trySettle();
 	}
 	
@@ -167,12 +167,12 @@ public class BotTurret extends Globals {
 			isTTM = true;
 			return;
 		}
-		double ap = computeArmyPos(friendVec());
-		if (ap > 20) {
-			rc.pack();
-			isTTM = true;
-			return;
-		}
+//		double ap = computeArmyPos(friendVec());
+//		if (ap > 20) {
+//			rc.pack();
+//			isTTM = true;
+//			return;
+//		}
 		currentSignals = rc.emptySignalQueue();
 		if (rc.isWeaponReady()) {
 			if (shootEnemy()) {
