@@ -25,11 +25,10 @@ public class BotArchon extends Globals {
 	private static void turn() throws GameActionException {
 		avoidEnemy();
 		countTurret();
+		exploreForNeutralsAndParts();
 		trySpawn();
 		tryRepairAlly();
 		tryConvertNeutrals();
-
-		exploreForNeutralsAndParts();
 	}
 	
 	private static void exploreForNeutralsAndParts() throws GameActionException {

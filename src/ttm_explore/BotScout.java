@@ -184,21 +184,21 @@ public class BotScout extends Globals {
 			tryMoveAround();
 			return;
 		}
-		if (lastSignal < 5) {
-			return;
-		}
 		countTurret();
-		if (nTurret < nTurretMax) {
+		if (nTurret == 0) {
 			DBug.tryMoveInDirection(FastMath.dirFromVec(friendVec()));
 			return;
 		} else {
 			int rdn = FastMath.rand256();
 			for (int i = 0; i < 8; ++i) {
-				Direction dir = Direction.values()[rdn % 8];
+				Direction dir = Direction.values()[(rdn + i) % 8];
 				if (rc.senseRubble(here.add(dir)) >= GameConstants.RUBBLE_SLOW_THRESH) {
 					rc.clearRubble(dir);
 					return;
 				}
+			}
+			if (lastSignal < 5) {
+				return;
 			}
 			Direction dir = Direction.values()[rdn % 8];
 			if (DBug.tryMoveInDirection(dir)) {
