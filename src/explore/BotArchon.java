@@ -11,8 +11,12 @@ import battlecode.common.Team;
 import explore.Messages.PartsLocation;
 
 public class BotArchon extends Globals {
+	private static MapLocation[] denAttackQueue = new MapLocation[1000];
+	private static int denAttackQueueHead = 0;
+	private static int denAttackQueueTail = 0;
+	
 	public static void loop() {
-		Debug.init("explore");
+		Debug.init("dens");
 		FastMath.initRand(rc);
 		while (true) {
 			try {
@@ -28,14 +32,51 @@ public class BotArchon extends Globals {
 	private static void turn() throws GameActionException {
 		processSignals();
 		MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
-		Debug.indicate("edges", 0, String.format("map X = [%d, %d], mapY = [%d, %d]", MapEdges.minX, MapEdges.maxX, MapEdges.minY, MapEdges.maxY));
+		//Debug.indicate("edges", 0, String.format("map X = [%d, %d], mapY = [%d, %d]", MapEdges.minX, MapEdges.maxX, MapEdges.minY, MapEdges.maxY));
 		
-		countTurret();
-		trySpawn();
+		//countTurret();
+		if (denAttackQueue[denAttackQueueHead] == null 
+				|| here.distanceSquaredTo(denAttackQueue[denAttackQueueHead]) <= mySensorRadiusSquared) {
+			trySpawn();
+		}
+		
+		
 		tryRepairAlly();
 		tryConvertNeutrals();
 		
-		exploreForNeutralsAndParts();
+		//exploreForNeutralsAndParts();
+		
+		tryAttackZombieDen();		
+	}
+	
+	private static void tryAttackZombieDen() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+		
+		MapLocation target = denAttackQueue[denAttackQueueHead];
+		if (target == null) {
+			Debug.indicate("dens", 0, "target is null :(");
+			return;
+		}
+
+		if (rc.canSenseLocation(target)) {
+			RobotInfo botAtTarget = rc.senseRobotAtLocation(target);
+			if (botAtTarget == null || botAtTarget.type != RobotType.ZOMBIEDEN) {
+				// this den has been destroyed. Move on to the next one.
+				++denAttackQueueHead;
+				Debug.indicate("dens", 0, "den at " + target + " seems to be destroyed. now head = " + denAttackQueueHead);
+				return;
+			}
+		}
+		
+		if (here.distanceSquaredTo(target) <= 20) {
+			Debug.indicate("dens", 0, "stationed near den at " + target);
+			Messages.sendAttackTarget(target, 100*mySensorRadiusSquared);
+			return;
+		}
+		
+		Debug.indicate("dens", 0, "going to den at " + target);
+		Bug.goTo(target);
+		Messages.sendAttackTarget(target, 2*mySensorRadiusSquared);
 	}
 	
 	private static void exploreForNeutralsAndParts() throws GameActionException {
@@ -96,26 +137,18 @@ public class BotArchon extends Globals {
 	
 	private static void trySpawn() throws GameActionException {
 		if (!rc.isCoreReady()) return;
-		if(!(myID == 333 && spawnCount == 0)) return;
-		
-		rc.setIndicatorString(2, "trySpawn: turn " + rc.getRoundNum());
-		
-		RobotType spawnType = RobotType.SCOUT; //(spawnCount % 5 == 4 ? RobotType.SCOUT : RobotType.TURRET);
+
+		RobotType spawnType = (spawnCount == 0 ? RobotType.SCOUT : RobotType.SOLDIER);
 
 		if (!rc.hasBuildRequirements(spawnType)) return;
 
-		// scouts can probably have different spawning conditions
-		double parts = rc.getTeamParts();
-		if (nTurret <= 1 || parts > 180 || parts > FastMath.rand256()) {
-			for (Direction dir : Direction.values()) {
-				MapLocation tl = here.add(dir);
-				if (0 == (tl.x + tl.y) % 2 && rc.canBuild(dir, spawnType)) {
-					rc.build(dir, spawnType);
-					++spawnCount;
-					if (spawnType == RobotType.SCOUT) {
-						Messages.sendKnownMapEdges(2); // tell scout known map edges
-					}
-					return;
+		Direction dir = Direction.values()[FastMath.rand256() % 8];
+		for (int i = 0; i < 8; ++i) {
+			if (rc.canBuild(dir, spawnType)) {
+				rc.build(dir, spawnType);
+				++spawnCount;
+				if (spawnType == RobotType.SCOUT) {
+					Messages.sendKnownMapEdges(2); // tell scout known map edges
 				}
 			}
 		}
@@ -146,6 +179,7 @@ public class BotArchon extends Globals {
 		}
 	}
 	
+	
 	private static void processSignals() {
 		Signal[] signals = rc.emptySignalQueue();
 		for (Signal sig : signals) {
@@ -161,6 +195,7 @@ public class BotArchon extends Globals {
 				case Messages.CHANNEL_ZOMBIE_DEN:
 					MapLocation zombieDenLoc = Messages.parseZombieDenLocation(data);
 					Debug.indicate("explore", 1, "heard about a zombie den at " + zombieDenLoc);
+					denAttackQueue[denAttackQueueTail++] = zombieDenLoc;
 					break;
 				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
 					MapLocation enemyTurretLoc = Messages.parseEnemyTurretWarning(data);
@@ -179,7 +214,11 @@ public class BotArchon extends Globals {
 				case Messages.CHANNEL_MAP_MAX_Y:
 					Messages.processMapMaxY(data);
 					break;
+					
+				default:
 				}
+			} else {
+				// simple signal with no message
 			}
 		}
 	}

@@ -9,6 +9,7 @@ public class Messages extends Globals {
 	public static final int CHANNEL_ZOMBIE_DEN = 0x20000000;
 	public static final int CHANNEL_FOUND_PARTS = 0x30000000;
 	public static final int CHANNEL_ENEMY_TURRET_WARNING = 0x40000000;
+	public static final int CHANNEL_ATTACK_TARGET = 0x90000000;
 	
 	public static final int CHANNEL_MAP_MIN_X = 0x50000000;
 	public static final int CHANNEL_MAP_MAX_X = 0x60000000;
@@ -65,6 +66,14 @@ public class Messages extends Globals {
 	}
 	
 	public static MapLocation parseEnemyTurretWarning(int[] data) {
+		return parseMapLocation(data);
+	}
+	
+	public static void sendAttackTarget(MapLocation loc, int radiusSq) throws GameActionException {
+		sendMapLocation(CHANNEL_ATTACK_TARGET, loc, radiusSq);
+	}
+	
+	public static MapLocation parseAttackTarget(int[] data) {
 		return parseMapLocation(data);
 	}
 

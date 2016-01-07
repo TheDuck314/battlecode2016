@@ -1,13 +1,17 @@
 package explore;
 
-import battlecode.common.*;;
+import battlecode.common.*;
+import explore.Messages.PartsLocation;;
 
 public class BotSoldier extends Globals {
 	
 	public static int motherId = 0;
 	public static MapLocation motherLocation = null;
 	public static boolean isHappyShooting = false;
-
+	
+	private static int targetReceivedRound = -999999;
+	private static MapLocation receivedTarget = null;
+	
 	public static void loop() {
 		updateMotherId(8);
 		while (true) {
@@ -64,6 +68,14 @@ public class BotSoldier extends Globals {
 			 }
 		}
 		if (bestLoc != null) {
+			if (bestLoc.equals(receivedTarget)) {
+				if (here.distanceSquaredTo(bestLoc) > 8) {
+					// try to move closer to attack target so that more allies can hit it
+					if (rc.isCoreReady() && Bug.tryMoveInDirection(here.directionTo(bestLoc))) {
+						return true;
+					}
+				}
+			}
 			rc.attackLocation(bestLoc);
 			return true;
 		}
@@ -73,12 +85,35 @@ public class BotSoldier extends Globals {
 	public static void followMother() throws GameActionException {
 		if (rc.isCoreReady()) {
 			updateMotherLocation();
-			Bug.goTo(motherLocation);
+			
+			if (receivedTarget != null && rc.getRoundNum() < 50 + targetReceivedRound) {
+				Bug.goTo(receivedTarget);
+			} else {
+			    Bug.goTo(motherLocation);
+			}
 		}
 	}
-	
+
+	private static void processSignals() {
+		Signal[] signals = rc.emptySignalQueue();
+		for (Signal sig : signals) {
+			if (sig.getTeam() != us) continue;
+
+			int[] data = sig.getMessage();
+			if (data != null) {
+				switch(data[0] & Messages.CHANNEL_MASK) {
+				case Messages.CHANNEL_ATTACK_TARGET:
+					targetReceivedRound = rc.getRoundNum();
+					receivedTarget = Messages.parseAttackTarget(data);
+					break;
+				default:
+				}
+			}
+		}
+	}
+
 	private static void turn() throws GameActionException {
-		update();
+		Globals.update();
 		if (rc.isWeaponReady()) {
 			if (shootEnemy()) {
 				isHappyShooting = true;
@@ -86,6 +121,7 @@ public class BotSoldier extends Globals {
 				isHappyShooting = false;
 			}
 		}
+		processSignals();
 		if (rc.getHealth() != myType.maxHealth || !isHappyShooting) {
 			followMother();
 		}

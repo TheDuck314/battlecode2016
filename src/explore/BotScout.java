@@ -10,8 +10,8 @@ import battlecode.common.Signal;
 import battlecode.common.Team;
 
 public class BotScout extends Globals {
-	private static MapLocationHashSet sentZombieDens = new MapLocationHashSet();
-	private static MapLocationHashSet sentPartLocations = new MapLocationHashSet();
+	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
+	private static MapLocationHashSet knownPartLocations = new MapLocationHashSet();
 	private static MapLocation origin;
 	private static boolean[][] exploredGrid = new boolean[100][100];
 	private static MapLocation exploreDest = null;
@@ -87,7 +87,7 @@ public class BotScout extends Globals {
 		for (RobotInfo zombie : zombies) {
 			if (zombie.type == RobotType.ZOMBIEDEN) {
 				MapLocation denLoc = zombie.location;
-				if (sentZombieDens.add(zombie.location)) {
+				if (knownZombieDens.add(zombie.location)) {
 					Messages.sendZombieDenLocation(denLoc, MapEdges.maxBroadcastDistSq());
 				}
 			}
@@ -103,6 +103,13 @@ public class BotScout extends Globals {
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
+				case Messages.CHANNEL_ZOMBIE_DEN:
+					knownZombieDens.add(Messages.parseZombieDenLocation(data));
+					break;
+				case Messages.CHANNEL_FOUND_PARTS:
+					knownPartLocations.add(Messages.parsePartsLocation(data).location);
+					break;
+				
 				case Messages.CHANNEL_MAP_MIN_X:
 					Messages.processMapMinX(data);
 					break;
@@ -115,6 +122,8 @@ public class BotScout extends Globals {
 				case Messages.CHANNEL_MAP_MAX_Y:
 					Messages.processMapMaxY(data);
 					break;
+					
+				default:
 				}
 			}
 		}
@@ -247,6 +256,7 @@ public class BotScout extends Globals {
 	}
 	
 	private static void turn() throws GameActionException {
+		processSignals();		
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
 		Debug.indicate("edges", 0, String.format("map X = [%d, %d], mapY = [%d, %d]", MapEdges.minX, MapEdges.maxX, MapEdges.minY, MapEdges.maxY));
 
