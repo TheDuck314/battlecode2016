@@ -64,7 +64,46 @@
       <double-array>0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0</double-array>
       <double-array>0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0</double-array>
     </initialParts>
-    <zombieSpawnSchedule/>
+        <zombieSpawnSchedule>
+		<round number="300">
+			<zombie-count type="STANDARDZOMBIE" count="6"/>
+        </round>
+		<round number="600">
+			<zombie-count type="STANDARDZOMBIE" count="8"/>
+			<zombie-count type="RANGEDZOMBIE" count="2"/>
+        </round>
+		<round number="900">
+			<zombie-count type="STANDARDZOMBIE" count="8"/>
+			<zombie-count type="RANGEDZOMBIE" count="4"/>
+        </round>
+		<round number="1200">
+			<zombie-count type="STANDARDZOMBIE" count="12"/>
+			<zombie-count type="RANGEDZOMBIE" count="4"/>
+        </round>
+		<round number="1500">
+			<zombie-count type="STANDARDZOMBIE" count="12"/>
+			<zombie-count type="RANGEDZOMBIE" count="8"/>
+        </round>
+		<round number="1800">
+			<zombie-count type="STANDARDZOMBIE" count="20"/>
+			<zombie-count type="RANGEDZOMBIE" count="8"/>
+        </round>
+		<round number="2100">
+			<zombie-count type="STANDARDZOMBIE" count="20"/>
+			<zombie-count type="RANGEDZOMBIE" count="8"/>
+			<zombie-count type="BIGZOMBIE" count="4"/>
+        </round>
+		<round number="2400">
+			<zombie-count type="STANDARDZOMBIE" count="24"/>
+			<zombie-count type="RANGEDZOMBIE" count="12"/>
+			<zombie-count type="BIGZOMBIE" count="4"/>
+        </round>
+		<round number="2700">
+			<zombie-count type="STANDARDZOMBIE" count="24"/>
+			<zombie-count type="RANGEDZOMBIE" count="16"/>
+			<zombie-count type="BIGZOMBIE" count="4"/>
+        </round>
+	</zombieSpawnSchedule>
     <initialRobots>
       <initial-robot originOffsetX="5" originOffsetY="6" type="ARCHON" team="A"/>
       <initial-robot originOffsetX="7" originOffsetY="26" type="ARCHON" team="B"/>
