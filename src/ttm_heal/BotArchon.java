@@ -24,7 +24,7 @@ public class BotArchon extends Globals {
 	public static int numTurns = 0;
 	
 	private static void turn() throws GameActionException {
-		avoidEnemy();
+		// avoidEnemy();
 		countTurret();
 		exploreForNeutralsAndParts();
 		trySpawn();
@@ -110,6 +110,8 @@ public class BotArchon extends Globals {
 //			DBug.goTo(bestLoc);
 //		}
 		if (numTurns <= 60 && rallyPoint != null && here.distanceSquaredTo(rallyPoint) > 8) {
+			avoidEnemy();
+			if (!rc.isCoreReady()) return;
 			DBug.goTo(rallyPoint);
 		} else {
 			moveAround();
