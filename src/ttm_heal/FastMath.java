@@ -62,7 +62,7 @@ public class FastMath {
 		if (d == null) {
 			return 0;
 		}
-		return d.dx * a.x + d.dy + a.y;
+		return d.dx * a.x + d.dy * a.y;
 	}
 	
 	public static Direction dirFromVec(MapLocation a) {
