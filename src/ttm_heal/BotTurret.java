@@ -170,6 +170,16 @@ public class BotTurret extends Globals {
 	}
 	
 	private static void turnTurret() throws GameActionException {
+//		RobotInfo[] infos;
+//		infos = rc.senseHostileRobots(here, mySensorRadiusSquared);
+//		for (RobotInfo e : infos) {
+//			if (e.type == RobotType.BIGZOMBIE
+//					&& e.location.distanceSquaredTo(here) <= e.type.attackRadiusSquared
+//					&& rc.getRoundNum() >= 2000
+//					&& !rc.isInfected()) {
+//				rc.disintegrate();
+//			}
+//		}
 		if (0 != (here.x + here.y) % 2) {
 			rc.pack();
 			isTTM = true;

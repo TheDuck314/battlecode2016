@@ -263,25 +263,29 @@ public class BotScout extends Globals {
 			if (oddPos[i]) {
 				scores[i] += 100;
 			}
-			if (nturrets[i] < 2) {
+			if (nturrets[i] < 1) {
 				scores[i] -= (2-nturrets[i]) * 50;
 			}
 			scores[i] += turrets[i] - scouts[i] * 8;
 		}
 		if (lastSignal > 5) {
-			scores[8] -= 10;
+			scores[8] -= 100;
 		} else {
 			scores[8] += 200;
+			rc.setIndicatorDot(here, 0, 0, 255);
 		}
 		for (int i = 0; i < 8; ++i) {
-			if (!cmoves[i]) {
-				scores[i] = Double.MIN_VALUE;
+			if (rubbles[i] < GameConstants.RUBBLE_SLOW_THRESH && !cmoves[i]) {
+				scores[i] = -100000;
 			}
 		}
-		double bestScore = Double.MIN_VALUE;
+		double bestScore = -100000;
 		Direction bestDir = null;
 		int rdn = FastMath.rand256();
 		for (int i = 0; i < 9; ++i) {
+			if (scores[i] <= -500) {
+				rc.setIndicatorDot(locs[i], 255, 0, 0);
+			}
 			if (bestScore < scores[(rdn + i) % 9]) {
 				bestDir = dirs[(rdn + i) % 9];
 				bestScore = scores[(rdn + i) % 9];
@@ -289,6 +293,8 @@ public class BotScout extends Globals {
 		}
 		if (bestDir != null) {
 			DBug.tryMoveClearDir(bestDir);
+		} else if (rubbles[8] >= GameConstants.RUBBLE_SLOW_THRESH) {
+			rc.clearRubble(Direction.NONE);
 		}
 		return;
 	}

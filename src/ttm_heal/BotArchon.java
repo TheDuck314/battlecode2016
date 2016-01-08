@@ -79,20 +79,20 @@ public class BotArchon extends Globals {
 		MapLocation[] nearbyLocs = MapLocation.getAllMapLocationsWithinRadiusSq(here, RobotType.ARCHON.sensorRadiusSquared);
 		
 		MapLocation bestLoc = null;
-		int bestDistSq = Integer.MAX_VALUE;
-		for (MapLocation loc : nearbyLocs) {
-			double parts = rc.senseParts(loc);
-			if (parts == 0) {
-				RobotInfo info = rc.senseRobotAtLocation(loc);
-				if (info == null || info.team != Team.NEUTRAL) continue;
-			}
-			// there are either parts or a neutral at this location
-			int distSq = here.distanceSquaredTo(loc);
-			if (distSq < bestDistSq) {
-				bestDistSq = distSq;
-				bestLoc = loc;
-			}			
-		}
+//		int bestDistSq = Integer.MAX_VALUE;
+//		for (MapLocation loc : nearbyLocs) {
+//			double parts = rc.senseParts(loc);
+//			if (parts == 0) {
+//				RobotInfo info = rc.senseRobotAtLocation(loc);
+//				if (info == null || info.team != Team.NEUTRAL) continue;
+//			}
+//			// there are either parts or a neutral at this location
+//			int distSq = here.distanceSquaredTo(loc);
+//			if (distSq < bestDistSq) {
+//				bestDistSq = distSq;
+//				bestLoc = loc;
+//			}			
+//		}
 		if (nTurret >= nTurretMax) {
 //			int rdn = FastMath.rand256();
 //			Direction dir = Direction.values()[rdn % 8];
@@ -111,7 +111,128 @@ public class BotArchon extends Globals {
 //		}
 		if (numTurns <= 60 && rallyPoint != null && here.distanceSquaredTo(rallyPoint) > 8) {
 			DBug.goTo(rallyPoint);
+		} else {
+			moveAround();
 		}
+	}
+	
+
+	public static MapLocation dangerousLoc = null;
+	public static int dangerousTurn = 0;
+	public static double myHealth;
+
+	public static void updateDangerousLoc() {
+		if (rc.getHealth() < myHealth) {
+			dangerousLoc = here;
+			dangerousTurn = 0;
+			myHealth = rc.getHealth();
+		} else if (dangerousLoc != null) {
+			if (dangerousTurn >= 200) {
+				dangerousLoc = null;
+				dangerousTurn = 0;
+			}
+			dangerousTurn += 1;
+		}
+	}
+
+	private static void moveAround() throws GameActionException {
+		updateDangerousLoc();
+		if (!rc.isCoreReady()) return;
+		Direction[] dirs = new Direction[9];
+		boolean[] cmoves = new boolean[9];
+		MapLocation[] locs = new MapLocation[9];
+		boolean[] oddPos = new boolean[9];
+		double[] rubbles = new double[9];
+		double[] attacks = new double[9];
+		double[] nturrets = new double[9];
+		double[] turrets = new double[9];
+		double[] scouts  = new double[9];
+		dirs[8] = null;
+		cmoves[8] = true;
+		locs[8] = here;
+		for (int i = 0; i < 8; ++i) {
+			dirs[i] = Direction.values()[i];
+			locs[i] = here.add(dirs[i]);
+			cmoves[i] = rc.canMove(dirs[i]);
+		}
+		for (int i = 0; i < 9; ++i) {
+			oddPos[i] = (locs[i].x + locs[i].y) % 2 != 0;
+			rubbles[i] = rc.senseRubble(locs[i]);
+		}
+		RobotInfo[] infos;
+		infos = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		for (RobotInfo e : infos) {
+			for (int i = 0; i < 9; ++i) {
+				if (e.location.distanceSquaredTo(locs[i]) <= e.type.attackRadiusSquared) {
+					attacks[i] += e.attackPower;
+				}
+			}
+		}
+		infos = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		MapLocation turretVec = new MapLocation(0,0);
+		MapLocation scoutVec = new MapLocation(0,0);
+		for (RobotInfo f : infos) {
+			if (f.ID == myID) {
+				continue;
+			}
+			switch (f.type) {
+			case ARCHON:
+			case TURRET:
+				for (int i = 0; i < 9; ++i) {
+					if (f.location.distanceSquaredTo(locs[i]) < 9) {
+						nturrets[i] += 1;
+					}
+				}
+				turretVec = turretVec.add(here.directionTo(f.location));
+				break;
+			case SCOUT:
+				scoutVec = scoutVec.add(here.directionTo(f.location));
+				break;
+			default:
+			}
+		}
+//		rc.setIndicatorLine(here, FastMath.addVec(turretVec, FastMath.addVec(here, FastMath.multiplyVec(-5,scoutVec))), 0, 255, 0);
+		for (int i = 0; i < 9; ++i) {
+			turrets[i] = FastMath.dotVec(dirs[i], turretVec);
+			scouts[i] = FastMath.dotVec(dirs[i], scoutVec);
+		}
+		double[] scores = new double[9];
+		for (int i = 0; i < 9; ++i) {
+			scores[i] = -attacks[i] * 1000;
+			if (locs[i] == dangerousLoc) {
+				scores[i] -= 1000;
+			}
+			if (rubbles[i] >= GameConstants.RUBBLE_SLOW_THRESH) {
+				scores[i] += 1000;
+			}
+			if (oddPos[i]) {
+				scores[i] += 100;
+			}
+			scores[i] += nturrets[i] * 50;
+			scores[i] += turrets[i] + scouts[i];
+		}
+		scores[8] -= 125;
+		scores[8] += FastMath.rand256();
+		for (int i = 0; i < 8; ++i) {
+			if (rubbles[i] < GameConstants.RUBBLE_SLOW_THRESH && !cmoves[i]) {
+				scores[i] = -100000;
+			}
+		}
+		double bestScore = -100000;
+		Direction bestDir = null;
+		int rdn = FastMath.rand256();
+		for (int i = 0; i < 9; ++i) {
+			if (bestScore < scores[(rdn + i) % 9]) {
+				bestDir = dirs[(rdn + i) % 9];
+				bestScore = scores[(rdn + i) % 9];
+			}
+		}
+		if (bestDir != null) {
+			DBug.tryMoveClearDir(bestDir);
+		} else if (rubbles[8] >= GameConstants.RUBBLE_SLOW_THRESH) {
+			rc.clearRubble(Direction.NONE);
+		}
+		return;
 	}
 	
 	private static void avoidEnemy() throws GameActionException {
