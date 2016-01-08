@@ -24,8 +24,6 @@ public class BotArchon extends Globals {
 	public static int numTurns = 0;
 	
 	private static void turn() throws GameActionException {
-		// avoidEnemy();
-		countTurret();
 		exploreForNeutralsAndParts();
 		trySpawn();
 		tryRepairAlly();
@@ -76,7 +74,7 @@ public class BotArchon extends Globals {
 	private static void exploreForNeutralsAndParts() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 		
-		MapLocation[] nearbyLocs = MapLocation.getAllMapLocationsWithinRadiusSq(here, RobotType.ARCHON.sensorRadiusSquared);
+//		MapLocation[] nearbyLocs = MapLocation.getAllMapLocationsWithinRadiusSq(here, RobotType.ARCHON.sensorRadiusSquared);
 		
 		MapLocation bestLoc = null;
 //		int bestDistSq = Integer.MAX_VALUE;
@@ -118,6 +116,44 @@ public class BotArchon extends Globals {
 		}
 	}
 	
+	private static void avoidEnemy() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+		Direction escapeDir = avoidEnemyDirection();
+		if (null != escapeDir) {
+//			System.out.println("Try escape!");
+			if (Bug.tryMoveInDirection(escapeDir)) {
+//				System.out.println("escape!");
+				return;
+			}
+		}
+	}
+
+	private static Direction avoidEnemyDirection() {
+		Direction escapeDir = null;
+		if (escapeDir == null) {
+			RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+			for (RobotInfo e : enemies) {
+//				 System.out.println("Got zombie in sight!");
+				if (e.location.distanceSquaredTo(here) <= e.type.attackRadiusSquared) {
+//					System.out.println("Got zombie in range!");
+					escapeDir = e.location.directionTo(here);
+				}
+			}
+		}
+		if (escapeDir == null) {
+			RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, them);
+			for (RobotInfo e : enemies) {
+//				System.out.println("Got enemy in sight!");
+				if (e.location.distanceSquaredTo(here) <= e.type.attackRadiusSquared) {
+//					System.out.println("Got enemy in range!");
+					escapeDir = e.location.directionTo(here);
+				}
+			}
+		}
+		return escapeDir;
+	}
+
+
 
 	public static MapLocation dangerousLoc = null;
 	public static int dangerousTurn = 0;
@@ -230,14 +266,20 @@ public class BotArchon extends Globals {
 		}
 		double bestScore = -100000;
 		Direction bestDir = null;
+		int bestI = 8;
 		int rdn = FastMath.rand256();
 		for (int i = 0; i < 9; ++i) {
 			if (bestScore < scores[(rdn + i) % 9]) {
 				bestDir = dirs[(rdn + i) % 9];
 				bestScore = scores[(rdn + i) % 9];
+				bestI = i;
 			}
 		}
+		nTurret = (int)nturrets[8];
 		if (bestDir != null) {
+			if (rc.canMove(bestDir)) {
+				nTurret = (int)nturrets[bestI];
+			}
 			DBug.tryMoveClearDir(bestDir);
 		} else if (rubbles[8] >= GameConstants.RUBBLE_SLOW_THRESH) {
 			rc.clearRubble(Direction.NONE);
@@ -245,91 +287,13 @@ public class BotArchon extends Globals {
 		return;
 	}
 	
-	private static void avoidEnemy() throws GameActionException {
-		if (!rc.isCoreReady()) return;
-		Direction escapeDir = avoidEnemyDirection();
-		if (null != escapeDir) {
-//			System.out.println("Try escape!");
-			if (Bug.tryMoveInDirection(escapeDir)) {
-//				System.out.println("escape!");
-				return;
-			}
-		}
-	}
-	
-	private static Direction avoidEnemyDirection() {
-		Direction escapeDir = null;
-		if (escapeDir == null) {
-			RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
-			for (RobotInfo e : enemies) {
-//				System.out.println("Got zombie in sight!");
-				if (e.location.distanceSquaredTo(here) <= e.type.attackRadiusSquared) {
-//					System.out.println("Got zombie in range!");
-					escapeDir = e.location.directionTo(here);
-				}
-			}
-		}
-		if (escapeDir == null) {
-			RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, them);
-			for (RobotInfo e : enemies) {
-//				System.out.println("Got enemy in sight!");
-				if (e.location.distanceSquaredTo(here) <= e.type.attackRadiusSquared) {
-//					System.out.println("Got enemy in range!");
-					escapeDir = e.location.directionTo(here);
-				}
-			}
-		}
-		return escapeDir;
-	}
-	
 	private static int spawnCount = 0;
 
 	private static int nTurret = 0;
 	private static int nTurretMax = 4;
 	
-	private static void countTurret() throws GameActionException {
-		nTurret = 0;
-		RobotInfo[] infos = rc.senseNearbyRobots(2, us);
-		for (RobotInfo info : infos) {
-			if (info.type == RobotType.TURRET) {
-				nTurret += 1;
-			}
-		}
-		nTurretMax = nTurret;
-		for (Direction dir : Direction.values()) {
-			MapLocation tl = here.add(dir);
-			if (0 == (tl.x + tl.y) % 2 && rc.canMove(dir)) {
-				nTurretMax += 1;
-			}
-		}
-	}
-	
-	private static Direction saferDir() throws GameActionException {
-		Direction bestDir = null;
-		int bestCount = nTurret; // need to count Turret first
-		RobotInfo[] infos = rc.senseNearbyRobots(9, us);
-		for (Direction dir : Direction.values()) {
-			if (!rc.canMove(dir)) {
-				continue;
-			}
-			MapLocation lc = here.add(dir);
-			int count = 0;
-			for (RobotInfo info : infos) {
-				if (info.type == RobotType.TURRET && info.location.distanceSquaredTo(lc) <= 2) {
-					count += 1;
-				}
-			}
-			if (count > bestCount) {
-				bestCount = count;
-				bestDir = dir;
-			}
-		}
-		return bestDir;
-	}
-	
 	private static void trySpawn() throws GameActionException {
 		if (!rc.isCoreReady()) return;
-		if (null != saferDir()) return;
 		
 		rc.setIndicatorString(2, "trySpawn: turn " + rc.getRoundNum());
 		
@@ -340,6 +304,30 @@ public class BotArchon extends Globals {
 		// scouts can probably have different spawning conditions
 		double parts = rc.getTeamParts();
 		if (nTurret <= 1 || parts > 250 || parts > 125 + FastMath.rand256()) {
+			
+			RobotInfo[] infos = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+			
+			int nscout = 0;
+			int nturrets = 0;
+			
+			for (RobotInfo f : infos) {
+				switch (f.type) {
+				case SCOUT:
+					nscout += 1;
+					break;
+				case TTM:
+				case TURRET:
+					nturrets += 1;
+					break;
+				default:
+				}
+			}
+			
+			spawnType = RobotType.TURRET;
+			if (nscout == 0 || nscout * 4 < nturrets) {
+				spawnType = RobotType.SCOUT;
+			}
+			
 			for (Direction dir : Direction.values()) {
 				MapLocation tl = here.add(dir);
 				if (0 == (tl.x + tl.y) % 2 && rc.canBuild(dir, spawnType)) {
