@@ -1,18 +1,17 @@
 package ttm_heal;
 
-import battlecode.common.Clock;
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotInfo;
-import battlecode.common.RobotType;
-import battlecode.common.Team;
+
+import battlecode.common.*;
 
 public class BotArchon extends Globals {
-	public static void loop() {
+	
+	
+	public static void loop() throws GameActionException {
 		FastMath.initRand(rc);
+		initArchons();
 		while (true) {
 			try {
+				numTurns += 1;
 				Globals.update();
 			    turn();
 			} catch (Exception e) {
@@ -22,6 +21,8 @@ public class BotArchon extends Globals {
 		}
 	}
 	
+	public static int numTurns = 0;
+	
 	private static void turn() throws GameActionException {
 		avoidEnemy();
 		countTurret();
@@ -29,6 +30,47 @@ public class BotArchon extends Globals {
 		trySpawn();
 		tryRepairAlly();
 		tryConvertNeutrals();
+	}
+	
+	public static int nArchons = 0;
+	public static MapLocation[] archonsLoc = new MapLocation[10];
+	public static int[] archonsId = new int[10];
+	public static int archonOrder = 0;
+	
+	public static MapLocation rallyPoint = null;
+	
+	public static void initArchons() throws GameActionException {
+		Globals.update();
+		archonsLoc[nArchons] = here;
+		archonsId[nArchons] = myID;
+		nArchons += 1;
+		Messages.sendMapLocation(Messages.SOURCE_MASK, here, MapEdges.maxBroadcastDistSq());
+		Clock.yield();
+		numTurns += 1;
+		Signal[] signals = rc.emptySignalQueue();
+		for (Signal sig : signals) {
+			if (sig.getTeam() != us) continue;
+			int[] data = sig.getMessage();
+			if (data != null) {
+				if (data[0] == Messages.SOURCE_MASK) {
+					archonsLoc[nArchons] = sig.getLocation();
+					archonsId[nArchons] = sig.getID();
+					nArchons += 1;
+				}
+			}
+		}
+		rallyPoint = here;
+		for (int i = 1; i < nArchons; ++i) {
+			rallyPoint = FastMath.addVec(rallyPoint, archonsLoc[i]);
+		}
+		rallyPoint = FastMath.multiplyVec(1.0/(double)nArchons, rallyPoint);
+		rallyPoint = rallyPoint.add(rallyPoint.directionTo(here), 0);
+		rc.setIndicatorDot(rallyPoint, 255, 0, 0);
+		for (int i = 0; i < nArchons; ++i) {
+			if (archonsId[i] < myID) {
+				archonOrder += 1;
+			}
+		}
 	}
 	
 	private static void exploreForNeutralsAndParts() throws GameActionException {
@@ -64,8 +106,11 @@ public class BotArchon extends Globals {
 //				return;
 //			}
 		}
-		if (bestLoc != null) {
-			Bug.goTo(bestLoc);
+//		if (bestLoc != null) {
+//			DBug.goTo(bestLoc);
+//		}
+		if (numTurns <= 60 && rallyPoint != null && here.distanceSquaredTo(rallyPoint) > 8) {
+			DBug.goTo(rallyPoint);
 		}
 	}
 	
@@ -157,7 +202,7 @@ public class BotArchon extends Globals {
 		
 		rc.setIndicatorString(2, "trySpawn: turn " + rc.getRoundNum());
 		
-		RobotType spawnType = (spawnCount % 5 == 1 ? RobotType.SCOUT : RobotType.TURRET);
+		RobotType spawnType = ((spawnCount - archonOrder - 2) % 5 == 0 ? RobotType.SCOUT : RobotType.TURRET);
 
 		if (!rc.hasBuildRequirements(spawnType)) return;
 
@@ -194,6 +239,7 @@ public class BotArchon extends Globals {
 			}
 		}
 		if (bestLoc != null) {
+			rc.setIndicatorDot(bestLoc, 255, 0, 0);
 			rc.repair(bestLoc);
 		}
 	}

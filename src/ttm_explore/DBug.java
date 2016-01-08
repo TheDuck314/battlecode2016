@@ -71,7 +71,7 @@ public class DBug extends Globals {
 	    		bestDir = dirs[i];
 	    	}
 	    }
-	    if (bestDir != null) {
+	    if (bestDir != null && bestDir != Direction.NONE && bestDir != Direction.OMNI) {
 	    	rc.clearRubble(bestDir);
 	    	return true;
 	    }

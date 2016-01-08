@@ -74,14 +74,22 @@ public class BotTurret extends Globals {
 			rc.attackLocation(bestLoc);
 			return true;
 		}
+		
 		Debug.indicate("spotting", 0, "going to check for spotting messages; message queue length = " + currentSignals.length);
 		for (Signal sig : currentSignals) {
-			MapLocation target = Messages.tryParseTurretSignal(sig);
-			Debug.indicate("spotting", 1, "got target = " + target);
-			if (target != null && rc.canAttackLocation(target)) {
-				Debug.indicate("spotting", 2, "attacking spotting target!");				
-				rc.attackLocation(target);
-				return true;
+			if (sig.getTeam() != us) continue;			
+			int[] data = sig.getMessage();
+			if (data != null) {
+				switch(data[0] & Messages.CHANNEL_MASK) {
+				case Messages.CHANNEL_TURRET_TARGET:
+					MapLocation target = Messages.parseTurretTarget(data);
+					Debug.indicate("spotting", 1, "got target = " + target);
+					if (target != null && rc.canAttackLocation(target)) {
+						Debug.indicate("spotting", 2, "attacking spotting target!");				
+						rc.attackLocation(target);
+						return true;
+					}
+				}
 			}
 		}
 		

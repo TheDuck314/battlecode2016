@@ -1,8 +1,6 @@
 package ttm_heal;
 
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
+import battlecode.common.*;
 
 public class Bug extends Globals {
 	private static MapLocation dest = null;

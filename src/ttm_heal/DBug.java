@@ -1,9 +1,6 @@
 package ttm_heal;
 
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.GameConstants;
-import battlecode.common.MapLocation;
+import battlecode.common.*;
 
 public class DBug extends Globals {
 	private static MapLocation dest = null;
