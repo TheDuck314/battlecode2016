@@ -238,15 +238,15 @@ public class BotScout extends Globals {
 						nturrets[i] += 1;
 					}
 				}
-				turretVec.add(here.directionTo(f.location));
+				turretVec = turretVec.add(here.directionTo(f.location));
 				break;
 			case SCOUT:
-				scoutVec.add(here.directionTo(f.location));
+				scoutVec = scoutVec.add(here.directionTo(f.location));
 				break;
 			default:
 			}
 		}
-		rc.setIndicatorLine(here, FastMath.addVec(here, turretVec), 255, 0, 0);
+//		rc.setIndicatorLine(here, FastMath.addVec(turretVec, FastMath.addVec(here, FastMath.multiplyVec(-5,scoutVec))), 0, 255, 0);
 		for (int i = 0; i < 9; ++i) {
 			turrets[i] = FastMath.dotVec(dirs[i], turretVec);
 			scouts[i] = FastMath.dotVec(dirs[i], scoutVec);
@@ -266,9 +266,13 @@ public class BotScout extends Globals {
 			if (nturrets[i] < 2) {
 				scores[i] -= (2-nturrets[i]) * 50;
 			}
-			scores[i] += turrets[i] - scouts[i] * 5;
+			scores[i] += turrets[i] - scouts[i] * 8;
 		}
-		scores[8] -= 10;
+		if (lastSignal > 5) {
+			scores[8] -= 10;
+		} else {
+			scores[8] += 200;
+		}
 		for (int i = 0; i < 8; ++i) {
 			if (!cmoves[i]) {
 				scores[i] = Double.MIN_VALUE;
