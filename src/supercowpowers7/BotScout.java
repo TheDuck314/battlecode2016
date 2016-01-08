@@ -1,13 +1,6 @@
 package supercowpowers7;
 
-import battlecode.common.Clock;
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotInfo;
-import battlecode.common.RobotType;
-import battlecode.common.Signal;
-import battlecode.common.Team;
+import battlecode.common.*;
 
 public class BotScout extends Globals {
 	private static MapLocation origin;
@@ -39,8 +32,7 @@ public class BotScout extends Globals {
 	private static void turn() throws GameActionException {
 		processSignals();		
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
-		Debug.indicate("edges", 0, String.format("map X = [%d, %d], mapY = [%d, %d]", MapEdges.minX, MapEdges.maxX, MapEdges.minY, MapEdges.maxY));
-
+		
 		retreatIfNecessary();
 		
 		trySendAttackTarget();
@@ -49,10 +41,12 @@ public class BotScout extends Globals {
 	}
 	
 	private static void trySendAttackTarget() throws GameActionException {
-		RobotInfo[] targets = rc.senseHostileRobots(here, mySensorRadiusSquared);
-		int numTargets = (targets.length < 3 ? targets.length : 3);
-		for (int i = 0; i < numTargets; ++i) {
-			Messages.sendAttackTarget(targets[i].location, 9 * mySensorRadiusSquared);
+		RobotInfo[] targets = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+		int numSent = 0;
+		for (RobotInfo target : targets) {
+			Messages.sendAttackTarget(target.location, 9 * mySensorRadiusSquared);
+			++numSent;
+			if (numSent >= 3) return;
 		}
 	}
 	

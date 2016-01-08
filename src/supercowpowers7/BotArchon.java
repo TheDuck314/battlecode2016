@@ -13,9 +13,17 @@ public class BotArchon extends Globals {
 
 	private static int lastArchonLocationMessageRound = 0;
 
-	public static void loop() {
+	private static int nArchons = 0;
+	private static MapLocation[] archonsLoc = new MapLocation[10];
+	private static int[] archonsId = new int[10];
+	private static int archonOrder = 0;
+	private static MapLocation rallyPoint = null;
+	
+	public static void loop() throws GameActionException {
 		Debug.init("heal");
 		FastMath.initRand(rc);
+		initArchons();
+
 		while (true) {
 			try {
 				Globals.update();
@@ -27,19 +35,61 @@ public class BotArchon extends Globals {
 		}
 	}
 	
+	private static void initArchons() throws GameActionException {
+		Globals.update();
+		archonsLoc[nArchons] = here;
+		archonsId[nArchons] = myID;
+		nArchons += 1;
+		Messages.sendArchonLocation(here, MapEdges.maxBroadcastDistSq());
+		Clock.yield();
+		Signal[] signals = rc.emptySignalQueue();
+		for (Signal sig : signals) {
+			if (sig.getTeam() != us) continue;
+			int[] data = sig.getMessage();
+			if (data != null) {
+				if ((data[0] & Messages.CHANNEL_MASK) == Messages.CHANNEL_ARCHON_LOCATION) {
+					archonsLoc[nArchons] = sig.getLocation();
+					archonsId[nArchons] = sig.getID();
+					nArchons += 1;
+				}
+			}
+		}
+		rallyPoint = here;
+		for (int i = 1; i < nArchons; ++i) {
+			rallyPoint = FastMath.addVec(rallyPoint, archonsLoc[i]);
+		}
+		rallyPoint = FastMath.multiplyVec(1.0/(double)nArchons, rallyPoint);
+		rallyPoint = rallyPoint.add(rallyPoint.directionTo(here), 0);
+		rc.setIndicatorDot(rallyPoint, 255, 0, 0);
+		for (int i = 0; i < nArchons; ++i) {
+			if (archonsId[i] < myID) {
+				archonOrder += 1;
+			}
+		}
+	}
+	
 	private static void turn() throws GameActionException {
+		if (rc.getRoundNum() <= 100 && rallyPoint != null && here.distanceSquaredTo(rallyPoint) > 2) {
+			if (rc.isCoreReady()) {
+			    DBug.goTo(rallyPoint);
+			}
+			return;
+		}
+		
 		processSignals();
 		MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
 
-		trySendArchonLocationMessage();
-		
 		trySendAttackTarget();
+		
+		trySendArchonLocationMessage();
+
 		
 		trySpawn();
 		
 		tryRepairAlly();
 		tryConvertNeutrals();
 		
+
 		//exploreForNeutralsAndParts();	
 	}
 	
