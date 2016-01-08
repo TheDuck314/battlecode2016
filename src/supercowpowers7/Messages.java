@@ -10,6 +10,7 @@ public class Messages extends Globals {
 	public static final int CHANNEL_FOUND_PARTS = 0x30000000;
 	public static final int CHANNEL_ENEMY_TURRET_WARNING = 0x40000000;
 	public static final int CHANNEL_ATTACK_TARGET = 0x90000000;
+	public static final int CHANNEL_ARCHON_LOCATION = 0xa0000000;
 	
 	public static final int CHANNEL_MAP_MIN_X = 0x50000000;
 	public static final int CHANNEL_MAP_MAX_X = 0x60000000;
@@ -74,6 +75,14 @@ public class Messages extends Globals {
 	}
 	
 	public static MapLocation parseAttackTarget(int[] data) {
+		return parseMapLocation(data);
+	}
+	
+	public static void sendArchonLocation(MapLocation loc, int radiusSq) throws GameActionException {
+		sendMapLocation(CHANNEL_ARCHON_LOCATION, loc, radiusSq);
+	}
+	
+	public static MapLocation parseArchonLocation(int[] data) {
 		return parseMapLocation(data);
 	}
 

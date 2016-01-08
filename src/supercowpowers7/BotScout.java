@@ -49,10 +49,10 @@ public class BotScout extends Globals {
 	}
 	
 	private static void trySendAttackTarget() throws GameActionException {
-		//RobotInfo[] zombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
-		RobotInfo[] zombies = rc.senseHostileRobots(here, mySensorRadiusSquared);
-		for (RobotInfo zombie : zombies) {
-			Messages.sendAttackTarget(zombie.location, 9 * mySensorRadiusSquared);
+		RobotInfo[] targets = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		int numTargets = (targets.length < 3 ? targets.length : 3);
+		for (int i = 0; i < numTargets; ++i) {
+			Messages.sendAttackTarget(targets[i].location, 9 * mySensorRadiusSquared);
 		}
 	}
 	

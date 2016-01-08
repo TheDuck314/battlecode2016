@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("micro");
+		Debug.init("heal");
 		FastMath.initRand(rc);
 		while (true) {
 			try {
@@ -19,8 +19,15 @@ public class BotSoldier extends Globals {
 	
 	private static MapLocation attackTarget = null;
 	private static int attackTargetReceivedRound = -9999;
+	
 	private static Direction wanderDirection = null;
 
+	private static boolean inHealingState = false;
+
+	private static int lastKnownArchonId = -1;
+	private static MapLocation lastKnownArchonLocation = null;
+	private static int lastKnownArchonLocationRound = -999999;
+	
 	private static void turn() throws GameActionException {
 		processSignals();
 		
@@ -28,7 +35,10 @@ public class BotSoldier extends Globals {
 			return;
 		}
 		
-		if (rc.getHealth() < myType.maxHealth / 2) {
+		manageHealingState();
+		Debug.indicate("heal", 0, "healingState = " + inHealingState);
+		
+		if (inHealingState) {
 			if (tryToHealAtArchon()) {
 				return;
 			}
@@ -52,6 +62,19 @@ public class BotSoldier extends Globals {
 						attackTargetReceivedRound = rc.getRoundNum();
 					}
 					break;
+					
+				case Messages.CHANNEL_ARCHON_LOCATION:
+					MapLocation archonLoc = Messages.parseArchonLocation(data);
+					Debug.indicate("heal", 2, "got archonLoc = " + archonLoc);
+					if (lastKnownArchonLocation == null 
+							|| (lastKnownArchonLocationRound < rc.getRoundNum() - 50)
+							|| here.distanceSquaredTo(lastKnownArchonLocation) > here.distanceSquaredTo(archonLoc)) {
+						lastKnownArchonLocation = archonLoc;
+						lastKnownArchonLocationRound = rc.getRoundNum();
+						Debug.indicateAppend("heal", 2, "; new best");
+					}
+					break;
+					
 				default:
 				}
 			}
@@ -200,9 +223,51 @@ public class BotSoldier extends Globals {
 		return false;
 	}
 	
+	private static void manageHealingState() {
+		if (rc.getHealth() < myType.maxHealth / 2) {
+			inHealingState = true;
+		}
+		if (rc.getHealth() == myType.maxHealth) {
+			inHealingState = false;
+		}
+	}
 	
-	private static boolean tryToHealAtArchon() {
-		return false;
+	private static void locateNearestArchon() throws GameActionException {
+		// first look for our favorite archon
+		if (rc.canSenseRobot(lastKnownArchonId)) {
+			RobotInfo archon = rc.senseRobot(lastKnownArchonId);
+			lastKnownArchonLocation = archon.location;
+			lastKnownArchonLocationRound = rc.getRoundNum();
+			return;
+		}
+		
+		// else look for any nearby archon
+		RobotInfo[] nearbyAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		for (RobotInfo ally : nearbyAllies) {
+			if (ally.type == RobotType.ARCHON) {
+				lastKnownArchonLocation = ally.location;
+				lastKnownArchonLocationRound = rc.getRoundNum();
+				lastKnownArchonId = ally.ID;
+				return;
+			}
+		}
+		
+		// else hope that we have gotten an archon location broadcast
+	}
+	
+	private static boolean tryToHealAtArchon() throws GameActionException {
+		if (!rc.isCoreReady()) return false;
+		
+		locateNearestArchon();
+		
+		if (lastKnownArchonLocation == null) {
+			Debug.indicate("heal", 1, "want to heal, but lastKnownArchonLocation is null!");
+			return false;
+		}
+		
+		Debug.indicate("heal", 1, "going to heal at archon at " + lastKnownArchonLocation);
+		DirectNav.swarmToAvoidingArchons(lastKnownArchonLocation);
+		return true;
 	}
 	
 	

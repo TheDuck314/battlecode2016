@@ -11,8 +11,10 @@ public class BotArchon extends Globals {
 
 	private static int spawnCount = 0;
 
+	private static int lastArchonLocationMessageRound = 0;
+
 	public static void loop() {
-		Debug.init("dens");
+		Debug.init("heal");
 		FastMath.initRand(rc);
 		while (true) {
 			try {
@@ -28,6 +30,10 @@ public class BotArchon extends Globals {
 	private static void turn() throws GameActionException {
 		processSignals();
 		MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
+
+		trySendArchonLocationMessage();
+		
+		trySendAttackTarget();
 		
 		trySpawn();
 		
@@ -35,6 +41,22 @@ public class BotArchon extends Globals {
 		tryConvertNeutrals();
 		
 		//exploreForNeutralsAndParts();	
+	}
+	
+	private static void trySendArchonLocationMessage() throws GameActionException {
+		if (lastArchonLocationMessageRound < rc.getRoundNum() - 40) {
+			Messages.sendArchonLocation(here, MapEdges.maxBroadcastDistSq());
+			lastArchonLocationMessageRound = rc.getRoundNum();
+			Debug.indicate("heal", 0, "sent archon location");
+		}
+	}
+	
+	private static void trySendAttackTarget() throws GameActionException {
+		RobotInfo[] targets = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		int numTargets = (targets.length < 3 ? targets.length : 3);
+		for (int i = 0; i < numTargets; ++i) {
+			Messages.sendAttackTarget(targets[i].location, 9 * mySensorRadiusSquared);
+		}
 	}
 	
 	private static void tryAttackZombieDen() throws GameActionException {
@@ -90,12 +112,12 @@ public class BotArchon extends Globals {
 	private static void tryRepairAlly() throws GameActionException {
 		RobotInfo[] healableAllies = rc.senseNearbyRobots(RobotType.ARCHON.attackRadiusSquared, us);
 		MapLocation bestLoc = null;
-		double lowestHealth = 10000;
+		double mostHealth = 0;
 		for (RobotInfo ally : healableAllies) {
 			if (ally.type == RobotType.ARCHON) continue;
-			if (ally.health < ally.maxHealth && ally.health < lowestHealth) {
+			if (ally.health < ally.maxHealth && ally.health > mostHealth) {
 				bestLoc = ally.location;
-				lowestHealth = ally.health;
+				mostHealth = ally.health;
 			}
 		}
 		if (bestLoc != null) {
