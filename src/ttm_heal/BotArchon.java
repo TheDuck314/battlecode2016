@@ -149,6 +149,7 @@ public class BotArchon extends Globals {
 		double[] nturrets = new double[9];
 		double[] turrets = new double[9];
 		double[] scouts  = new double[9];
+		double[] archons  = new double[9];
 		dirs[8] = null;
 		cmoves[8] = true;
 		locs[8] = here;
@@ -173,12 +174,17 @@ public class BotArchon extends Globals {
 		infos = rc.senseNearbyRobots(mySensorRadiusSquared, us);
 		MapLocation turretVec = new MapLocation(0,0);
 		MapLocation scoutVec = new MapLocation(0,0);
+		MapLocation archonVec = new MapLocation(0,0);
 		for (RobotInfo f : infos) {
 			if (f.ID == myID) {
 				continue;
 			}
 			switch (f.type) {
 			case ARCHON:
+				if (here.distanceSquaredTo(f.location) < 12) {
+					archonVec = archonVec.add(here.directionTo(f.location));
+				}
+				break;
 			case TURRET:
 				for (int i = 0; i < 9; ++i) {
 					if (f.location.distanceSquaredTo(locs[i]) < 9) {
@@ -197,6 +203,7 @@ public class BotArchon extends Globals {
 		for (int i = 0; i < 9; ++i) {
 			turrets[i] = FastMath.dotVec(dirs[i], turretVec);
 			scouts[i] = FastMath.dotVec(dirs[i], scoutVec);
+			archons[i] = FastMath.dotVec(dirs[i], archonVec);
 		}
 		double[] scores = new double[9];
 		for (int i = 0; i < 9; ++i) {
@@ -212,6 +219,7 @@ public class BotArchon extends Globals {
 			}
 			scores[i] += nturrets[i] * 50;
 			scores[i] += turrets[i] + scouts[i];
+			scores[i] -= archons[i] * 50;
 		}
 		scores[8] -= 125;
 		scores[8] += FastMath.rand256();
@@ -325,13 +333,13 @@ public class BotArchon extends Globals {
 		
 		rc.setIndicatorString(2, "trySpawn: turn " + rc.getRoundNum());
 		
-		RobotType spawnType = ((spawnCount - archonOrder - 2) % 5 == 0 ? RobotType.SCOUT : RobotType.TURRET);
+		RobotType spawnType = ((spawnCount - archonOrder - 0) % 5 == 0 ? RobotType.SCOUT : RobotType.TURRET);
 
 		if (!rc.hasBuildRequirements(spawnType)) return;
 
 		// scouts can probably have different spawning conditions
 		double parts = rc.getTeamParts();
-		if (nTurret <= 1 || parts > 180 || parts > FastMath.rand256()) {
+		if (nTurret <= 1 || parts > 250 || parts > 125 + FastMath.rand256()) {
 			for (Direction dir : Direction.values()) {
 				MapLocation tl = here.add(dir);
 				if (0 == (tl.x + tl.y) % 2 && rc.canBuild(dir, spawnType)) {
