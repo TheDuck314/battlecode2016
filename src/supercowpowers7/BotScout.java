@@ -10,8 +10,6 @@ import battlecode.common.Signal;
 import battlecode.common.Team;
 
 public class BotScout extends Globals {
-	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
-	private static MapLocationHashSet knownPartLocations = new MapLocationHashSet();
 	private static MapLocation origin;
 	private static boolean[][] exploredGrid = new boolean[100][100];
 	private static MapLocation exploreDest = null;
@@ -22,7 +20,7 @@ public class BotScout extends Globals {
 	private static final int DANGER_MEMORY_LENGTH = 5;
 	private static MapLocation[] dangerMemory = new MapLocation[DANGER_MEMORY_LENGTH];
 	private static int dangerMemoryPointer = 0;
-	
+
 	public static void loop() {
     	Debug.init("safebug");
     	origin = here;
@@ -38,64 +36,23 @@ public class BotScout extends Globals {
 		}
 	}
 	
-	private static void trySendTurretTarget() throws GameActionException {
-		RobotInfo[] allies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
-		MapLocation[] turrets = new MapLocation[1000];
-		int numTurrets = 0;
-		for (RobotInfo ally : allies) {
-			if (ally.type == RobotType.TURRET || ally.type == RobotType.TTM) {
-				turrets[numTurrets++] = ally.location;
-			}
-		}
+	private static void turn() throws GameActionException {
+		processSignals();		
+		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
+		Debug.indicate("edges", 0, String.format("map X = [%d, %d], mapY = [%d, %d]", MapEdges.minX, MapEdges.maxX, MapEdges.minY, MapEdges.maxY));
+
+		retreatIfNecessary();
 		
-		RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, them);
-		RobotInfo[] zombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
-		MapLocation bestTarget = null;
-		int bestScore = Integer.MIN_VALUE;
-		for (RobotInfo enemy : enemies) {
-			int score = 0;
-			MapLocation enemyLoc = enemy.location;
-			for (int i = 0; i < numTurrets; ++i) {
-				int distSq = enemyLoc.distanceSquaredTo(turrets[i]);
-				if (distSq > RobotType.TURRET.sensorRadiusSquared && distSq <= RobotType.TURRET.attackRadiusSquared) {
-					++score;
-				}
-			}
-			if (score > bestScore) {
-				bestScore = score;
-				bestTarget = enemyLoc;
-			}
-		}
-		for (RobotInfo enemy : zombies) {
-			int score = 0;
-			MapLocation enemyLoc = enemy.location;
-			for (int i = 0; i < numTurrets; ++i) {
-				int distSq = enemyLoc.distanceSquaredTo(turrets[i]);
-				if (distSq > RobotType.TURRET.sensorRadiusSquared && distSq <= RobotType.TURRET.attackRadiusSquared) {
-					++score;
-				}
-			}
-			if (score > bestScore) {
-				bestScore = score;
-				bestTarget = enemyLoc;
-			}
-		}
+		trySendAttackTarget();
 		
-		if (bestTarget != null) {
-			Debug.indicate("spotting", 0, "spotting target at " + bestTarget);
-			Messages.sendTurretTarget(bestTarget, 2*mySensorRadiusSquared);
-		}
+		explore();
 	}
 	
-	private static void trySendZombieDenLocation() throws GameActionException {
-		RobotInfo[] zombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+	private static void trySendAttackTarget() throws GameActionException {
+		//RobotInfo[] zombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+		RobotInfo[] zombies = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		for (RobotInfo zombie : zombies) {
-			if (zombie.type == RobotType.ZOMBIEDEN) {
-				MapLocation denLoc = zombie.location;
-				if (knownZombieDens.add(zombie.location)) {
-					Messages.sendZombieDenLocation(denLoc, MapEdges.maxBroadcastDistSq());
-				}
-			}
+			Messages.sendAttackTarget(zombie.location, 9 * mySensorRadiusSquared);
 		}
 	}
 	
@@ -108,13 +65,6 @@ public class BotScout extends Globals {
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
-				case Messages.CHANNEL_ZOMBIE_DEN:
-					knownZombieDens.add(Messages.parseZombieDenLocation(data));
-					break;
-				case Messages.CHANNEL_FOUND_PARTS:
-					knownPartLocations.add(Messages.parsePartsLocation(data).location);
-					break;
-				
 				case Messages.CHANNEL_MAP_MIN_X:
 					Messages.processMapMinX(data);
 					break;
@@ -376,22 +326,5 @@ public class BotScout extends Globals {
 			Debug.indicate("explore", 1, "going to exploreDest");
 			ScoutBug.goTo(exploreDest, checkWhichSquaresAreSafe());
 		}
-	}
-	
-	private static void turn() throws GameActionException {
-		processSignals();		
-		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
-		Debug.indicate("edges", 0, String.format("map X = [%d, %d], mapY = [%d, %d]", MapEdges.minX, MapEdges.maxX, MapEdges.minY, MapEdges.maxY));
-
-		retreatIfNecessary();
-		
-		trySendZombieDenLocation();
-		
-		
-		explore();
-		
-		/*if (rc.getRoundNum() % 100 == 0) {
-			Messages.sendZombieDenLocation(new MapLocation(0,0), 100*100);
-		}*/
 	}
 }

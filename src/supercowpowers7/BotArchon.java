@@ -1,21 +1,16 @@
 package supercowpowers7;
 
-import battlecode.common.Clock;
-import battlecode.common.Direction;
-import battlecode.common.GameActionException;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotInfo;
-import battlecode.common.RobotType;
-import battlecode.common.Signal;
-import battlecode.common.Team;
-import explore.Messages.PartsLocation;
+import battlecode.common.*;
+import supercowpowers7.Messages.PartsLocation;
 
 public class BotArchon extends Globals {
 	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
 	private static MapLocation[] denAttackQueue = new MapLocation[1000];
 	private static int denAttackQueueHead = 0;
 	private static int denAttackQueueTail = 0;
-	
+
+	private static int spawnCount = 0;
+
 	public static void loop() {
 		Debug.init("dens");
 		FastMath.initRand(rc);
@@ -33,35 +28,13 @@ public class BotArchon extends Globals {
 	private static void turn() throws GameActionException {
 		processSignals();
 		MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
-		//Debug.indicate("edges", 0, String.format("map X = [%d, %d], mapY = [%d, %d]", MapEdges.minX, MapEdges.maxX, MapEdges.minY, MapEdges.maxY));
 		
-		if (rc.getRoundNum() > 200) {
-			if(rc.getRoundNum() % 50 == 0) {
-				Messages.sendAttackTarget(here, MapEdges.maxBroadcastDistSq());
-			} else if (rc.getRoundNum() % 10 == 0) {
-				Messages.sendAttackTarget(here, 9 * mySensorRadiusSquared);
-			}
-		}
-		
-		//countTurret();
-		/*if (denAttackQueue[denAttackQueueHead] == null 
-				|| here.distanceSquaredTo(denAttackQueue[denAttackQueueHead]) <= mySensorRadiusSquared) {
-			trySpawn();
-		}*/
 		trySpawn();
-		
 		
 		tryRepairAlly();
 		tryConvertNeutrals();
 		
-		//exploreForNeutralsAndParts();
-		
-		Debug.indicate("dens", 2, "den queue: ");
-		for (int i = denAttackQueueHead; i < denAttackQueueTail; ++i) {
-			Debug.indicateAppend("dens", 2, denAttackQueue[i].toString() + ", ");
-		}
-		
-		tryAttackZombieDen();		
+		//exploreForNeutralsAndParts();	
 	}
 	
 	private static void tryAttackZombieDen() throws GameActionException {
@@ -94,67 +67,11 @@ public class BotArchon extends Globals {
 		DirectNav.goTo(target);
 		//Messages.sendAttackTarget(target, 2*mySensorRadiusSquared);
 	}
-	
-	private static void exploreForNeutralsAndParts() throws GameActionException {
-		if (!rc.isCoreReady()) return;
-		
-		MapLocation[] nearbyLocs = MapLocation.getAllMapLocationsWithinRadiusSq(here, RobotType.ARCHON.sensorRadiusSquared);
-		
-		MapLocation bestLoc = null;
-		int bestDistSq = Integer.MAX_VALUE;
-		for (MapLocation loc : nearbyLocs) {
-			double parts = rc.senseParts(loc);
-			if (parts == 0) {
-				RobotInfo info = rc.senseRobotAtLocation(loc);
-				if (info == null || info.team != Team.NEUTRAL) continue;
-			}
-			// there are either parts or a neutral at this location
-			int distSq = here.distanceSquaredTo(loc);
-			if (distSq < bestDistSq) {
-				bestDistSq = distSq;
-				bestLoc = loc;
-			}			
-		}
-		
-		if (nTurret >= nTurretMax) {
-			int rdn = FastMath.rand256();
-			Direction dir = Direction.values()[rdn % 8];
-			if (rc.canMove(dir)) {
-				rc.move(dir);
-				return;
-			}
-		}
-		if (bestLoc != null) {
-			// Bug.goTo(bestLoc);
-		}
-	}
 
-	private static int spawnCount = 0;
-
-	private static int nTurret = 0;
-	private static int nTurretMax = 4;
-	
-	private static void countTurret() throws GameActionException {
-		nTurret = 0;
-		RobotInfo[] infos = rc.senseNearbyRobots(2, us);
-		for (RobotInfo info : infos) {
-			if (info.type == RobotType.TURRET) {
-				nTurret += 1;
-			}
-		}
-		nTurretMax = nTurret;
-		for (Direction dir : Direction.values()) {
-			MapLocation tl = here.add(dir);
-			if (0 == (tl.x + tl.y) % 2 && rc.canMove(dir)) {
-				nTurretMax += 1;
-			}
-		}
-	}
-	
 	private static void trySpawn() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 
-		RobotType spawnType = (spawnCount == 0 ? RobotType.SCOUT : RobotType.SOLDIER);
+		RobotType spawnType = (spawnCount % 10 == 0 ? RobotType.SCOUT : RobotType.SOLDIER);
 
 		if (!rc.hasBuildRequirements(spawnType)) return;
 

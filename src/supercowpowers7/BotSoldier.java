@@ -1,22 +1,15 @@
 package supercowpowers7;
 
 import battlecode.common.*;
-import explore.Messages.PartsLocation;;
 
 public class BotSoldier extends Globals {
-	
-	public static int motherId = 0;
-	public static MapLocation motherLocation = null;
-	public static boolean isHappyShooting = false;
-	
-	private static int targetReceivedRound = -999999;
-	private static MapLocation receivedTarget = null;
-	
 	public static void loop() {
-		updateMotherId(8);
+		Debug.init("micro");
+		FastMath.initRand(rc);
 		while (true) {
 			try {
-			    turn();
+				Globals.update();
+				turn();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -24,74 +17,24 @@ public class BotSoldier extends Globals {
 		}
 	}
 	
-	public static void updateMotherId(int range) {
-		RobotInfo[] infos = rc.senseNearbyRobots(range, us);
-		for (RobotInfo info : infos) {
-			if (info.type == RobotType.ARCHON) {
-				motherId = info.ID;
-				motherLocation = info.location;
-				break;
-			}
-		}
-	}
-	
-	public static void updateMotherLocation() throws GameActionException {
-		if (rc.canSenseRobot(motherId)) {
-			motherLocation = rc.senseRobot(motherId).location;
-		} else {
-			updateMotherId(mySensorRadiusSquared);
-		}
-	}
-	
-	public static boolean shootEnemy() throws GameActionException {
-		MapLocation bestLoc = null;
-		RobotInfo[] infos = rc.senseNearbyRobots(myAttackRadiusSquared, them);
-		for (RobotInfo info : infos) {
-			if (info.type == RobotType.ARCHON && bestLoc == null) {
-				if (bestLoc == null) {
-					bestLoc = info.location;
-				}
-			} else {
-				rc.attackLocation(info.location);
-				return true;
-			}
-		}
-		infos = rc.senseNearbyRobots(myAttackRadiusSquared, Team.ZOMBIE);
-		for (RobotInfo info : infos) {
-			 if (info.type == RobotType.ZOMBIEDEN) {
-				 if (bestLoc == null) {
-					 bestLoc = info.location;
-				 }
-			 } else {
-				 rc.attackLocation(info.location);
-				 return true;
-			 }
-		}
-		if (bestLoc != null) {
-			if (bestLoc.equals(receivedTarget)) {
-				if (here.distanceSquaredTo(bestLoc) > 8) {
-					// try to move closer to attack target so that more allies can hit it
-					if (rc.isCoreReady() && Bug.tryMoveInDirection(here.directionTo(bestLoc))) {
-						return true;
-					}
-				}
-			}
-			rc.attackLocation(bestLoc);
-			return true;
-		}
-		return false;
-	}
+	private static MapLocation attackTarget = null;
+	private static int attackTargetReceivedRound = -9999;
+	private static Direction wanderDirection = null;
 
-	public static void followMother() throws GameActionException {
-		if (rc.isCoreReady()) {
-			if (rc.canSenseRobot(motherId)) {
-				receivedTarget = rc.senseRobot(motherId).location;
-			}
-			
-			if (receivedTarget != null) {			
-			    DirectNav.politelySwarmToAvoidingArchons(receivedTarget);
+	private static void turn() throws GameActionException {
+		processSignals();
+		
+		if (tryToMicro()) {
+			return;
+		}
+		
+		if (rc.getHealth() < myType.maxHealth / 2) {
+			if (tryToHealAtArchon()) {
+				return;
 			}
 		}
+		
+		lookForZombieDens();
 	}
 
 	private static void processSignals() {
@@ -103,8 +46,11 @@ public class BotSoldier extends Globals {
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
 				case Messages.CHANNEL_ATTACK_TARGET:
-					targetReceivedRound = rc.getRoundNum();
-					receivedTarget = Messages.parseAttackTarget(data);
+					MapLocation suggestedTarget = Messages.parseAttackTarget(data);
+					if (attackTarget == null || here.distanceSquaredTo(suggestedTarget) < here.distanceSquaredTo(attackTarget)) {
+						attackTarget = suggestedTarget;
+						attackTargetReceivedRound = rc.getRoundNum();
+					}
 					break;
 				default:
 				}
@@ -112,18 +58,178 @@ public class BotSoldier extends Globals {
 		}
 	}
 
-	private static void turn() throws GameActionException {
-		Globals.update();
-		if (rc.isWeaponReady()) {
-			if (shootEnemy()) {
-				isHappyShooting = true;
-			} else {
-				isHappyShooting = false;
+	private static boolean tryToMicro() throws GameActionException {
+		RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
+
+		if (attackableHostiles.length > 0) {
+			if (rc.isWeaponReady()) {	
+				chooseTargetAndAttack(attackableHostiles);
 			}
 		}
-		processSignals();
-		if (rc.getHealth() != myType.maxHealth || !isHappyShooting) {
-			followMother();
+
+		if (!rc.isCoreReady()) {
+			return false;
+		}
+		
+		RobotInfo[] visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		if (visibleHostiles.length == 0) {
+			return false;
+		}		
+		if (retreatIfNecessary(visibleHostiles)) {
+			return true;
+		}
+		if (attackableHostiles.length > 0) {
+			return true; // if in combat, stay and fight (since we decided not to retreat)
+		}
+		if (tryHelpAlly(visibleHostiles)) {
+			return true;
+		}
+		if (tryAttackHelplessTarget(visibleHostiles)) {
+			return true;
+		}
+		
+		return false;
+	}
+	
+	private static void chooseTargetAndAttack(RobotInfo[] targets) throws GameActionException {
+		RobotInfo bestTarget = null;
+		double minHealth = Double.MAX_VALUE;
+		for (RobotInfo target : targets) {
+			if (target.health < minHealth) {
+				minHealth = target.health;
+				bestTarget = target;
+			}
+		}
+		if (bestTarget != null) {
+			Debug.indicate("micro", 0, "attacking " + bestTarget.type);
+			rc.attackLocation(bestTarget.location);
+		}
+	}
+
+
+	private static boolean retreatIfNecessary(RobotInfo[] visibleHostiles) throws GameActionException {
+		boolean mustRetreat = false;
+		for (RobotInfo hostile : visibleHostiles) {
+			RobotType hostileType = hostile.type;
+			if (!hostileType.canAttack()) {
+				continue;				
+			}
+			int distSq = here.distanceSquaredTo(hostile.location);
+			if (distSq <= hostileType.attackRadiusSquared) {
+				mustRetreat = true;
+				break;
+			}
+		}
+		
+		if (!mustRetreat) return false;
+
+		Direction[] dirs = Direction.values();		
+		MapLocation[] dirLocs = new MapLocation[8];
+		int[] penalties = new int[8];
+		boolean[] canMove = new boolean[8];
+		for (int d = 0; d < 8; ++d) {
+			dirLocs[d] = here.add(dirs[d]);
+			canMove[d] = rc.canMove(dirs[d]);
+		}
+
+		for (RobotInfo hostile : visibleHostiles) {
+			RobotType hostileType = hostile.type;
+			if (!hostileType.canAttack()) {
+				continue;				
+			}
+			MapLocation hostileLoc = hostile.location;
+			int hostileRange = hostileType.attackRadiusSquared;
+			for (int d = 0; d < 8; ++d) {
+				if (canMove[d] && hostileLoc.distanceSquaredTo(dirLocs[d]) <= hostileRange) {
+					penalties[d]++;
+				}
+			}
+		}
+
+		Direction bestDir = null;
+		int minPenalty = 999999;
+		for (int d = 0; d < 8; ++d) {
+			if (canMove[d] && penalties[d] < minPenalty) {
+				minPenalty = penalties[d];
+				bestDir = dirs[d];
+			}
+		}
+		if (bestDir != null) {
+			Debug.indicate("micro", 0, "retreating");
+			rc.move(bestDir);
+			return true;
+		}
+
+		return false;
+	}
+	
+	private static boolean tryHelpAlly(RobotInfo[] visibleHostiles) throws GameActionException {
+		MapLocation closestHostile = Util.closest(visibleHostiles).location;
+		
+		boolean allyIsFighting = false;
+		RobotInfo[] alliesAroundHostile = 
+				rc.senseNearbyRobots(closestHostile, myAttackRadiusSquared, us);
+		for (RobotInfo ally : alliesAroundHostile) {
+			if (ally.type.canAttack()) {
+				if (ally.location.distanceSquaredTo(closestHostile) <= ally.type.attackRadiusSquared) {
+					allyIsFighting = true;
+					break;
+				}
+			}
+		}
+		
+		if (allyIsFighting) {
+			if (Bug.tryMoveInDirection(here.directionTo(closestHostile))) {
+				Debug.indicate("micro", 0, "helping ally fight hostile at " + closestHostile);
+				return true;
+			}
+		}
+		return false;
+	}
+	
+	private static boolean tryAttackHelplessTarget(RobotInfo[] visibleHostiles) throws GameActionException {
+		RobotInfo closestHostile = Util.closest(visibleHostiles);
+		if (closestHostile.type.canAttack()) {
+			return false;
+		}
+		
+		if (Bug.tryMoveInDirection(here.directionTo(closestHostile.location))) {
+			Debug.indicate("micro", 0, "moving to attack helpless " + closestHostile.type + " at " + closestHostile.location);
+			return true;
+		}
+		return false;
+	}
+	
+	
+	private static boolean tryToHealAtArchon() {
+		return false;
+	}
+	
+	
+	private static void lookForZombieDens() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+
+		if (attackTarget != null) {
+			if (rc.canSenseLocation(attackTarget)) {
+				RobotInfo targetInfo = rc.senseRobotAtLocation(attackTarget);
+				if (targetInfo == null || targetInfo.team == us) {
+					attackTarget = null;
+				}
+			}
+		}
+		
+		if (attackTarget != null) {
+			DirectNav.goTo(attackTarget);
+			return;
+		}
+		
+		if (wanderDirection == null || !rc.canMove(wanderDirection)) {
+			wanderDirection = Direction.values()[FastMath.rand256() % 8];
+		}
+		
+		if (rc.canMove(wanderDirection)) {
+			Debug.indicate("micro", 0, "wandering");
+			rc.move(wanderDirection);
 		}
 	}
 }
