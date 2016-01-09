@@ -245,11 +245,11 @@ public class BotArchon extends Globals {
 		for (int i = 0; i < 9; ++i) {
 			scores[i] = -attacks[i] * 1000;
 			if (locs[i] == dangerousLoc) {
-				scores[i] -= 5000;
+				scores[i] -= 2000;
 			}
 			if (rubbles[i] >= GameConstants.RUBBLE_SLOW_THRESH) {
 				scores[i] -= attacks[8] * 1000;
-				scores[i] += 1000;
+				scores[i] += 500;
 			}
 			if (oddPos[i]) {
 				scores[i] += 100;
