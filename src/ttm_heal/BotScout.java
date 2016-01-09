@@ -243,7 +243,7 @@ public class BotScout extends Globals {
 		for (int i = 0; i < 9; ++i) {
 			scores[i] = -attacks[i] * 1000;
 			if (locs[i] == dangerousLoc) {
-				scores[i] -= 1000;
+				scores[i] -= 5000;
 			}
 			if (rubbles[i] >= GameConstants.RUBBLE_SLOW_THRESH) {
 				scores[i] -= attacks[8] * 1000;
@@ -253,9 +253,9 @@ public class BotScout extends Globals {
 				scores[i] += 100;
 			}
 			if (nturrets[i] < 2) {
-				scores[i] -= (2-nturrets[i]) * 50;
+				scores[i] -= (1-nturrets[i]) * 50;
 			}
-			// scores[i] += turrets[i] - scouts[i] * 8;
+			scores[i] += turrets[i] - scouts[i] * 8;
 		}
 		if (lastSignal > 5 || attacks[8] > 0) {
 			scores[8] -= 100;

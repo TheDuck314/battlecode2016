@@ -91,19 +91,19 @@ public class BotArchon extends Globals {
 //				bestLoc = loc;
 //			}			
 //		}
-		if (nTurret >= nTurretMax) {
+//		if (nTurret >= nTurretMax) {
 //			int rdn = FastMath.rand256();
 //			Direction dir = Direction.values()[rdn % 8];
 //			if (Bug.tryMoveInDirection(dir)) {
 //				return;
 //			}
-		} else {
+//		} else {
 //			Direction dir = saferDir();
 //			if (dir != null) {
 //				rc.move(dir);
 //				return;
 //			}
-		}
+//		}
 //		if (bestLoc != null) {
 //			DBug.goTo(bestLoc);
 //		}
@@ -217,7 +217,7 @@ public class BotArchon extends Globals {
 			}
 			switch (f.type) {
 			case ARCHON:
-				if (here.distanceSquaredTo(f.location) < 12) {
+				if (here.distanceSquaredTo(f.location) < 4) {
 					archonVec = archonVec.add(here.directionTo(f.location));
 				}
 				break;
@@ -245,9 +245,10 @@ public class BotArchon extends Globals {
 		for (int i = 0; i < 9; ++i) {
 			scores[i] = -attacks[i] * 1000;
 			if (locs[i] == dangerousLoc) {
-				scores[i] -= 1000;
+				scores[i] -= 5000;
 			}
 			if (rubbles[i] >= GameConstants.RUBBLE_SLOW_THRESH) {
+				scores[i] -= attacks[8] * 1000;
 				scores[i] += 1000;
 			}
 			if (oddPos[i]) {
@@ -290,7 +291,6 @@ public class BotArchon extends Globals {
 	private static int spawnCount = 0;
 
 	private static int nTurret = 0;
-	private static int nTurretMax = 4;
 	
 	private static void trySpawn() throws GameActionException {
 		if (!rc.isCoreReady()) return;
@@ -324,7 +324,7 @@ public class BotArchon extends Globals {
 			}
 			
 			spawnType = RobotType.TURRET;
-			if (nscout == 0 || nscout * 4 < nturrets) {
+			if (nturrets > 1 && nscout == 0 || nscout * 4 < nturrets) {
 				spawnType = RobotType.SCOUT;
 			}
 			
