@@ -10,6 +10,11 @@ public class Bug extends Globals {
 	private static int closestDistWhileBugging = Integer.MAX_VALUE;
 	private static int numTurnsWithNoWall = 0;
 
+	public static void reset() {
+		dest = null;
+		tracing = false;
+	}
+	
 	public static void goTo(MapLocation theDest) throws GameActionException {
 		if (!theDest.equals(dest)) {
 			dest = theDest;
