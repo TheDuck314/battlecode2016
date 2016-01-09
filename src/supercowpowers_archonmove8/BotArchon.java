@@ -92,7 +92,7 @@ public class BotArchon extends Globals {
 		//exploreForNeutralsAndParts();	
 	}
 	
-	private static int nTurret = 0;
+	private static int nFriend = 0;
 	
 	public static MapLocation dangerousLoc = null;
 	public static int dangerousTurn = 0;
@@ -121,8 +121,8 @@ public class BotArchon extends Globals {
 		boolean[] oddPos = new boolean[9];
 		double[] rubbles = new double[9];
 		double[] attacks = new double[9];
-		double[] nturrets = new double[9];
-		double[] turrets = new double[9];
+		double[] nfriends = new double[9];
+		double[] friends = new double[9];
 		double[] scouts  = new double[9];
 		double[] archons  = new double[9];
 		dirs[8] = null;
@@ -147,7 +147,7 @@ public class BotArchon extends Globals {
 			}
 		}
 		infos = rc.senseNearbyRobots(mySensorRadiusSquared, us);
-		MapLocation turretVec = new MapLocation(0,0);
+		MapLocation friendVec = new MapLocation(0,0);
 		MapLocation scoutVec = new MapLocation(0,0);
 		MapLocation archonVec = new MapLocation(0,0);
 		for (RobotInfo f : infos) {
@@ -160,13 +160,14 @@ public class BotArchon extends Globals {
 					archonVec = archonVec.add(here.directionTo(f.location));
 				}
 				break;
+			case SOLDIER:
 			case TURRET:
 				for (int i = 0; i < 9; ++i) {
 					if (f.location.distanceSquaredTo(locs[i]) < 9) {
-						nturrets[i] += 1;
+						nfriends[i] += 1;
 					}
 				}
-				turretVec = turretVec.add(here.directionTo(f.location));
+				friendVec = friendVec.add(here.directionTo(f.location));
 				break;
 			case SCOUT:
 				scoutVec = scoutVec.add(here.directionTo(f.location));
@@ -174,9 +175,9 @@ public class BotArchon extends Globals {
 			default:
 			}
 		}
-//		rc.setIndicatorLine(here, FastMath.addVec(turretVec, FastMath.addVec(here, FastMath.multiplyVec(-5,scoutVec))), 0, 255, 0);
+//		rc.setIndicatorLine(here, FastMath.addVec(friendVec, FastMath.addVec(here, FastMath.multiplyVec(-5,scoutVec))), 0, 255, 0);
 		for (int i = 0; i < 9; ++i) {
-			turrets[i] = FastMath.dotVec(dirs[i], turretVec);
+			friends[i] = FastMath.dotVec(dirs[i], friendVec);
 			scouts[i] = FastMath.dotVec(dirs[i], scoutVec);
 			archons[i] = FastMath.dotVec(dirs[i], archonVec);
 		}
@@ -193,11 +194,11 @@ public class BotArchon extends Globals {
 //			if (oddPos[i]) {
 //				scores[i] += 100;
 //			}
-//			scores[i] += nturrets[i] * 50;
-//			scores[i] += turrets[i] + scouts[i];
+//			scores[i] += nfriends[i] * 50;
+			scores[i] += friends[i] + scouts[i];
 //			scores[i] -= archons[i] * 50;
 		}
-		scores[8] += 500;
+		scores[8] += FastMath.rand256() - 128;
 		for (int i = 0; i < 8; ++i) {
 			if (rubbles[i] < GameConstants.RUBBLE_SLOW_THRESH && !cmoves[i]) {
 				scores[i] = -100000;
@@ -214,10 +215,10 @@ public class BotArchon extends Globals {
 				bestI = i;
 			}
 		}
-		nTurret = (int)nturrets[8];
+		nFriend = (int)nfriends[8];
 		if (bestDir != null) {
 			if (rc.canMove(bestDir)) {
-				nTurret = (int)nturrets[bestI];
+				nFriend = (int)nfriends[bestI];
 			}
 			DBug.tryMoveClearDir(bestDir);
 		} else if (rubbles[8] >= GameConstants.RUBBLE_SLOW_THRESH) {
