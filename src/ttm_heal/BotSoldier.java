@@ -37,6 +37,7 @@ public class BotSoldier extends Globals {
 		} else {
 			updateMotherId(mySensorRadiusSquared);
 			Bug.reset();
+			DBug.reset();
 		}
 	}
 	
@@ -60,7 +61,7 @@ public class BotSoldier extends Globals {
 	public static void followMother() throws GameActionException {
 		if (rc.isCoreReady()) {
 			updateMotherLocation();
-			Bug.goTo(motherLocation);
+			DBug.goTo(motherLocation);
 		}
 	}
 	
