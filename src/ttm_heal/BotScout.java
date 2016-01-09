@@ -42,7 +42,7 @@ public class BotScout extends Globals {
 				if (distSq > RobotType.TURRET.sensorRadiusSquared && distSq <= RobotType.TURRET.attackRadiusSquared) {
 					++score;
 					if (distSq <= enemy.type.attackRadiusSquared) {
-						score += 2;
+						score += enemy.attackPower;
 					}
 				}
 			}
@@ -222,7 +222,7 @@ public class BotScout extends Globals {
 			case ARCHON:
 			case TURRET:
 				for (int i = 0; i < 9; ++i) {
-					if (f.location.distanceSquaredTo(locs[i]) < 9) {
+					if (f.location.distanceSquaredTo(locs[i]) < 16) {
 						nturrets[i] += 1;
 					}
 				}
@@ -246,17 +246,18 @@ public class BotScout extends Globals {
 				scores[i] -= 1000;
 			}
 			if (rubbles[i] >= GameConstants.RUBBLE_SLOW_THRESH) {
+				scores[i] -= attacks[8] * 1000;
 				scores[i] += 1000;
 			}
 			if (oddPos[i]) {
 				scores[i] += 100;
 			}
-			if (nturrets[i] < 1) {
+			if (nturrets[i] < 2) {
 				scores[i] -= (2-nturrets[i]) * 50;
 			}
-			scores[i] += turrets[i] - scouts[i] * 8;
+			// scores[i] += turrets[i] - scouts[i] * 8;
 		}
-		if (lastSignal > 5) {
+		if (lastSignal > 5 || attacks[8] > 0) {
 			scores[8] -= 100;
 		} else {
 			scores[8] += 200;
