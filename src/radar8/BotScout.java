@@ -32,12 +32,42 @@ public class BotScout extends Globals {
 	private static void turn() throws GameActionException {
 		processSignals();		
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
+
+		trySendAttackTarget();
+		
+		trySendPartsOrNeutralLocation();
 		
 		retreatIfNecessary();
 		
-		trySendAttackTarget();
-		
 		explore();
+	}
+	
+	private static int lastPartsOrNeutralSignalRound = -999999;
+	
+	private static void trySendPartsOrNeutralLocation() throws GameActionException {
+		if (lastPartsOrNeutralSignalRound > rc.getRoundNum() - 10) return;
+		
+		MapLocation[] nearbyLocs = MapLocation.getAllMapLocationsWithinRadiusSq(here, RobotType.ARCHON.sensorRadiusSquared);
+		
+		for (MapLocation loc : nearbyLocs) {
+			double numParts = rc.senseParts(loc);
+			if (numParts >= 1) {
+				Messages.sendPartsLocation(loc, (int)numParts, 4*mySensorRadiusSquared);
+				lastPartsOrNeutralSignalRound = rc.getRoundNum();
+				return;
+			}
+			RobotInfo robot = rc.senseRobotAtLocation(loc);
+			if (robot != null && robot.team == Team.NEUTRAL) {
+				lastPartsOrNeutralSignalRound = rc.getRoundNum();
+				Messages.sendNeutralLocation(loc, 2*mySensorRadiusSquared);
+				return;
+			}
+		}	
+	}
+	
+	private static void sendRadarData() {
+		//RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSq);
+		
 	}
 	
 	private static void trySendAttackTarget() throws GameActionException {

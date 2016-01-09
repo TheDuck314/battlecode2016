@@ -8,9 +8,19 @@ public class DirectNav extends Globals {
 		if (here.equals(dest)) return;
 
         Direction forward = here.directionTo(dest);
+	    MapLocation forwardLoc = here.add(forward);
+		if (here.isAdjacentTo(dest)) {
+			if (rc.canMove(forward)) {
+				rc.move(forward);
+				return;
+			} else if (rc.senseRubble(forwardLoc) > GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
+				rc.clearRubble(forward);
+				return;
+			}
+		}
+		
 		Direction left = forward.rotateLeft();
 		Direction right = forward.rotateRight();
-	    MapLocation forwardLoc = here.add(forward);
 		MapLocation leftLoc = here.add(left);
 		MapLocation rightLoc = here.add(right);
 	    double forwardRubble = rc.senseRubble(forwardLoc);

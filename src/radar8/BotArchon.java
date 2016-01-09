@@ -1,14 +1,9 @@
 package radar8;
 
 import battlecode.common.*;
-import supercowpowers7.Messages.PartsLocation;
+import radar8.Messages.PartsLocation;
 
 public class BotArchon extends Globals {
-	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
-	private static MapLocation[] denAttackQueue = new MapLocation[1000];
-	private static int denAttackQueueHead = 0;
-	private static int denAttackQueueTail = 0;
-
 	private static int spawnCount = 0;
 
 	private static int lastArchonLocationMessageRound = 0;
@@ -19,10 +14,12 @@ public class BotArchon extends Globals {
 	private static int archonOrder = 0;
 	private static MapLocation rallyPoint = null;
 	
+	private static MapLocation currentDestination = null;
+	
 	public static void loop() throws GameActionException {
-		Debug.init("heal");
+		Debug.init("parts");
 		FastMath.initRand(rc);
-		initArchons();
+		//initArchons();
 
 		while (true) {
 			try {
@@ -89,13 +86,20 @@ public class BotArchon extends Globals {
 		tryRepairAlly();
 		tryConvertNeutrals();
 		
-
-		//exploreForNeutralsAndParts();	
+		if (rc.isCoreReady()) {
+			pickDestination();
+			
+			if (currentDestination != null) {
+			    goToDestination();
+			} else {
+				goToCenterOfMass();
+			}
+		}
 	}
 	
 	private static void trySendArchonLocationMessage() throws GameActionException {
-		if (lastArchonLocationMessageRound < rc.getRoundNum() - 40) {
-			Messages.sendArchonLocation(here, MapEdges.maxBroadcastDistSq());
+		if (lastArchonLocationMessageRound < rc.getRoundNum() - 60) {
+			Messages.sendArchonLocation(here, 900);
 			lastArchonLocationMessageRound = rc.getRoundNum();
 			Debug.indicate("heal", 0, "sent archon location");
 		}
@@ -109,42 +113,19 @@ public class BotArchon extends Globals {
 		}
 	}
 	
-	private static void tryAttackZombieDen() throws GameActionException {
-		if (!rc.isCoreReady()) return;
-		
-		MapLocation target = denAttackQueue[denAttackQueueHead];
-		if (target == null) {
-			Debug.indicate("dens", 0, "target is null :(");
-			return;
-		}
-
-		if (rc.canSenseLocation(target)) {
-			RobotInfo botAtTarget = rc.senseRobotAtLocation(target);
-			if (botAtTarget == null || botAtTarget.type != RobotType.ZOMBIEDEN) {
-				// this den has been destroyed. Move on to the next one.
-				++denAttackQueueHead;
-				Debug.indicate("dens", 0, "den at " + target + " seems to be destroyed. now head = " + denAttackQueueHead);
-				return;
-			}
-		}
-		
-		if (here.distanceSquaredTo(target) <= 20) {
-			Debug.indicate("dens", 0, "stationed near den at " + target);
-			//Messages.sendAttackTarget(target, 100*mySensorRadiusSquared);
-			return;
-		}
-		
-		Debug.indicate("dens", 0, "going to den at " + target);
-		//Bug.goTo(target);
-		DirectNav.goTo(target);
-		//Messages.sendAttackTarget(target, 2*mySensorRadiusSquared);
-	}
-
 	private static void trySpawn() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 
-		RobotType spawnType = (spawnCount % 10 == 0 ? RobotType.SCOUT : RobotType.SOLDIER);
-
+		RobotType spawnType = RobotType.SOLDIER;
+		if (rc.getRoundNum() > 400) {
+			if (spawnCount % 4 == 0) {
+				spawnType = RobotType.TURRET;
+			}
+		}
+		if (spawnCount % 10 == 0) {
+			spawnType = RobotType.SCOUT;
+		}
+		
 		if (!rc.hasBuildRequirements(spawnType)) return;
 
 		Direction dir = Direction.values()[FastMath.rand256() % 8];
@@ -184,6 +165,11 @@ public class BotArchon extends Globals {
 		}
 	}
 	
+	private static void considerDestination(MapLocation loc) {
+		if (currentDestination == null || here.distanceSquaredTo(loc) < here.distanceSquaredTo(currentDestination)) {
+			currentDestination = loc;
+		}
+	}
 	
 	private static void processSignals() {
 		Signal[] signals = rc.emptySignalQueue();
@@ -195,20 +181,12 @@ public class BotArchon extends Globals {
 				switch(data[0] & Messages.CHANNEL_MASK) {
 				case Messages.CHANNEL_FOUND_PARTS:
 					PartsLocation partsLoc = Messages.parsePartsLocation(data);
-					Debug.indicate("explore", 0, "heard about " + partsLoc.numParts + " parts at " + partsLoc.location);
+					Debug.indicate("parts", 0, "parts at " + partsLoc.location);
+					considerDestination(partsLoc.location);
 					break;
-				case Messages.CHANNEL_ZOMBIE_DEN:
-					MapLocation zombieDenLoc = Messages.parseZombieDenLocation(data);
-					Debug.indicate("explore", 1, "heard about a zombie den at " + zombieDenLoc);
-					if (knownZombieDens.add(zombieDenLoc)) {
-						denAttackQueue[denAttackQueueTail++] = zombieDenLoc;
-					} else {
-						Debug.indicateAppend("explore", 1, "; but we already knew about it");
-					}
-					break;
-				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
-					MapLocation enemyTurretLoc = Messages.parseEnemyTurretWarning(data);
-					Debug.indicate("explore", 2, "heard about an enemy turret at " + enemyTurretLoc);
+				case Messages.CHANNEL_FOUND_NEUTRAL:
+					MapLocation neutralLoc = Messages.parseNeutralLocation(data);
+					considerDestination(neutralLoc);
 					break;
 					
 				case Messages.CHANNEL_MAP_MIN_X:
@@ -230,5 +208,56 @@ public class BotArchon extends Globals {
 				// simple signal with no message
 			}
 		}
+	}
+	
+	private static void pickDestination() throws GameActionException {
+		if (currentDestination != null) {
+			if (here.equals(currentDestination)) {
+				currentDestination = null;
+			} else if (rc.canSenseLocation(currentDestination)) {
+				if (rc.senseParts(currentDestination) == 0) {
+					RobotInfo robot = rc.senseRobotAtLocation(currentDestination);
+					if (robot == null || robot.team != Team.NEUTRAL) {
+						currentDestination = null;
+					}
+				}
+			}
+		}
+		
+		MapLocation[] nearbyLocs = MapLocation.getAllMapLocationsWithinRadiusSq(here, mySensorRadiusSquared);
+		
+		for (MapLocation loc : nearbyLocs) {
+			double numParts = rc.senseParts(loc);
+			if (numParts >= 1) {
+				considerDestination(loc);
+				continue;
+			}
+			RobotInfo robot = rc.senseRobotAtLocation(loc);
+			if (robot != null && robot.team == Team.NEUTRAL) {
+				considerDestination(loc);
+				continue;
+			}
+		}	
+	}
+	
+	private static void goToDestination() throws GameActionException {
+		Debug.indicate("parts", 1, "destination = " + currentDestination);
+		if (currentDestination != null) {
+			DirectNav.goTo(currentDestination);
+		}
+	}
+	
+	private static void goToCenterOfMass() throws GameActionException {
+		RobotInfo[] allies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		if (allies.length == 0) return;
+		int avgX = 0;
+		int avgY = 0;
+		for (RobotInfo ally : allies) {
+			avgX += ally.location.x;
+			avgY += ally.location.y;
+		}
+		avgX /= allies.length;
+		avgY /= allies.length;
+		DirectNav.goTo(new MapLocation(avgX, avgY));
 	}
 }
