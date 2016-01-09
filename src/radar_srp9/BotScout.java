@@ -37,9 +37,10 @@ public class BotScout extends Globals {
 		
 		trySendPartsOrNeutralLocation();
 		
-		retreatIfNecessary();
+//		retreatIfNecessary();
+//		explore();
 		
-		explore();
+		moveAround();
 	}
 	
 	private static int lastPartsOrNeutralSignalRound = -999999;
@@ -108,6 +109,159 @@ public class BotScout extends Globals {
 		}
 	}
 	
+	private static int nFriend = 0;
+	
+	public static MapLocation dangerousLoc = null;
+	public static int dangerousTurn = 0;
+	public static double myHealth;
+	
+	public static Direction lastDir = null;
+
+	public static void updateDangerousLoc() {
+		if (rc.getHealth() < myHealth) {
+			dangerousLoc = here;
+			dangerousTurn = 0;
+			myHealth = rc.getHealth();
+		} else if (dangerousLoc != null) {
+			if (dangerousTurn >= 200) {
+				dangerousLoc = null;
+				dangerousTurn = 0;
+			}
+			dangerousTurn += 1;
+		}
+	}
+
+	private static void moveAround() throws GameActionException {
+		updateDangerousLoc();
+		if (!rc.isCoreReady()) return;
+		Direction[] dirs = new Direction[9];
+		boolean[] cmoves = new boolean[9];
+		MapLocation[] locs = new MapLocation[9];
+//		boolean[] oddPos = new boolean[9];
+		double[] rubbles = new double[9];
+		double[] attacks = new double[9];
+		double[] nfriends = new double[9];
+		double[] friends = new double[9];
+		double[] scouts  = new double[9];
+		double[] archons  = new double[9];
+		dirs[8] = null;
+		cmoves[8] = true;
+		locs[8] = here;
+		for (int i = 0; i < 8; ++i) {
+			dirs[i] = Direction.values()[i];
+			locs[i] = here.add(dirs[i]);
+			cmoves[i] = rc.canMove(dirs[i]);
+		}
+		for (int i = 0; i < 9; ++i) {
+//			oddPos[i] = !isGoodTurretLocation(locs[i]);
+			rubbles[i] = rc.senseRubble(locs[i]);
+		}
+		RobotInfo[] infos;
+		infos = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		for (RobotInfo e : infos) {
+			for (int i = 0; i < 9; ++i) {
+				int distSq = e.location.distanceSquaredTo(locs[i]);
+				if (distSq <= e.type.attackRadiusSquared) {
+					attacks[i] += e.attackPower;
+				} else {
+					attacks[i] += e.attackPower / (5 * distSq / (e.type.attackRadiusSquared+1));
+				}
+			}
+		}
+		infos = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		MapLocation friendVec = new MapLocation(0,0);
+		MapLocation scoutVec = new MapLocation(0,0);
+		MapLocation archonVec = new MapLocation(0,0);
+		for (RobotInfo f : infos) {
+			if (f.ID == myID) {
+				continue;
+			}
+			switch (f.type) {
+			case ARCHON:
+				archonVec = archonVec.add(here.directionTo(f.location));
+//				if (here.distanceSquaredTo(f.location) < 4) {
+//					archonVec = archonVec.add(here.directionTo(f.location));
+//				}
+				break;
+			// case SOLDIER:
+			case TURRET:
+				for (int i = 0; i < 9; ++i) {
+					if (f.location.distanceSquaredTo(locs[i]) < 9) {
+						nfriends[i] += 1;
+					}
+				}
+				friendVec = friendVec.add(here.directionTo(f.location));
+				break;
+			case SCOUT:
+				scoutVec = scoutVec.add(here.directionTo(f.location));
+				break;
+			default:
+			}
+		}
+//		rc.setIndicatorLine(here, FastMath.addVec(friendVec, FastMath.addVec(here, FastMath.multiplyVec(-5,scoutVec))), 0, 255, 0);
+		for (int i = 0; i < 9; ++i) {
+			friends[i] = FastMath.dotVec(dirs[i], friendVec);
+			scouts[i] = FastMath.dotVec(dirs[i], scoutVec);
+			archons[i] = FastMath.dotVec(dirs[i], archonVec);
+		}
+		double[] scores = new double[9];
+		for (int i = 0; i < 9; ++i) {
+			scores[i] = -attacks[i] * 1000;
+			if (locs[i] == dangerousLoc) {
+				scores[i] -= 2000;
+			}
+//			if (rubbles[i] >= GameConstants.RUBBLE_SLOW_THRESH) {
+//				scores[i] -= attacks[8] * 1000;
+//				scores[i] += 500;
+//			}
+//			if (oddPos[i]) {
+//				scores[i] += 100;
+//			}
+//			scores[i] += nfriends[i] * 50;
+			scores[i] += friends[i] - scouts[i] * 50;
+			scores[i] += archons[i] * 10;
+		}
+		for (int i = 0; i < 8; ++i) {
+			if (dirs[i].isDiagonal()) {
+				scores[i] += 10;
+			}
+			if (dirs[i] == lastDir) {
+				scores[i] += 100;
+				scores[(i+1)%8] += 50;
+				scores[(i+7)%8] += 50;
+			}
+		}
+		scores[8] -= 128;
+		for (int i = 0; i < 8; ++i) {
+			if (!cmoves[i]) {
+				scores[i] = -10000000;
+			}
+		}
+		double bestScore = -100000;
+		Direction bestDir = null;
+		int bestI = 8;
+//		int rdn = FastMath.rand256();
+		int rdn = 0;
+		for (int i = 0; i < 9; ++i) {
+			if (bestScore < scores[(rdn + i) % 9]) {
+				bestDir = dirs[(rdn + i) % 9];
+				bestScore = scores[(rdn + i) % 9];
+				bestI = i;
+			}
+		}
+		nFriend = (int)nfriends[8];
+		if (bestDir != null) {
+			if (rc.canMove(bestDir)) {
+				nFriend = (int)nfriends[bestI];
+			}
+			Bug.tryMoveInDirection(bestDir);
+		} else if (rubbles[8] >= GameConstants.RUBBLE_SLOW_THRESH) {
+			rc.clearRubble(Direction.NONE);
+		}
+		
+		lastDir = bestDir;
+		return;
+	}
 	
 	
 	private static MapLocation gridLocation(int gridX, int gridY) {

@@ -1,7 +1,6 @@
 package radar_srp9;
 
 import battlecode.common.*;
-import radar8.Messages.PartsLocation;
 
 public class BotArchon extends Globals {
 	private static int spawnCount = 0;

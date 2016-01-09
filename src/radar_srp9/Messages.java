@@ -94,16 +94,6 @@ public class Messages extends Globals {
 		rc.broadcastMessageSignal(data0, data1, radiusSq);
 	}
 	
-	// Result of parsing a part location signal.
-	public static class PartsLocation {
-		public MapLocation location;
-		public int numParts;
-		public PartsLocation(MapLocation location, int numParts) {
-			this.location = location;
-			this.numParts = numParts;
-		}
-	}
-	
 	// outPartsLoc is set to the MapLocation of the found parts
 	// the returned value is the number of parts at that location
 	public static PartsLocation parsePartsLocation(int[] data) {
