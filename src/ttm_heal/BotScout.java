@@ -199,7 +199,7 @@ public class BotScout extends Globals {
 			cmoves[i] = rc.canMove(dirs[i]);
 		}
 		for (int i = 0; i < 9; ++i) {
-			oddPos[i] = (locs[i].x + locs[i].y) % 2 != 0;
+			oddPos[i] = !isGoodTurretLocation(locs[i]);
 			rubbles[i] = rc.senseRubble(locs[i]);
 		}
 		RobotInfo[] infos;

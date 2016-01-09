@@ -12,6 +12,10 @@ public class Globals {
 	public static int myAttackRadiusSquared;
 	public static int mySensorRadiusSquared;
 	
+	public static boolean isGoodTurretLocation(MapLocation a) {
+		return a.x % 2 == 0 && (a.x / 2 + a.y) % 2 == 0;
+	}
+	
 	public static void init(RobotController theRC) {
 		rc = theRC;
 		us = rc.getTeam();

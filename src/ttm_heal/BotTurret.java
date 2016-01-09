@@ -103,25 +103,23 @@ public class BotTurret extends Globals {
 
 	private static MapLocation targetPosition = new MapLocation(1000, 1000);
 	
-	private static Direction[] goodDir = { Direction.NORTH, Direction.SOUTH, Direction.EAST, Direction.WEST };
-	private static Direction[] badDir = { Direction.NORTH_EAST, Direction.SOUTH_EAST, Direction.NORTH_WEST, Direction.SOUTH_WEST };
-
 	private static void trySettle() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 		int rdn = FastMath.rand256();
-		for (int i = 0; i < 4; ++i) {
-			Direction dir = goodDir[(rdn + i) % 4];
+		Direction bestDir = null;
+		for (int i = 0; i < 8; ++i) {
+			Direction dir = Direction.values()[(rdn + i) % 8];
 			if (rc.canMove(dir)) {
-				rc.move(dir);
-				return;
+				bestDir = dir;
+				if (isGoodTurretLocation(here.add(dir))) {
+					rc.move(dir);
+					return;
+				}
 			}
 		}
-		for (int i = 0; i < 4; ++i) {
-			Direction dir = badDir[(rdn + i) % 4];
-			if (rc.canMove(dir)) {
-				rc.move(dir);
-				return;
-			}
+		if (bestDir != null) {
+			rc.move(bestDir);
+			return;
 		}
 	}
 
@@ -156,7 +154,7 @@ public class BotTurret extends Globals {
 //			tryMoveToTarget();
 //			return;
 //		}
-		if (0 == (here.x + here.y) % 2) {
+		if (isGoodTurretLocation(here)) {
 			rc.unpack();
 			initTurret();
 			isTTM = false;
@@ -180,7 +178,7 @@ public class BotTurret extends Globals {
 //				rc.disintegrate();
 //			}
 //		}
-		if (0 != (here.x + here.y) % 2) {
+		if (!isGoodTurretLocation(here)) {
 			rc.pack();
 			isTTM = true;
 			return;

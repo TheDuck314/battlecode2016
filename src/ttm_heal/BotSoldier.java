@@ -49,6 +49,7 @@ public class BotSoldier extends Globals {
 			double score = info.health / (info.attackPower + 1);
 			if (score < bestScore) {
 				bestLoc = info.location;
+				bestScore = score;
 			}
 		}
 		if (bestLoc != null) {
