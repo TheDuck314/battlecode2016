@@ -1,16 +1,30 @@
-package ttm_heal;
+package supercowpowers_archonmove8;
 
 import battlecode.common.*;
 
 public class BotArchon extends Globals {
-	
+	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
+	private static MapLocation[] denAttackQueue = new MapLocation[1000];
+	private static int denAttackQueueHead = 0;
+	private static int denAttackQueueTail = 0;
+
+	private static int spawnCount = 0;
+
+	private static int lastArchonLocationMessageRound = 0;
+
+	private static int nArchons = 0;
+	private static MapLocation[] archonsLoc = new MapLocation[10];
+	private static int[] archonsId = new int[10];
+	private static int archonOrder = 0;
+	private static MapLocation rallyPoint = null;
 	
 	public static void loop() throws GameActionException {
+		Debug.init("heal");
 		FastMath.initRand(rc);
 		initArchons();
+
 		while (true) {
 			try {
-				numTurns += 1;
 				Globals.update();
 			    turn();
 			} catch (Exception e) {
@@ -20,36 +34,19 @@ public class BotArchon extends Globals {
 		}
 	}
 	
-	public static int numTurns = 0;
-	
-	private static void turn() throws GameActionException {
-		exploreForNeutralsAndParts();
-		trySpawn();
-		tryRepairAlly();
-		tryConvertNeutrals();
-	}
-	
-	public static int nArchons = 0;
-	public static MapLocation[] archonsLoc = new MapLocation[10];
-	public static int[] archonsId = new int[10];
-	public static int archonOrder = 0;
-	
-	public static MapLocation rallyPoint = null;
-	
-	public static void initArchons() throws GameActionException {
+	private static void initArchons() throws GameActionException {
 		Globals.update();
 		archonsLoc[nArchons] = here;
 		archonsId[nArchons] = myID;
 		nArchons += 1;
-		Messages.sendMapLocation(Messages.SOURCE_MASK, here, MapEdges.maxBroadcastDistSq());
+		Messages.sendArchonLocation(here, MapEdges.maxBroadcastDistSq());
 		Clock.yield();
-		numTurns += 1;
 		Signal[] signals = rc.emptySignalQueue();
 		for (Signal sig : signals) {
 			if (sig.getTeam() != us) continue;
 			int[] data = sig.getMessage();
 			if (data != null) {
-				if (data[0] == Messages.SOURCE_MASK) {
+				if ((data[0] & Messages.CHANNEL_MASK) == Messages.CHANNEL_ARCHON_LOCATION) {
 					archonsLoc[nArchons] = sig.getLocation();
 					archonsId[nArchons] = sig.getID();
 					nArchons += 1;
@@ -70,88 +67,31 @@ public class BotArchon extends Globals {
 		}
 	}
 	
-	private static void exploreForNeutralsAndParts() throws GameActionException {
-		if (!rc.isCoreReady()) return;
-		
-//		MapLocation[] nearbyLocs = MapLocation.getAllMapLocationsWithinRadiusSq(here, RobotType.ARCHON.sensorRadiusSquared);
-		
-		MapLocation bestLoc = null;
-//		int bestDistSq = Integer.MAX_VALUE;
-//		for (MapLocation loc : nearbyLocs) {
-//			double parts = rc.senseParts(loc);
-//			if (parts == 0) {
-//				RobotInfo info = rc.senseRobotAtLocation(loc);
-//				if (info == null || info.team != Team.NEUTRAL) continue;
-//			}
-//			// there are either parts or a neutral at this location
-//			int distSq = here.distanceSquaredTo(loc);
-//			if (distSq < bestDistSq) {
-//				bestDistSq = distSq;
-//				bestLoc = loc;
-//			}			
-//		}
-//		if (nTurret >= nTurretMax) {
-//			int rdn = FastMath.rand256();
-//			Direction dir = Direction.values()[rdn % 8];
-//			if (Bug.tryMoveInDirection(dir)) {
-//				return;
-//			}
-//		} else {
-//			Direction dir = saferDir();
-//			if (dir != null) {
-//				rc.move(dir);
-//				return;
-//			}
-//		}
-//		if (bestLoc != null) {
-//			DBug.goTo(bestLoc);
-//		}
-		if (numTurns <= 60 && rallyPoint != null && here.distanceSquaredTo(rallyPoint) > 8) {
-			avoidEnemy();
-			if (!rc.isCoreReady()) return;
-			DBug.goTo(rallyPoint);
-		} else {
-			moveAround();
+	private static void turn() throws GameActionException {
+		if (rc.getRoundNum() <= 100 && rallyPoint != null && here.distanceSquaredTo(rallyPoint) > 2) {
+			if (rc.isCoreReady()) {
+			    DBug.goTo(rallyPoint);
+			}
+			return;
 		}
+		
+		processSignals();
+		MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
+
+		trySendAttackTarget();
+		
+		trySendArchonLocationMessage();
+
+		
+		trySpawn();
+		
+		tryRepairAlly();
+		tryConvertNeutrals();
+		
+		moveAround();
+		//exploreForNeutralsAndParts();	
 	}
 	
-	private static void avoidEnemy() throws GameActionException {
-		if (!rc.isCoreReady()) return;
-		Direction escapeDir = avoidEnemyDirection();
-		if (null != escapeDir) {
-//			System.out.println("Try escape!");
-			if (Bug.tryMoveInDirection(escapeDir)) {
-//				System.out.println("escape!");
-				return;
-			}
-		}
-	}
-
-	private static Direction avoidEnemyDirection() {
-		Direction escapeDir = null;
-		if (escapeDir == null) {
-			RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
-			for (RobotInfo e : enemies) {
-//				 System.out.println("Got zombie in sight!");
-				if (e.location.distanceSquaredTo(here) <= e.type.attackRadiusSquared) {
-//					System.out.println("Got zombie in range!");
-					escapeDir = e.location.directionTo(here);
-				}
-			}
-		}
-		if (escapeDir == null) {
-			RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, them);
-			for (RobotInfo e : enemies) {
-//				System.out.println("Got enemy in sight!");
-				if (e.location.distanceSquaredTo(here) <= e.type.attackRadiusSquared) {
-//					System.out.println("Got enemy in range!");
-					escapeDir = e.location.directionTo(here);
-				}
-			}
-		}
-		return escapeDir;
-	}
-
 	private static int nFriend = 0;
 	
 	public static MapLocation dangerousLoc = null;
@@ -220,7 +160,7 @@ public class BotArchon extends Globals {
 					archonVec = archonVec.add(here.directionTo(f.location));
 				}
 				break;
-			// case SOLDIER:
+			case SOLDIER:
 			case TURRET:
 				for (int i = 0; i < 9; ++i) {
 					if (f.location.distanceSquaredTo(locs[i]) < 9) {
@@ -287,64 +227,67 @@ public class BotArchon extends Globals {
 		return;
 	}
 	
-	private static int spawnCount = 0;
+	private static void trySendArchonLocationMessage() throws GameActionException {
+		if (lastArchonLocationMessageRound < rc.getRoundNum() - 40) {
+			Messages.sendArchonLocation(here, MapEdges.maxBroadcastDistSq());
+			lastArchonLocationMessageRound = rc.getRoundNum();
+			Debug.indicate("heal", 0, "sent archon location");
+		}
+	}
 	
-	private static void trySpawn() throws GameActionException {
+	private static void trySendAttackTarget() throws GameActionException {
+		RobotInfo[] targets = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		int numTargets = (targets.length < 3 ? targets.length : 3);
+		for (int i = 0; i < numTargets; ++i) {
+			Messages.sendAttackTarget(targets[i].location, 9 * mySensorRadiusSquared);
+		}
+	}
+	
+	private static void tryAttackZombieDen() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 		
-		rc.setIndicatorString(2, "trySpawn: turn " + rc.getRoundNum());
+		MapLocation target = denAttackQueue[denAttackQueueHead];
+		if (target == null) {
+			Debug.indicate("dens", 0, "target is null :(");
+			return;
+		}
+
+		if (rc.canSenseLocation(target)) {
+			RobotInfo botAtTarget = rc.senseRobotAtLocation(target);
+			if (botAtTarget == null || botAtTarget.type != RobotType.ZOMBIEDEN) {
+				// this den has been destroyed. Move on to the next one.
+				++denAttackQueueHead;
+				Debug.indicate("dens", 0, "den at " + target + " seems to be destroyed. now head = " + denAttackQueueHead);
+				return;
+			}
+		}
 		
-		RobotType spawnType = ((spawnCount - archonOrder - 0) % 5 == 0 ? RobotType.SCOUT : RobotType.TURRET);
+		if (here.distanceSquaredTo(target) <= 20) {
+			Debug.indicate("dens", 0, "stationed near den at " + target);
+			//Messages.sendAttackTarget(target, 100*mySensorRadiusSquared);
+			return;
+		}
+		
+		Debug.indicate("dens", 0, "going to den at " + target);
+		//Bug.goTo(target);
+		DirectNav.goTo(target);
+		//Messages.sendAttackTarget(target, 2*mySensorRadiusSquared);
+	}
+
+	private static void trySpawn() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+
+		RobotType spawnType = (spawnCount % 10 == (2 + archonOrder) % 10 ? RobotType.SCOUT : RobotType.SOLDIER);
 
 		if (!rc.hasBuildRequirements(spawnType)) return;
 
-		// scouts can probably have different spawning conditions
-		double parts = rc.getTeamParts();
-		if (nFriend <= 1 || parts > 250 || parts > 125 + FastMath.rand256()) {
-			
-			RobotInfo[] infos = rc.senseNearbyRobots(mySensorRadiusSquared, us);
-			
-			int nscout = 0;
-			int nturrets = 0;
-			int nsoldies = 0;
-			
-			for (RobotInfo f : infos) {
-				switch (f.type) {
-				case SCOUT:
-					nscout += 1;
-					break;
-				case SOLDIER:
-					nsoldies += 1;
-					break;
-				case TTM:
-				case TURRET:
-					nturrets += 1;
-					break;
-				default:
-				}
-			}
-			
-			spawnType = RobotType.TURRET;
-			if (nsoldies < 6) {
-				spawnType = RobotType.SOLDIER;
-			}
-			if (nturrets > 1 && (nscout == 0 || (spawnCount - archonOrder - 0) % 5 == 0)) {
-				spawnType = RobotType.SCOUT;
-			}
-			
-			for (Direction dir : Direction.values()) {
-				MapLocation tl = here.add(dir);
-				if (0 == (tl.x + tl.y) % 2 && rc.canBuild(dir, spawnType)) {
-					rc.build(dir, spawnType);
-					++spawnCount;
-					return;
-				}
-			}
-			for (Direction dir : Direction.values()) {
-				if (rc.canBuild(dir, spawnType)) {
-					rc.build(dir, spawnType);
-					++spawnCount;
-					return;
+		Direction dir = Direction.values()[FastMath.rand256() % 8];
+		for (int i = 0; i < 8; ++i) {
+			if (rc.canBuild(dir, spawnType)) {
+				rc.build(dir, spawnType);
+				++spawnCount;
+				if (spawnType == RobotType.SCOUT) {
+					Messages.sendKnownMapEdges(2); // tell scout known map edges
 				}
 			}
 		}
@@ -353,16 +296,15 @@ public class BotArchon extends Globals {
 	private static void tryRepairAlly() throws GameActionException {
 		RobotInfo[] healableAllies = rc.senseNearbyRobots(RobotType.ARCHON.attackRadiusSquared, us);
 		MapLocation bestLoc = null;
-		double lowestHealth = 10000;
+		double mostHealth = 0;
 		for (RobotInfo ally : healableAllies) {
 			if (ally.type == RobotType.ARCHON) continue;
-			if (ally.health < ally.maxHealth && ally.health < lowestHealth) {
+			if (ally.health < ally.maxHealth && ally.health > mostHealth) {
 				bestLoc = ally.location;
-				lowestHealth = ally.health;
+				mostHealth = ally.health;
 			}
 		}
 		if (bestLoc != null) {
-			rc.setIndicatorDot(bestLoc, 255, 0, 0);
 			rc.repair(bestLoc);
 		}
 	}
@@ -373,6 +315,54 @@ public class BotArchon extends Globals {
 		for (RobotInfo neutral : adjacentNeutrals) {
 			rc.activate(neutral.location);
 			return;
+		}
+	}
+	
+	
+	private static void processSignals() {
+		Signal[] signals = rc.emptySignalQueue();
+		for (Signal sig : signals) {
+			if (sig.getTeam() != us) continue;
+			
+			int[] data = sig.getMessage();
+			if (data != null) {
+				switch(data[0] & Messages.CHANNEL_MASK) {
+				case Messages.CHANNEL_FOUND_PARTS:
+					PartsLocation partsLoc = Messages.parsePartsLocation(data);
+					Debug.indicate("explore", 0, "heard about " + partsLoc.numParts + " parts at " + partsLoc.location);
+					break;
+				case Messages.CHANNEL_ZOMBIE_DEN:
+					MapLocation zombieDenLoc = Messages.parseZombieDenLocation(data);
+					Debug.indicate("explore", 1, "heard about a zombie den at " + zombieDenLoc);
+					if (knownZombieDens.add(zombieDenLoc)) {
+						denAttackQueue[denAttackQueueTail++] = zombieDenLoc;
+					} else {
+						Debug.indicateAppend("explore", 1, "; but we already knew about it");
+					}
+					break;
+				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
+					MapLocation enemyTurretLoc = Messages.parseEnemyTurretWarning(data);
+					Debug.indicate("explore", 2, "heard about an enemy turret at " + enemyTurretLoc);
+					break;
+					
+				case Messages.CHANNEL_MAP_MIN_X:
+					Messages.processMapMinX(data);
+					break;
+				case Messages.CHANNEL_MAP_MAX_X:
+					Messages.processMapMaxX(data);
+					break;
+				case Messages.CHANNEL_MAP_MIN_Y:
+					Messages.processMapMinY(data);
+					break;
+				case Messages.CHANNEL_MAP_MAX_Y:
+					Messages.processMapMaxY(data);
+					break;
+					
+				default:
+				}
+			} else {
+				// simple signal with no message
+			}
 		}
 	}
 }

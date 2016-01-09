@@ -1,26 +1,23 @@
-package ttm_heal;
+package supercowpowers_archonmove8;
 
-import battlecode.common.*;
+import battlecode.common.Direction;
+import battlecode.common.GameActionException;
+import battlecode.common.MapLocation;
 
 public class Bug extends Globals {
 	private static MapLocation dest = null;
-
+	
 	private static boolean tracing = false;
 	private static MapLocation lastWall = null;
-	private static int closestDistWhileBugging = Integer.MAX_VALUE;
+	private static int closestDistWhileBugging = Integer.MAX_VALUE;	
 	private static int numTurnsWithNoWall = 0;
-
-	public static void reset() {
-		dest = null;
-		tracing = false;
-	}
-	
+		
 	public static void goTo(MapLocation theDest) throws GameActionException {
 		if (!theDest.equals(dest)) {
 			dest = theDest;
 			tracing = false;
 		}
-
+		
 		if (!tracing) {
 			// try to go direct; start bugging on failure
 			if (tryMoveInDirection(here.directionTo(dest))) {
@@ -37,13 +34,13 @@ public class Bug extends Globals {
 				}
 			}
 		}
-		traceMove();
-
-		if (numTurnsWithNoWall >= 3) {
-			tracing = false;
-		}
+	    traceMove();
+	    
+	    if (numTurnsWithNoWall >= 3) {
+	    	tracing = false;
+	    }
 	}
-
+	
 
 	public static boolean tryMoveInDirection(Direction dir) throws GameActionException {
 		if (rc.canMove(dir)) {
@@ -62,15 +59,15 @@ public class Bug extends Globals {
 		}
 		return false;
 	}
-
-
+	
+	
 	static void startTracing() {
 		tracing = true;
 		lastWall = here.add(here.directionTo(dest));
 		closestDistWhileBugging = here.distanceSquaredTo(dest);
 		numTurnsWithNoWall = 0;
 	}
-
+	
 	static void traceMove() throws GameActionException {
 		Direction tryDir = here.directionTo(lastWall);
 		if (rc.canMove(tryDir)) {

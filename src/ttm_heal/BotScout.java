@@ -31,8 +31,7 @@ public class BotScout extends Globals {
 			}
 		}
 
-		RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, them);
-		RobotInfo[] zombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+		RobotInfo[] enemies = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		MapLocation bestTarget = null;
 		int bestScore = Integer.MIN_VALUE;
 		for (RobotInfo enemy : enemies) {
@@ -42,20 +41,9 @@ public class BotScout extends Globals {
 				int distSq = enemyLoc.distanceSquaredTo(turrets[i]);
 				if (distSq > RobotType.TURRET.sensorRadiusSquared && distSq <= RobotType.TURRET.attackRadiusSquared) {
 					++score;
-				}
-			}
-			if (score > bestScore) {
-				bestScore = score;
-				bestTarget = enemyLoc;
-			}
-		}
-		for (RobotInfo enemy : zombies) {
-			int score = 0;
-			MapLocation enemyLoc = enemy.location;
-			for (int i = 0; i < numTurrets; ++i) {
-				int distSq = enemyLoc.distanceSquaredTo(turrets[i]);
-				if (distSq > RobotType.TURRET.sensorRadiusSquared && distSq <= RobotType.TURRET.attackRadiusSquared) {
-					++score;
+					if (distSq <= enemy.type.attackRadiusSquared) {
+						score += enemy.attackPower;
+					}
 				}
 			}
 			if (score > bestScore) {
@@ -234,7 +222,7 @@ public class BotScout extends Globals {
 			case ARCHON:
 			case TURRET:
 				for (int i = 0; i < 9; ++i) {
-					if (f.location.distanceSquaredTo(locs[i]) < 9) {
+					if (f.location.distanceSquaredTo(locs[i]) < 16) {
 						nturrets[i] += 1;
 					}
 				}
@@ -255,20 +243,21 @@ public class BotScout extends Globals {
 		for (int i = 0; i < 9; ++i) {
 			scores[i] = -attacks[i] * 1000;
 			if (locs[i] == dangerousLoc) {
-				scores[i] -= 1000;
+				scores[i] -= 5000;
 			}
 			if (rubbles[i] >= GameConstants.RUBBLE_SLOW_THRESH) {
+				scores[i] -= attacks[8] * 1000;
 				scores[i] += 1000;
 			}
 			if (oddPos[i]) {
 				scores[i] += 100;
 			}
-			if (nturrets[i] < 1) {
-				scores[i] -= (2-nturrets[i]) * 50;
+			if (nturrets[i] < 2) {
+				scores[i] -= (1-nturrets[i]) * 50;
 			}
 			scores[i] += turrets[i] - scouts[i] * 8;
 		}
-		if (lastSignal > 5) {
+		if (lastSignal > 5 || attacks[8] > 0) {
 			scores[8] -= 100;
 		} else {
 			scores[8] += 200;

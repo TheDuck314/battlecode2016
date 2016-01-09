@@ -45,15 +45,15 @@ public class BotTurret extends Globals {
 
 	public static boolean shootEnemy() throws GameActionException {
 		MapLocation bestLoc = null;
-		double bestLocHealth = Double.MAX_VALUE;
+		double bestScore = Double.MAX_VALUE;
 		RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, them);
 		for (RobotInfo enemy : enemies) {
 			if (!rc.canAttackLocation(enemy.location)) {
 				continue;
 			}
-			if (enemy.health < bestLocHealth) {
+			if (enemy.health < bestScore) {
 				bestLoc = enemy.location;
-				bestLocHealth = enemy.health;
+				bestScore = enemy.health;
 			}
 		}
 		if (bestLoc != null) {
@@ -65,9 +65,10 @@ public class BotTurret extends Globals {
 			if (!rc.canAttackLocation(zombie.location)) {
 				continue;
 			}
-			if (zombie.health < bestLocHealth) {
+			double score = zombie.health / zombie.attackPower;
+			if (score < bestScore) {
 				bestLoc = zombie.location;
-				bestLocHealth = zombie.health;
+				bestScore = zombie.health;
 			}
 		}
 		if (bestLoc != null) {
@@ -92,7 +93,6 @@ public class BotTurret extends Globals {
 				}
 			}
 		}
-		
 		return false;
 	}
 	

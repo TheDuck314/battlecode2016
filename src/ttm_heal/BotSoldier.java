@@ -36,32 +36,19 @@ public class BotSoldier extends Globals {
 			motherLocation = rc.senseRobot(motherId).location;
 		} else {
 			updateMotherId(mySensorRadiusSquared);
+			Bug.reset();
 		}
 	}
 	
 	public static boolean shootEnemy() throws GameActionException {
 		MapLocation bestLoc = null;
-		RobotInfo[] infos = rc.senseNearbyRobots(myAttackRadiusSquared, them);
+		double bestScore = 100000000;
+		RobotInfo[] infos = rc.senseHostileRobots(here, myAttackRadiusSquared);
 		for (RobotInfo info : infos) {
-			if (info.type == RobotType.ARCHON && bestLoc == null) {
-				if (bestLoc == null) {
-					bestLoc = info.location;
-				}
-			} else {
-				rc.attackLocation(info.location);
-				return true;
+			double score = info.health / (info.attackPower + 1);
+			if (score < bestScore) {
+				bestLoc = info.location;
 			}
-		}
-		infos = rc.senseNearbyRobots(myAttackRadiusSquared, Team.ZOMBIE);
-		for (RobotInfo info : infos) {
-			 if (info.type == RobotType.ZOMBIEDEN) {
-				 if (bestLoc == null) {
-					 bestLoc = info.location;
-				 }
-			 } else {
-				 rc.attackLocation(info.location);
-				 return true;
-			 }
 		}
 		if (bestLoc != null) {
 			rc.attackLocation(bestLoc);
