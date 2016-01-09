@@ -41,7 +41,8 @@ public class BotArchon extends Globals {
 		archonsLoc[nArchons] = here;
 		archonsId[nArchons] = myID;
 		nArchons += 1;
-		Messages.sendMapLocation(Messages.SOURCE_MASK, here, MapEdges.maxBroadcastDistSq());
+		int initialMask = 12312234;
+		Messages.sendMapLocation(initialMask, here, MapEdges.maxBroadcastDistSq());
 		Clock.yield();
 		numTurns += 1;
 		Signal[] signals = rc.emptySignalQueue();
@@ -49,7 +50,7 @@ public class BotArchon extends Globals {
 			if (sig.getTeam() != us) continue;
 			int[] data = sig.getMessage();
 			if (data != null) {
-				if (data[0] == Messages.SOURCE_MASK) {
+				if (data[0] == initialMask) {
 					archonsLoc[nArchons] = sig.getLocation();
 					archonsId[nArchons] = sig.getID();
 					nArchons += 1;
@@ -256,7 +257,7 @@ public class BotArchon extends Globals {
 //				scores[i] += 100;
 //			}
 //			scores[i] += nfriends[i] * 50;
-			scores[i] += friends[i] + scouts[i];
+			scores[i] += friends[i] * 5 + scouts[i];
 			scores[i] += archons[i] * 10;
 		}
 		scores[8] += FastMath.rand256() - 128;

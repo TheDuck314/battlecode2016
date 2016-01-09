@@ -4,18 +4,20 @@ import battlecode.common.*;
 
 public class Messages extends Globals {
 	public static final int CHANNEL_MASK = 0xf0000000;
-	public static final int SOURCE_MASK = 0x00100000;
-	public static final int MASK_INVERSE = 0x000fffff;
+	public static final int CHANNEL_MASK_INVERSE = ~CHANNEL_MASK;
 	public static final int CHANNEL_TURRET_TARGET = 0x10000000;
 	public static final int CHANNEL_ZOMBIE_DEN = 0x20000000;
 	public static final int CHANNEL_FOUND_PARTS = 0x30000000;
 	public static final int CHANNEL_ENEMY_TURRET_WARNING = 0x40000000;
-	public static final int CHANNEL_ATTACK_TARGET = 0x90000000;
-	
 	public static final int CHANNEL_MAP_MIN_X = 0x50000000;
 	public static final int CHANNEL_MAP_MAX_X = 0x60000000;
 	public static final int CHANNEL_MAP_MIN_Y = 0x70000000;
 	public static final int CHANNEL_MAP_MAX_Y = 0x80000000;
+	public static final int CHANNEL_ATTACK_TARGET = 0x90000000;
+	public static final int CHANNEL_ARCHON_LOCATION = 0xa0000000;
+	public static final int CHANNEL_RADAR = 0xb0000000;
+	public static final int CHANNEL_FOUND_NEUTRAL = 0xc0000000;
+	
 	
 	
 	public static int intFromMapLocation(MapLocation loc) {
@@ -32,17 +34,19 @@ public class Messages extends Globals {
 		rc.broadcastMessageSignal(channel, intFromMapLocation(loc), radiusSq);
 	}
 	
-	public static MapLocation parseMapLocation(int[] data) {
+	private static MapLocation parseMapLocation(int[] data) {
 		return mapLocationFromInt(data[1]);
 	}
 	
-	public static void sendInt(int channel, int data, int radiusSq) throws GameActionException {
+	private static void sendInt(int channel, int data, int radiusSq) throws GameActionException {
 		rc.broadcastMessageSignal(channel, data, radiusSq);
 	}
 	
-	public static int parseInt(int[] data) {
+	private static int parseInt(int[] data) {
 		return data[1];
 	}
+	
+	
 	
 	public static void sendTurretTarget(MapLocation loc, int radiusSq) throws GameActionException {
 		sendMapLocation(CHANNEL_TURRET_TARGET, loc, radiusSq);
@@ -75,29 +79,35 @@ public class Messages extends Globals {
 	public static MapLocation parseAttackTarget(int[] data) {
 		return parseMapLocation(data);
 	}
-
-	public static void sendPartsLocation(MapLocation loc, int numParts, int radiusSq) throws GameActionException {
-		int data0 = CHANNEL_FOUND_PARTS | (MASK_INVERSE & numParts);
-		int data1 = intFromMapLocation(loc);
-		rc.broadcastMessageSignal(data0, data1, radiusSq);
+	
+	public static void sendArchonLocation(MapLocation loc, int radiusSq) throws GameActionException {
+		sendMapLocation(CHANNEL_ARCHON_LOCATION, loc, radiusSq);
 	}
 	
-	// Result of parsing a part location signal.
-	public static class PartsLocation {
-		public MapLocation location;
-		public int numParts;
-		public PartsLocation(MapLocation location, int numParts) {
-			this.location = location;
-			this.numParts = numParts;
-		}
+	public static MapLocation parseArchonLocation(int[] data) {
+		return parseMapLocation(data);
+	}
+
+	public static void sendPartsLocation(MapLocation loc, int numParts, int radiusSq) throws GameActionException {
+		int data0 = CHANNEL_FOUND_PARTS | (CHANNEL_MASK_INVERSE & numParts);
+		int data1 = intFromMapLocation(loc);
+		rc.broadcastMessageSignal(data0, data1, radiusSq);
 	}
 	
 	// outPartsLoc is set to the MapLocation of the found parts
 	// the returned value is the number of parts at that location
 	public static PartsLocation parsePartsLocation(int[] data) {
 		MapLocation loc = mapLocationFromInt(data[1]);
-		int numParts = data[0] & MASK_INVERSE;
+		int numParts = data[0] & CHANNEL_MASK_INVERSE;
 		return new PartsLocation(loc, numParts);
+	}
+	
+	public static void sendNeutralLocation(MapLocation loc, int radiusSq) throws GameActionException {
+		sendMapLocation(CHANNEL_FOUND_NEUTRAL, loc, radiusSq);
+	}
+	
+	public static MapLocation parseNeutralLocation(int[] data) {
+		return parseMapLocation(data);
 	}
 	
 	public static void sendMapMinX(int radiusSq) throws GameActionException {
@@ -147,46 +157,28 @@ public class Messages extends Globals {
 	public static void processMapMaxY(int[] data) {
 		MapEdges.maxY = parseInt(data);
 	}
-	
-	public static void processSignals() {
-		Signal[] signals = rc.emptySignalQueue();
-		for (Signal sig : signals) {
-			if (sig.getTeam() != us) continue;
-			
-			int[] data = sig.getMessage();
-			if (data != null) {
-				switch(data[0] & Messages.CHANNEL_MASK) {
-				case Messages.CHANNEL_FOUND_PARTS:
-					PartsLocation partsLoc = Messages.parsePartsLocation(data);
-					Debug.indicate("explore", 0, "heard about " + partsLoc.numParts + " parts at " + partsLoc.location);
-					break;
-				case Messages.CHANNEL_ZOMBIE_DEN:
-					MapLocation zombieDenLoc = Messages.parseZombieDenLocation(data);
-					Debug.indicate("explore", 1, "heard about a zombie den at " + zombieDenLoc);
-					break;
-				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
-					MapLocation enemyTurretLoc = Messages.parseEnemyTurretWarning(data);
-					Debug.indicate("explore", 2, "heard about an enemy turret at " + enemyTurretLoc);
-					break;
-				case Messages.CHANNEL_MAP_MIN_X:
-					Messages.processMapMinX(data);
-					break;
-				case Messages.CHANNEL_MAP_MAX_X:
-					Messages.processMapMaxX(data);
-					break;
-				case Messages.CHANNEL_MAP_MIN_Y:
-					Messages.processMapMinY(data);
-					break;
-				case Messages.CHANNEL_MAP_MAX_Y:
-					Messages.processMapMaxY(data);
-					break;
-					
-				default:
-				}
-			} else {
-				// simple signal with no message
-			}
+		
+	/*
+	public static void sendRadarData(RobotInfo[] infos, int radiusSq) throws GameActionException {
+		long dataLong = 0;
+		for (int i = 0; i < infos.length; ++i) {
+			dataLong <<= 12;
+			RobotInfo info = infos[i];
+			dataLong |= ((1 + info.type.ordinal()) << 8) 
+					| ((info.location.x - here.x + 8) << 4)
+					| (info.location.y - here.y + 8);
 		}
+		int data1 = (int)((dataLong & 0xffffffff00000000L) >>> 32);
+		int data2 = (int)(dataLong & 0x00000000ffffffffL);
+		rc.broadcastMessageSignal(CHANNEL_RADAR | data1, data2, radiusSq);
 	}
 	
+	public static RobotInfo[] parseRadarData(int data[]) {
+		long dataLong = CHANNEL_RADAR ^ (((long)data[0]) << 32) | ((long)data[1]);
+		RobotInfo[] infos = new RobotInfo[10];
+		int numInfos = 0;
+		while (dataLong != 0) {
+			
+		}
+	}*/
 }
