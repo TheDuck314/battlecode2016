@@ -184,7 +184,6 @@ public class BotScout extends Globals {
 		Direction[] dirs = new Direction[9];
 		boolean[] cmoves = new boolean[9];
 		MapLocation[] locs = new MapLocation[9];
-		boolean[] oddPos = new boolean[9];
 		double[] rubbles = new double[9];
 		double[] attacks = new double[9];
 		double[] nturrets = new double[9];
@@ -199,7 +198,6 @@ public class BotScout extends Globals {
 			cmoves[i] = rc.canMove(dirs[i]);
 		}
 		for (int i = 0; i < 9; ++i) {
-			oddPos[i] = !isGoodTurretLocation(locs[i]);
 			rubbles[i] = rc.senseRubble(locs[i]);
 		}
 		RobotInfo[] infos;
@@ -248,9 +246,6 @@ public class BotScout extends Globals {
 			if (rubbles[i] >= GameConstants.RUBBLE_SLOW_THRESH) {
 				scores[i] -= attacks[8] * 1000;
 				scores[i] += 1000;
-			}
-			if (oddPos[i]) {
-				scores[i] += 100;
 			}
 			if (nturrets[i] < 2) {
 				scores[i] -= (1-nturrets[i]) * 50;

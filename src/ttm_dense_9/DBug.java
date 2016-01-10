@@ -20,6 +20,12 @@ public class DBug extends Globals {
 			dest = theDest;
 			tracing = false;
 		}
+		if (theDest.equals(here)) {
+			return;
+		}
+		if (tracing && here.equals(lastWall)) {
+			tracing = false;
+		}
 
 		if (!tracing) {
 			// try to go direct; start bugging on failure

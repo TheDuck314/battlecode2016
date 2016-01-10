@@ -102,26 +102,6 @@ public class BotTurret extends Globals {
 	
 
 	private static MapLocation targetPosition = new MapLocation(1000, 1000);
-	
-	private static void trySettle() throws GameActionException {
-		if (!rc.isCoreReady()) return;
-		int rdn = FastMath.rand256();
-		Direction bestDir = null;
-		for (int i = 0; i < 8; ++i) {
-			Direction dir = Direction.values()[(rdn + i) % 8];
-			if (rc.canMove(dir)) {
-				bestDir = dir;
-				if (isGoodTurretLocation(here.add(dir))) {
-					rc.move(dir);
-					return;
-				}
-			}
-		}
-		if (bestDir != null) {
-			rc.move(bestDir);
-			return;
-		}
-	}
 
 	private static MapLocation friendVec() {
 		RobotInfo[] friend = rc.senseNearbyRobots(mySensorRadiusSquared, us);
@@ -149,12 +129,23 @@ public class BotTurret extends Globals {
 	}
 
 	private static void turnTTM() throws GameActionException {
+		if (!rc.isCoreReady()) return;
 //		double ap = computeArmyPos(friendVec());
 //		if (ap > 5) {
 //			tryMoveToTarget();
 //			return;
 //		}
-		if (isGoodTurretLocation(here)) {
+//		if (isGoodTurretLocation(here)) {
+//			rc.unpack();
+//			initTurret();
+//			isTTM = false;
+//			return;
+//		}
+		Direction dir = betterDirection();
+		if (dir != null) {
+			rc.move(dir);
+			return;
+		} else {
 			rc.unpack();
 			initTurret();
 			isTTM = false;
@@ -164,7 +155,39 @@ public class BotTurret extends Globals {
 //			tryMoveToTarget();
 //			return;
 //		}
-		trySettle();
+//		trySettle();
+	}
+	
+	public static MapLocation turretCenter = null;
+	public static int turretRadiusSq = 5;
+	
+	public static double turretLocationScore(MapLocation a) {
+		if (turretCenter == null) {
+			turretCenter = here;
+		}
+		int distSq = turretCenter.distanceSquaredTo(a);
+		if (distSq > turretRadiusSq) {
+			return 0;
+		} else {
+			return distSq;
+		}
+	}
+	
+	public static Direction betterDirection() throws GameActionException {
+		double bestScore = turretLocationScore(here);
+		Direction bestDir = null;
+		for (Direction dir : Direction.values()) {
+			MapLocation loc = here.add(dir);
+			if (!rc.onTheMap(loc)) continue;
+			if (rc.isLocationOccupied(loc)) continue;
+			if (rc.senseRubble(loc) > GameConstants.RUBBLE_OBSTRUCTION_THRESH) continue;
+			double score = turretLocationScore(loc);
+			if (score > bestScore) {
+				bestDir = dir;
+				bestScore = score;
+			}
+		}
+		return bestDir;
 	}
 	
 	private static void turnTurret() throws GameActionException {
@@ -178,11 +201,11 @@ public class BotTurret extends Globals {
 //				rc.disintegrate();
 //			}
 //		}
-		if (!isGoodTurretLocation(here)) {
-			rc.pack();
-			isTTM = true;
-			return;
-		}
+//		if (!isGoodTurretLocation(here)) {
+//			rc.pack();
+//			isTTM = true;
+//			return;
+//		}
 //		double ap = computeArmyPos(friendVec());
 //		if (ap > 20) {
 //			rc.pack();
@@ -196,6 +219,11 @@ public class BotTurret extends Globals {
 			} else {
 				isHappyShooting = false;
 			}
+		}
+		if (!isHappyShooting && betterDirection() != null) {
+			rc.pack();
+			isTTM = true;
+			return;
 		}
 	}
 	

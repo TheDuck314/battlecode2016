@@ -77,6 +77,10 @@ public class BotSoldier extends Globals {
 		if (rc.getHealth() != myType.maxHealth || !isHappyShooting) {
 			followMother();
 		}
+		
+		if (rc.getRobotCount() > 25) {
+			rc.disintegrate();
+		}
 	}
 	
 	private static MapLocation attackTarget = null;
