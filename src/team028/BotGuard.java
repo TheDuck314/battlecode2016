@@ -85,7 +85,7 @@ public class BotGuard extends Globals {
 			}
 		}
 		if (closest != null) {
-			Bug.tryMoveInDirection(here.directionTo(closest.location));
+			Nav.tryMoveInDirection(here.directionTo(closest.location));
 			return true;
 		}
 		return false;
@@ -99,7 +99,7 @@ public class BotGuard extends Globals {
 		}
 		if (rc.isCoreReady()) {
 			if (tryChargeEnemies()) return;
-			Bug.goTo(motherLocation);
+			Nav.goToDirect(motherLocation);
 		}
 	}
 }

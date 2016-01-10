@@ -64,14 +64,6 @@ public class Messages extends Globals {
 		return parseMapLocation(data);
 	}
 	
-	public static void sendEnemyTurretWarning(MapLocation loc, int radiusSq) throws GameActionException {
-		sendMapLocation(CHANNEL_ENEMY_TURRET_WARNING, loc, radiusSq);		
-	}
-	
-	public static MapLocation parseEnemyTurretWarning(int[] data) {
-		return parseMapLocation(data);
-	}
-	
 	public static void sendAttackTarget(MapLocation loc, int radiusSq) throws GameActionException {
 		sendMapLocation(CHANNEL_ATTACK_TARGET, loc, radiusSq);
 	}
@@ -158,27 +150,73 @@ public class Messages extends Globals {
 		MapEdges.maxY = parseInt(data);
 	}
 		
-	/*
+	public static void sendEnemyTurretWarning(int id, MapLocation loc, int radiusSq) throws GameActionException {
+		Debug.indicate("radar", 1, "sending warning about turret with id " + id + ", loc = " + loc);
+		int data0 = id;
+		int data1 = intFromMapLocation(loc);
+		rc.broadcastMessageSignal(CHANNEL_ENEMY_TURRET_WARNING | data0, data1, radiusSq);
+	}
+	
+	public static void processEnemyTurretWarning(int[] data) {
+		int id = data[0] ^ CHANNEL_ENEMY_TURRET_WARNING;
+		MapLocation loc = mapLocationFromInt(data[1]);
+		Radar.addEnemyTurret(id, loc);
+	}
+	
 	public static void sendRadarData(RobotInfo[] infos, int radiusSq) throws GameActionException {
-		long dataLong = 0;
-		for (int i = 0; i < infos.length; ++i) {
-			dataLong <<= 12;
-			RobotInfo info = infos[i];
-			dataLong |= ((1 + info.type.ordinal()) << 8) 
+		long data = 0;
+		for (RobotInfo info : infos) {
+			data <<= 12;
+			data |= ((1 + info.type.ordinal()) << 8)
 					| ((info.location.x - here.x + 8) << 4)
 					| (info.location.y - here.y + 8);
 		}
-		int data1 = (int)((dataLong & 0xffffffff00000000L) >>> 32);
-		int data2 = (int)(dataLong & 0x00000000ffffffffL);
-		rc.broadcastMessageSignal(CHANNEL_RADAR | data1, data2, radiusSq);
+		int data0 = (int)(data >> 32);
+		int data1 = (int)(data & 0x00000000ffffffffL);
+		rc.broadcastMessageSignal(CHANNEL_RADAR | (CHANNEL_MASK_INVERSE & data0), data1, radiusSq);
 	}
 	
-	public static RobotInfo[] parseRadarData(int data[]) {
-		long dataLong = CHANNEL_RADAR ^ (((long)data[0]) << 32) | ((long)data[1]);
-		RobotInfo[] infos = new RobotInfo[10];
-		int numInfos = 0;
-		while (dataLong != 0) {
-			
+	public static void addRadarDataToEnemyCache(int[] intData, MapLocation origin, int maxDistSq) {
+		long data = (((long)(CHANNEL_RADAR ^ intData[0])) << 32) 
+				| (((long)intData[1]) & 0x00000000ffffffffL);
+		
+		int round = rc.getRoundNum();
+		RobotType[] types = RobotType.values();		
+		while (data != 0) {
+			int y = origin.y - 8 + (int)(data & 0xfL);
+			int x = origin.x - 8 + (int)((data >> 4) & 0xfL);
+			MapLocation loc = new MapLocation(x, y);
+			if (here.distanceSquaredTo(loc) <= maxDistSq) {
+				int typeOrdinal = (int)((data >> 8) & 0xfL) - 1;		
+				RobotType type = types[typeOrdinal];
+				FastRobotInfo info = new FastRobotInfo(loc, type, round);
+				Radar.addEnemyToCache(info);
+			}
+			data >>= 12;
 		}
-	}*/
+	}
+	
+	public static MapLocation getClosestRadarHit(int[] intData, MapLocation origin) {
+		MapLocation closest = null;
+		int bestDistSq = Integer.MAX_VALUE;
+		
+		long data = (((long)(CHANNEL_RADAR ^ intData[0])) << 32) 
+				| (((long)intData[1]) & 0x00000000ffffffffL);
+		
+		int round = rc.getRoundNum();
+		RobotType[] types = RobotType.values();		
+		while (data != 0) {
+			int y = origin.y - 8 + (int)(data & 0xfL);
+			int x = origin.x - 8 + (int)((data >> 4) & 0xfL);
+			MapLocation loc = new MapLocation(x, y);
+			int distSq = here.distanceSquaredTo(loc);
+			if (distSq < bestDistSq) {
+				bestDistSq = distSq;
+				closest = loc;
+			}
+			data >>= 12;
+		}
+		
+		return closest;
+	}
 }

@@ -67,7 +67,7 @@ public class BotArchon extends Globals {
 	private static void turn() throws GameActionException {
 		if (rc.getRoundNum() <= 100 && rallyPoint != null && here.distanceSquaredTo(rallyPoint) > 2) {
 			if (rc.isCoreReady()) {
-			    DBug.goTo(rallyPoint);
+			    Nav.goToDirectSafely(rallyPoint);
 			}
 			return;
 		}
@@ -75,7 +75,8 @@ public class BotArchon extends Globals {
 		processSignals();
 		MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
 
-		trySendAttackTarget();
+		//trySendAttackTarget();
+		sendRadarInfo();
 		
 		trySendArchonLocationMessage();
 
@@ -86,12 +87,39 @@ public class BotArchon extends Globals {
 		tryConvertNeutrals();
 		
 		if (rc.isCoreReady()) {
+			if (retreatIfNecessary()) {
+				return;
+			}
+			
 			pickDestination();
 			
 			if (currentDestination != null) {
 			    goToDestination();
 			} else {
 				goToCenterOfMass();
+			}
+		}
+	}
+	
+	private static void sendRadarInfo() throws GameActionException {
+		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		Debug.indicate("radar", 0, "sendRaderInfo: hostiles.length = " + hostiles.length);
+		if (hostiles.length == 0) return;
+		
+		int rangeSq = 9*mySensorRadiusSquared;
+		
+		if (hostiles.length <= 5) {
+			Messages.sendRadarData(hostiles, rangeSq);
+		} else {
+			Messages.sendRadarData(Util.truncateArray(hostiles, 5), rangeSq);
+		}
+		
+		for (RobotInfo hostile : hostiles) {
+			if (hostile.type == RobotType.TURRET) {
+				if (!Radar.turretIsKnown(hostile.ID, hostile.location)) {
+					Radar.addEnemyTurret(hostile.ID, hostile.location);
+					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, 9*mySensorRadiusSquared);
+				}
 			}
 		}
 	}
@@ -242,7 +270,7 @@ public class BotArchon extends Globals {
 	private static void goToDestination() throws GameActionException {
 		Debug.indicate("parts", 1, "destination = " + currentDestination);
 		if (currentDestination != null) {
-			DirectNav.goTo(currentDestination);
+			Nav.goToDirectSafely(currentDestination);
 		}
 	}
 	
@@ -257,6 +285,26 @@ public class BotArchon extends Globals {
 		}
 		avgX /= allies.length;
 		avgY /= allies.length;
-		DirectNav.goTo(new MapLocation(avgX, avgY));
+		Nav.goToDirect(new MapLocation(avgX, avgY));
+	}
+	
+	private static boolean retreatIfNecessary() throws GameActionException {
+		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		boolean mustRetreat = false;
+		MapLocation retreatTarget = here;
+		for (RobotInfo hostile : hostiles) {
+			RobotType hostileType = hostile.type;
+			if (!hostileType.canAttack()) continue;			
+			mustRetreat = true;
+			retreatTarget = retreatTarget.add(hostile.location.directionTo(here));
+		}
+		if (mustRetreat) {
+			if (!here.equals(retreatTarget)) {
+				Direction retreatDir = here.directionTo(retreatTarget);
+				Nav.tryHardMoveInDirection(retreatDir);
+				return true;
+			}
+		}
+		return false;
 	}
 }

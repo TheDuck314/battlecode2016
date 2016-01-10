@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("heal");
+		Debug.init("radar");
 		FastMath.initRand(rc);
 		while (true) {
 			try {
@@ -30,13 +30,12 @@ public class BotSoldier extends Globals {
 	
 	private static void turn() throws GameActionException {
 		processSignals();
+
+		manageHealingState();
 		
 		if (tryToMicro()) {
 			return;
 		}
-		
-		manageHealingState();
-		Debug.indicate("heal", 0, "healingState = " + inHealingState);
 		
 		if (inHealingState) {
 			if (tryToHealAtArchon()) {
@@ -48,6 +47,8 @@ public class BotSoldier extends Globals {
 	}
 
 	private static void processSignals() {
+		Radar.clearEnemyCache();
+
 		Signal[] signals = rc.emptySignalQueue();
 		for (Signal sig : signals) {
 			if (sig.getTeam() != us) continue;
@@ -55,23 +56,28 @@ public class BotSoldier extends Globals {
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
-				case Messages.CHANNEL_ATTACK_TARGET:
+				/*case Messages.CHANNEL_ATTACK_TARGET:
 					MapLocation suggestedTarget = Messages.parseAttackTarget(data);
 					if (attackTarget == null || here.distanceSquaredTo(suggestedTarget) < here.distanceSquaredTo(attackTarget)) {
 						attackTarget = suggestedTarget;
 						attackTargetReceivedRound = rc.getRoundNum();
 					}
+					break;*/
+				case Messages.CHANNEL_RADAR:
+					MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
+					if (attackTarget == null
+							|| here.distanceSquaredTo(closest) < here.distanceSquaredTo(attackTarget)) {
+						attackTarget = closest;
+					}
 					break;
 					
 				case Messages.CHANNEL_ARCHON_LOCATION:
 					MapLocation archonLoc = Messages.parseArchonLocation(data);
-					Debug.indicate("heal", 2, "got archonLoc = " + archonLoc);
 					if (lastKnownArchonLocation == null 
 							|| (lastKnownArchonLocationRound < rc.getRoundNum() - 50)
 							|| here.distanceSquaredTo(lastKnownArchonLocation) > here.distanceSquaredTo(archonLoc)) {
 						lastKnownArchonLocation = archonLoc;
 						lastKnownArchonLocationRound = rc.getRoundNum();
-						Debug.indicateAppend("heal", 2, "; new best");
 					}
 					break;
 					
@@ -81,9 +87,26 @@ public class BotSoldier extends Globals {
 		}
 	}
 
-	private static boolean tryToMicro() throws GameActionException {
+	private static boolean tryToMicro() throws GameActionException {		
 		RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
+		RobotInfo[] visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 
+		if (inHealingState) {
+			// if we are in the healing state, then if we are under attack we should retreat.
+			// but if coreDelay >= cooldown delay, then we can optionally attack			
+			if (rc.isCoreReady()) {
+				if (retreatIfNecessary(visibleHostiles)) {
+				    return true;
+				}
+			} else if (rc.isWeaponReady() && rc.getCoreDelay() >= myType.cooldownDelay) {
+				if (attackableHostiles.length > 0) {
+					chooseTargetAndAttack(attackableHostiles);
+					return true;
+				}
+			}
+			return false;
+		}
+		
 		if (attackableHostiles.length > 0) {
 			if (rc.isWeaponReady()) {	
 				chooseTargetAndAttack(attackableHostiles);
@@ -94,7 +117,6 @@ public class BotSoldier extends Globals {
 			return false;
 		}
 		
-		RobotInfo[] visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		if (visibleHostiles.length == 0) {
 			return false;
 		}		
@@ -202,7 +224,7 @@ public class BotSoldier extends Globals {
 		}
 		
 		if (allyIsFighting) {
-			if (Bug.tryMoveInDirection(here.directionTo(closestHostile))) {
+			if (Nav.tryMoveInDirection(here.directionTo(closestHostile))) {
 				Debug.indicate("micro", 0, "helping ally fight hostile at " + closestHostile);
 				return true;
 			}
@@ -216,7 +238,7 @@ public class BotSoldier extends Globals {
 			return false;
 		}
 		
-		if (Bug.tryMoveInDirection(here.directionTo(closestHostile.location))) {
+		if (Nav.tryMoveInDirection(here.directionTo(closestHostile.location))) {
 			Debug.indicate("micro", 0, "moving to attack helpless " + closestHostile.type + " at " + closestHostile.location);
 			return true;
 		}
@@ -261,18 +283,32 @@ public class BotSoldier extends Globals {
 		locateNearestArchon();
 		
 		if (lastKnownArchonLocation == null) {
-			Debug.indicate("heal", 1, "want to heal, but lastKnownArchonLocation is null!");
 			return false;
 		}
 		
-		Debug.indicate("heal", 1, "going to heal at archon at " + lastKnownArchonLocation);
-		DirectNav.swarmToAvoidingArchons(lastKnownArchonLocation);
+		Nav.swarmToAvoidingArchons(lastKnownArchonLocation);
 		return true;
 	}
 	
 	
 	private static void lookForZombieDens() throws GameActionException {
 		if (!rc.isCoreReady()) return;
+		
+		if (attackTarget == null) {
+			Debug.indicate("radar", 0, "lookForZombieDens: attackTarget == null, numCachedEnemies = " + Radar.numCachedEnemies);
+			MapLocation closest = null;
+			int bestDistSq = Integer.MAX_VALUE;
+			for (int i = 0; i < Radar.numCachedEnemies; ++i) {
+				FastRobotInfo hostile = Radar.enemyCache[i];
+				int distSq = here.distanceSquaredTo(hostile.location);
+				if (distSq < bestDistSq) {
+					bestDistSq = distSq;
+					closest = hostile.location;
+				}
+			}
+			attackTarget = closest;
+			Debug.indicate("radar", 1, "now attackTarget = " + attackTarget);
+		}
 
 		if (attackTarget != null) {
 			if (rc.canSenseLocation(attackTarget)) {
@@ -284,7 +320,7 @@ public class BotSoldier extends Globals {
 		}
 		
 		if (attackTarget != null) {
-			DirectNav.goTo(attackTarget);
+			Nav.goToDirect(attackTarget);
 			return;
 		}
 		

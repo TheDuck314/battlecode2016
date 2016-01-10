@@ -3,7 +3,7 @@ package team028;
 import battlecode.common.*;
 
 // Result of parsing a part location signal.
-class PartsLocation {
+public class PartsLocation {
 	public MapLocation location;
 	public int numParts;
 	public PartsLocation(MapLocation location, int numParts) {

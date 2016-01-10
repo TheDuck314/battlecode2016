@@ -14,8 +14,15 @@ public class BotScout extends Globals {
 	private static MapLocation[] dangerMemory = new MapLocation[DANGER_MEMORY_LENGTH];
 	private static int dangerMemoryPointer = 0;
 
+	private static int turretFollowId = -1;
+	
+	private static int lastPartsOrNeutralSignalRound = -999999;
+	
+	private static int lastGlobalRadarBroadcastRound = 0;
+	
+
 	public static void loop() {
-    	Debug.init("safebug");
+    	Debug.init("radar");
     	origin = here;
     	exploredGrid[50][50] = true;    	
 		while (true) {
@@ -33,46 +40,97 @@ public class BotScout extends Globals {
 		processSignals();		
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
 
-		trySendAttackTarget();
+		//trySendAttackTarget();
+		sendRadarInfo();
 		
 		trySendPartsOrNeutralLocation();
 		
 //		retreatIfNecessary();
 //		explore();
 		
+		if (rc.getID() % 2 == 0) {
+			if (tryFollowTurret()) {
+				return;
+			}
+		}
+		
 		moveAround();
 	}
 	
-	private static int lastPartsOrNeutralSignalRound = -999999;
+	private static boolean tryFollowTurret() throws GameActionException {
+		if (!rc.isCoreReady()) return false;
+		
+		if (rc.canSenseRobot(turretFollowId)) {
+			MapLocation turretLoc = rc.senseRobot(turretFollowId).location;
+			Nav.goToDirect(turretLoc);
+			rc.setIndicatorDot(turretLoc, 0, 255, 0);
+			return true;
+		}
+		
+		RobotInfo[] nearbyAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		for (RobotInfo ally : nearbyAllies) {
+			if (ally.type == RobotType.TTM || ally.type == RobotType.TURRET) {
+				turretFollowId = ally.ID;
+				Nav.goToDirect(ally.location);
+				rc.setIndicatorDot(ally.location, 0, 255, 0);
+				return true;
+			}
+		}
+		
+		return false;
+	}
 	
 	private static void trySendPartsOrNeutralLocation() throws GameActionException {
 		if (lastPartsOrNeutralSignalRound > rc.getRoundNum() - 10) return;
 		
 		MapLocation[] nearbyLocs = MapLocation.getAllMapLocationsWithinRadiusSq(here, RobotType.ARCHON.sensorRadiusSquared);
 		
+		int rangeSq = 9*mySensorRadiusSquared;
 		for (MapLocation loc : nearbyLocs) {
 			double numParts = rc.senseParts(loc);
 			if (numParts >= 1) {
-				Messages.sendPartsLocation(loc, (int)numParts, 4*mySensorRadiusSquared);
+				Messages.sendPartsLocation(loc, (int)numParts, rangeSq);
 				lastPartsOrNeutralSignalRound = rc.getRoundNum();
 				return;
 			}
 			RobotInfo robot = rc.senseRobotAtLocation(loc);
 			if (robot != null && robot.team == Team.NEUTRAL) {
 				lastPartsOrNeutralSignalRound = rc.getRoundNum();
-				Messages.sendNeutralLocation(loc, 2*mySensorRadiusSquared);
+				Messages.sendNeutralLocation(loc, rangeSq);
 				return;
 			}
 		}	
 	}
 	
-	private static void sendRadarData() {
-		//RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSq);
+	private static void sendRadarInfo() throws GameActionException {
+		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		Debug.indicate("radar", 0, "sendRaderInfo: hostiles.length = " + hostiles.length);
+		if (hostiles.length == 0) return;
 		
+		int rangeSq = 9*mySensorRadiusSquared;
+		if (rc.getRoundNum() - lastGlobalRadarBroadcastRound > 50) {
+			rangeSq = MapEdges.maxBroadcastDistSq();
+			lastGlobalRadarBroadcastRound = rc.getRoundNum();
+		}
+		
+		if (hostiles.length <= 5) {
+			Messages.sendRadarData(hostiles, rangeSq);
+		} else {
+			Messages.sendRadarData(Util.truncateArray(hostiles, 5), rangeSq);
+		}
+		
+		for (RobotInfo hostile : hostiles) {
+			if (hostile.type == RobotType.TURRET) {
+				if (!Radar.turretIsKnown(hostile.ID, hostile.location)) {
+					Radar.addEnemyTurret(hostile.ID, hostile.location);
+					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, 9*mySensorRadiusSquared);
+				}
+			}
+		}
 	}
 	
 	private static void trySendAttackTarget() throws GameActionException {
-		RobotInfo[] targets = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		RobotInfo[] targets = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
 		int numSent = 0;
 		for (RobotInfo target : targets) {
 			Messages.sendAttackTarget(target.location, 9 * mySensorRadiusSquared);
@@ -253,8 +311,8 @@ public class BotScout extends Globals {
 		if (bestDir != null) {
 			if (rc.canMove(bestDir)) {
 				nFriend = (int)nfriends[bestI];
+				rc.move(bestDir);
 			}
-			Bug.tryMoveInDirection(bestDir);
 		} else if (rubbles[8] >= GameConstants.RUBBLE_SLOW_THRESH) {
 			rc.clearRubble(Direction.NONE);
 		}
@@ -379,11 +437,6 @@ public class BotScout extends Globals {
 			isSquareSafe[d] = rc.canMove(dir);
 			dirLocs[d] = here.add(dir);
 			if (isSquareSafe[d]) {
-				rc.setIndicatorDot(dirLocs[d], 0, 255, 0);
-			} else {
-				rc.setIndicatorDot(dirLocs[d], 255, 0, 0);
-			}
-			if (isSquareSafe[d]) {
 				for (int i = 0; i < DANGER_MEMORY_LENGTH; ++i) {
 					if (dirLocs[d].equals(dangerMemory[i])) {
 						isSquareSafe[d] = false;
@@ -502,7 +555,7 @@ public class BotScout extends Globals {
 		rc.setIndicatorDot(exploreDest, 0, 255, 0);
 		if (rc.isCoreReady()) {
 			Debug.indicate("explore", 1, "going to exploreDest");
-			ScoutBug.goTo(exploreDest, checkWhichSquaresAreSafe());
+			Nav.goToBug(exploreDest/*, checkWhichSquaresAreSafe()*/);
 		}
 	}
 }

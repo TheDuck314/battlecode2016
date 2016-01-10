@@ -67,7 +67,7 @@ public class BotViper extends Globals {
 			shootEnemies();
 		}
 		if (rc.isCoreReady()) {
-			Bug.goTo(motherLocation);
+			Nav.goToDirect(motherLocation);
 		}
 	}
 }
