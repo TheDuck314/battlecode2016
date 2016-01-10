@@ -102,14 +102,6 @@ public class BotScout extends Globals {
 		}	
 	}
 	
-	private static RobotInfo[] truncateArray(RobotInfo[] arr, int maxLength) {
-		RobotInfo[] ret = new RobotInfo[maxLength];
-		for (int i = 0; i < maxLength; ++i) {
-			ret[i] = arr[i];
-		}
-		return ret;
-	}
-	
 	private static void sendRadarInfo() throws GameActionException {
 		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		Debug.indicate("radar", 0, "sendRaderInfo: hostiles.length = " + hostiles.length);
@@ -124,7 +116,7 @@ public class BotScout extends Globals {
 		if (hostiles.length <= 5) {
 			Messages.sendRadarData(hostiles, rangeSq);
 		} else {
-			Messages.sendRadarData(truncateArray(hostiles, 5), rangeSq);
+			Messages.sendRadarData(Util.truncateArray(hostiles, 5), rangeSq);
 		}
 		
 		for (RobotInfo hostile : hostiles) {

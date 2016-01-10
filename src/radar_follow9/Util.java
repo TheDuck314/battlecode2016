@@ -15,4 +15,13 @@ public class Util extends Globals {
 		}
 		return ret;
 	}
+	
+	
+	public static RobotInfo[] truncateArray(RobotInfo[] arr, int maxLength) {
+		RobotInfo[] ret = new RobotInfo[maxLength];
+		for (int i = 0; i < maxLength; ++i) {
+			ret[i] = arr[i];
+		}
+		return ret;
+	}
 }

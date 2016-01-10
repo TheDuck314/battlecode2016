@@ -75,7 +75,8 @@ public class BotArchon extends Globals {
 		processSignals();
 		MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
 
-		trySendAttackTarget();
+		//trySendAttackTarget();
+		sendRadarInfo();
 		
 		trySendArchonLocationMessage();
 
@@ -96,6 +97,29 @@ public class BotArchon extends Globals {
 			    goToDestination();
 			} else {
 				goToCenterOfMass();
+			}
+		}
+	}
+	
+	private static void sendRadarInfo() throws GameActionException {
+		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		Debug.indicate("radar", 0, "sendRaderInfo: hostiles.length = " + hostiles.length);
+		if (hostiles.length == 0) return;
+		
+		int rangeSq = 9*mySensorRadiusSquared;
+		
+		if (hostiles.length <= 5) {
+			Messages.sendRadarData(hostiles, rangeSq);
+		} else {
+			Messages.sendRadarData(Util.truncateArray(hostiles, 5), rangeSq);
+		}
+		
+		for (RobotInfo hostile : hostiles) {
+			if (hostile.type == RobotType.TURRET) {
+				if (!Radar.turretIsKnown(hostile.ID, hostile.location)) {
+					Radar.addEnemyTurret(hostile.ID, hostile.location);
+					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, 9*mySensorRadiusSquared);
+				}
 			}
 		}
 	}
