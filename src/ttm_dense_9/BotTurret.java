@@ -102,26 +102,6 @@ public class BotTurret extends Globals {
 	
 
 	private static MapLocation targetPosition = new MapLocation(1000, 1000);
-	
-	private static void trySettle() throws GameActionException {
-		if (!rc.isCoreReady()) return;
-		int rdn = FastMath.rand256();
-		Direction bestDir = null;
-		for (int i = 0; i < 8; ++i) {
-			Direction dir = Direction.values()[(rdn + i) % 8];
-			if (rc.canMove(dir)) {
-				bestDir = dir;
-				if (isGoodTurretLocation(here.add(dir))) {
-					rc.move(dir);
-					return;
-				}
-			}
-		}
-		if (bestDir != null) {
-			rc.move(bestDir);
-			return;
-		}
-	}
 
 	private static MapLocation friendVec() {
 		RobotInfo[] friend = rc.senseNearbyRobots(mySensorRadiusSquared, us);
