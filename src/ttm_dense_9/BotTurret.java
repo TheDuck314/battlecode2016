@@ -12,7 +12,7 @@ public class BotTurret extends Globals {
 
 	public static void loop() {
 		FastMath.initRand(rc);
-		Debug.init("spotting");
+		Debug.init("position");
 		initTurret();
 		while (true) {
 			try {
@@ -96,70 +96,25 @@ public class BotTurret extends Globals {
 		return false;
 	}
 
-	private static void initTurret() {
-		rc.emptySignalQueue();
-	}
 
-
-	private static MapLocation targetPosition = new MapLocation(1000, 1000);
-
-	private static MapLocation friendVec() {
-		RobotInfo[] friend = rc.senseNearbyRobots(mySensorRadiusSquared, us);
-		MapLocation vecSum = new MapLocation(0,0);
-		for (RobotInfo ri : friend) {
-			if (ri.type != RobotType.TURRET) {
-				continue;
-			}
-			MapLocation vec = FastMath.minusVec(ri.location, here);
-			vecSum = FastMath.addVec(vecSum, vec);
-		}
-		return vecSum;
-	}
-
-	private static double computeArmyPos(MapLocation vecSum) {
-		MapLocation targetVec = FastMath.minusVec(targetPosition, here);
-		double mag = FastMath.dotVec(vecSum, targetVec) / Math.pow(FastMath.dotVec(targetVec, targetVec), 0.5);
-//		System.out.println("mag = " + mag);
-		return mag;
-	}
-
-	private static void tryMoveToTarget() throws GameActionException {
-		if (!rc.isCoreReady()) return;
-		Bug.goTo(targetPosition);
-	}
-
-	private static void turnTTM() throws GameActionException {
-		if (!rc.isCoreReady()) return;
-//		double ap = computeArmyPos(friendVec());
-//		if (ap > 5) {
-//			tryMoveToTarget();
-//			return;
-//		}
-//		if (isGoodTurretLocation(here)) {
-//			rc.unpack();
-//			initTurret();
-//			isTTM = false;
-//			return;
-//		}
-		Direction dir = betterDirection();
-		if (dir != null) {
-			rc.move(dir);
-			return;
-		} else {
-			rc.unpack();
-			initTurret();
-			isTTM = false;
-			return;
-		}
-//		if (ap > 0) {
-//			tryMoveToTarget();
-//			return;
-//		}
-//		trySettle();
-	}
 
 	public static MapLocation turretCenter = null;
-	public static int turretRadiusSq = 5;
+	public static int turretRadiusSq = 16;
+	
+	private static void processRallyPointSignals() {
+		for (Signal sig : currentSignals) {
+			if (sig.getTeam() != us) continue;
+			int[] data = sig.getMessage();
+			if (data != null) {
+				switch(data[0] & Messages.CHANNEL_MASK) {
+				case Messages.CHANNEL_RALLY_POINT:
+					turretCenter = Messages.parseRallyPoint(data);
+					turretRadiusSq = Messages.parseRallyPointRSq(data);
+					Debug.indicate("position", 2, "got center = " + turretCenter + " rSq = " + turretRadiusSq);
+				}
+			}
+		}
+	}
 
 	public static double turretLocationScore(MapLocation a) {
 		if (turretCenter == null) {
@@ -167,7 +122,7 @@ public class BotTurret extends Globals {
 		}
 		int distSq = turretCenter.distanceSquaredTo(a);
 		if (distSq > turretRadiusSq) {
-			return 0;
+			return -distSq;
 		} else {
 			return distSq;
 		}
@@ -212,7 +167,6 @@ public class BotTurret extends Globals {
 //			isTTM = true;
 //			return;
 //		}
-		currentSignals = rc.emptySignalQueue();
 		if (rc.isWeaponReady()) {
 			if (shootEnemy()) {
 				isHappyShooting = true;
@@ -227,10 +181,48 @@ public class BotTurret extends Globals {
 		}
 	}
 
+
+	private static void turnTTM() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+//		double ap = computeArmyPos(friendVec());
+//		if (ap > 5) {
+//			tryMoveToTarget();
+//			return;
+//		}
+//		if (isGoodTurretLocation(here)) {
+//			rc.unpack();
+//			initTurret();
+//			isTTM = false;
+//			return;
+//		}
+		Direction dir = betterDirection();
+		if (dir != null) {
+			rc.move(dir);
+			return;
+		} else {
+			rc.unpack();
+			initTurret();
+			isTTM = false;
+			return;
+		}
+//		if (ap > 0) {
+//			tryMoveToTarget();
+//			return;
+//		}
+//		trySettle();
+	}
+	
+	
+	private static void initTurret() {
+		rc.emptySignalQueue();
+	}
+
 	public static boolean isTTM = false;
 
 	private static void turn() throws GameActionException {
 		Globals.update();
+		currentSignals = rc.emptySignalQueue();
+		processRallyPointSignals();
 		if (isTTM) {
 			turnTTM();
 		} else {

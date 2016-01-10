@@ -17,6 +17,7 @@ public class Messages extends Globals {
 	public static final int CHANNEL_ARCHON_LOCATION = 0xa0000000;
 	public static final int CHANNEL_RADAR = 0xb0000000;
 	public static final int CHANNEL_FOUND_NEUTRAL = 0xc0000000;
+	public static final int CHANNEL_RALLY_POINT = 0xd0000000;
 	
 	private static int intFromMapLocation(MapLocation loc) {
 		return ((loc.x + 16000) << 16) | (loc.y + 16000);
@@ -44,8 +45,16 @@ public class Messages extends Globals {
 		return data[1];
 	}
 	
-	public static void sendInitialArchonLocation() throws GameActionException {
-		sendMapLocation(0, here, MapEdges.maxBroadcastDistSq());
+	public static void sendRallyPoint(MapLocation loc, int rSq, int radiusSq) throws GameActionException {
+		sendMapLocation(CHANNEL_RALLY_POINT | rSq, loc, radiusSq);
+	}
+	
+	public static MapLocation parseRallyPoint(int[] data) {
+		return parseMapLocation(data);
+	}
+	
+	public static int parseRallyPointRSq(int[] data) {
+		return data[0]^CHANNEL_RALLY_POINT;
 	}
 	
 	public static void sendTurretTarget(MapLocation loc, int radiusSq) throws GameActionException {

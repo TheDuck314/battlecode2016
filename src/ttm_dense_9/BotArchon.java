@@ -7,6 +7,7 @@ public class BotArchon extends Globals {
 	
 	public static void loop() throws GameActionException {
 		FastMath.initRand(rc);
+		Debug.init("position");
 		initArchons();
 		while (true) {
 			try {
@@ -27,6 +28,7 @@ public class BotArchon extends Globals {
 		trySpawn();
 		tryRepairAlly();
 		tryConvertNeutrals();
+		sendRallyPoint();
 	}
 	
 	public static int nArchons = 0;
@@ -41,7 +43,7 @@ public class BotArchon extends Globals {
 		archonsLoc[nArchons] = here;
 		archonsId[nArchons] = myID;
 		nArchons += 1;
-		Messages.sendInitialArchonLocation();
+		Messages.sendArchonLocation(here, MapEdges.maxBroadcastDistSq());
 		Clock.yield();
 		numTurns += 1;
 		Signal[] signals = rc.emptySignalQueue();
@@ -49,7 +51,8 @@ public class BotArchon extends Globals {
 			if (sig.getTeam() != us) continue;
 			int[] data = sig.getMessage();
 			if (data != null) {
-				if (data[0] == 0) {
+				switch(data[0] & Messages.CHANNEL_MASK) {
+				case Messages.CHANNEL_ARCHON_LOCATION:
 					archonsLoc[nArchons] = sig.getLocation();
 					archonsId[nArchons] = sig.getID();
 					nArchons += 1;
@@ -61,7 +64,6 @@ public class BotArchon extends Globals {
 			rallyPoint = FastMath.addVec(rallyPoint, archonsLoc[i]);
 		}
 		rallyPoint = FastMath.multiplyVec(1.0/(double)nArchons, rallyPoint);
-		rallyPoint = rallyPoint.add(rallyPoint.directionTo(here), 0);
 		rc.setIndicatorDot(rallyPoint, 255, 0, 0);
 		for (int i = 0; i < nArchons; ++i) {
 			if (archonsId[i] < myID) {
@@ -70,8 +72,8 @@ public class BotArchon extends Globals {
 		}
 	}
 	
-	private static void exploreForNeutralsAndParts() throws GameActionException {
-		if (!rc.isCoreReady()) return;
+	private static boolean exploreForNeutralsAndParts() throws GameActionException {
+		if (!rc.isCoreReady()) return false;
 		
 //		MapLocation[] nearbyLocs = MapLocation.getAllMapLocationsWithinRadiusSq(here, RobotType.ARCHON.sensorRadiusSquared);
 		
@@ -106,13 +108,21 @@ public class BotArchon extends Globals {
 //		if (bestLoc != null) {
 //			DBug.goTo(bestLoc);
 //		}
+		if (!rc.isCoreReady()) return false;
 		if (numTurns <= 60 && rallyPoint != null && here.distanceSquaredTo(rallyPoint) > 8) {
 			avoidEnemy();
-			if (!rc.isCoreReady()) return;
 			DBug.goTo(rallyPoint);
+			return true;
 		} else {
-			moveAround();
+			return moveAround();
 		}
+	}
+	
+	private static void sendRallyPoint() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+		int rSq = 13;
+		Messages.sendRallyPoint(rallyPoint, rSq, 2 * mySensorRadiusSquared);
+		Debug.indicate("position", 2, "send center = " + rallyPoint + " rSq = " + rSq);
 	}
 	
 	private static void avoidEnemy() throws GameActionException {
@@ -172,9 +182,9 @@ public class BotArchon extends Globals {
 		}
 	}
 
-	private static void moveAround() throws GameActionException {
+	private static boolean moveAround() throws GameActionException {
 		updateDangerousLoc();
-		if (!rc.isCoreReady()) return;
+		if (!rc.isCoreReady()) return false;
 		Direction[] dirs = new Direction[9];
 		boolean[] cmoves = new boolean[9];
 		MapLocation[] locs = new MapLocation[9];
@@ -199,8 +209,11 @@ public class BotArchon extends Globals {
 		infos = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		for (RobotInfo e : infos) {
 			for (int i = 0; i < 9; ++i) {
-				if (e.location.distanceSquaredTo(locs[i]) <= e.type.attackRadiusSquared) {
+				int distSq = e.location.distanceSquaredTo(locs[i]);
+				if (distSq <= e.type.attackRadiusSquared) {
 					attacks[i] += e.attackPower;
+				} else {
+					attacks[i] += e.attackPower / (5 * distSq / (e.type.attackRadiusSquared+1));
 				}
 			}
 		}
@@ -255,7 +268,7 @@ public class BotArchon extends Globals {
 //			scores[i] += archons[i] * 10;
 			scores[i] -= locs[i].distanceSquaredTo(rallyPoint);
 		}
-		scores[8] += 128;
+		scores[8] += 1;
 		for (int i = 0; i < 8; ++i) {
 			if (rubbles[i] < GameConstants.RUBBLE_SLOW_THRESH && !cmoves[i]) {
 				scores[i] = -100000;
@@ -278,18 +291,20 @@ public class BotArchon extends Globals {
 				nFriend = (int)nfriends[bestI];
 			}
 			DBug.tryMoveClearDir(bestDir);
+			return true;
 		} else if (rubbles[8] >= GameConstants.RUBBLE_SLOW_THRESH) {
 			rc.clearRubble(Direction.NONE);
+			return true;
 		}
-		return;
+		return false;
 	}
 	
 	private static int spawnCount = 0;
 	
 	private static void trySpawn() throws GameActionException {
 		if (!rc.isCoreReady()) return;
-		
-		rc.setIndicatorString(2, "trySpawn: turn " + rc.getRoundNum());
+
+		Debug.indicate("spawn", 2, "trySpawn: turn " + rc.getRoundNum());
 		
 		RobotType spawnType = ((spawnCount - archonOrder - 0) % 5 == 0 ? RobotType.SCOUT : RobotType.TURRET);
 
