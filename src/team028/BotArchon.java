@@ -80,17 +80,19 @@ public class BotArchon extends Globals {
 		
 		trySendArchonLocationMessage();
 
-		
-		trySpawn();
-		
 		tryRepairAlly();
-		tryConvertNeutrals();
-		
+
 		if (rc.isCoreReady()) {
 			if (retreatIfNecessary()) {
 				return;
 			}
-			
+		}
+		
+		trySpawn();
+		
+		tryConvertNeutrals();
+		
+		if (rc.isCoreReady()) {
 			pickDestination();
 			
 			if (currentDestination != null) {
