@@ -7,7 +7,7 @@ public class BotTurret extends Globals {
 	public static int motherId = 0;
 	public static MapLocation motherLocation = null;
 	public static boolean isHappyShooting = false;
-	
+
 	private static Signal[] currentSignals;
 
 	public static void loop() {
@@ -75,10 +75,10 @@ public class BotTurret extends Globals {
 			rc.attackLocation(bestLoc);
 			return true;
 		}
-		
+
 		Debug.indicate("spotting", 0, "going to check for spotting messages; message queue length = " + currentSignals.length);
 		for (Signal sig : currentSignals) {
-			if (sig.getTeam() != us) continue;			
+			if (sig.getTeam() != us) continue;
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
@@ -86,7 +86,7 @@ public class BotTurret extends Globals {
 					MapLocation target = Messages.parseTurretTarget(data);
 					Debug.indicate("spotting", 1, "got target = " + target);
 					if (target != null && rc.canAttackLocation(target)) {
-						Debug.indicate("spotting", 2, "attacking spotting target!");				
+						Debug.indicate("spotting", 2, "attacking spotting target!");
 						rc.attackLocation(target);
 						return true;
 					}
@@ -95,11 +95,11 @@ public class BotTurret extends Globals {
 		}
 		return false;
 	}
-	
+
 	private static void initTurret() {
 		rc.emptySignalQueue();
 	}
-	
+
 
 	private static MapLocation targetPosition = new MapLocation(1000, 1000);
 
@@ -115,14 +115,14 @@ public class BotTurret extends Globals {
 		}
 		return vecSum;
 	}
-	
+
 	private static double computeArmyPos(MapLocation vecSum) {
 		MapLocation targetVec = FastMath.minusVec(targetPosition, here);
 		double mag = FastMath.dotVec(vecSum, targetVec) / Math.pow(FastMath.dotVec(targetVec, targetVec), 0.5);
 //		System.out.println("mag = " + mag);
 		return mag;
 	}
-	
+
 	private static void tryMoveToTarget() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 		Bug.goTo(targetPosition);
@@ -157,10 +157,10 @@ public class BotTurret extends Globals {
 //		}
 //		trySettle();
 	}
-	
+
 	public static MapLocation turretCenter = null;
 	public static int turretRadiusSq = 5;
-	
+
 	public static double turretLocationScore(MapLocation a) {
 		if (turretCenter == null) {
 			turretCenter = here;
@@ -172,7 +172,7 @@ public class BotTurret extends Globals {
 			return distSq;
 		}
 	}
-	
+
 	public static Direction betterDirection() throws GameActionException {
 		double bestScore = turretLocationScore(here);
 		Direction bestDir = null;
@@ -189,7 +189,7 @@ public class BotTurret extends Globals {
 		}
 		return bestDir;
 	}
-	
+
 	private static void turnTurret() throws GameActionException {
 //		RobotInfo[] infos;
 //		infos = rc.senseHostileRobots(here, mySensorRadiusSquared);
@@ -226,7 +226,7 @@ public class BotTurret extends Globals {
 			return;
 		}
 	}
-	
+
 	public static boolean isTTM = false;
 
 	private static void turn() throws GameActionException {
