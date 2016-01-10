@@ -18,19 +18,17 @@ public class Messages extends Globals {
 	public static final int CHANNEL_RADAR = 0xb0000000;
 	public static final int CHANNEL_FOUND_NEUTRAL = 0xc0000000;
 	
-	
-	
-	public static int intFromMapLocation(MapLocation loc) {
+	private static int intFromMapLocation(MapLocation loc) {
 		return ((loc.x + 16000) << 16) | (loc.y + 16000);
 	}
 	
-	public static MapLocation mapLocationFromInt(int data) {
+	private static MapLocation mapLocationFromInt(int data) {
 		int x = ((data & 0xffff0000) >>> 16) - 16000;
 		int y = (data & 0x0000ffff) - 16000;
 		return new MapLocation(x, y);
 	}
 
-	public static void sendMapLocation(int channel, MapLocation loc, int radiusSq) throws GameActionException {
+	private static void sendMapLocation(int channel, MapLocation loc, int radiusSq) throws GameActionException {
 		rc.broadcastMessageSignal(channel, intFromMapLocation(loc), radiusSq);
 	}
 	
@@ -46,7 +44,9 @@ public class Messages extends Globals {
 		return data[1];
 	}
 	
-	
+	public static void sendInitialArchonLocation() throws GameActionException {
+		sendMapLocation(0, here, MapEdges.maxBroadcastDistSq());
+	}
 	
 	public static void sendTurretTarget(MapLocation loc, int radiusSq) throws GameActionException {
 		sendMapLocation(CHANNEL_TURRET_TARGET, loc, radiusSq);

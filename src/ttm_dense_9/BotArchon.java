@@ -41,8 +41,7 @@ public class BotArchon extends Globals {
 		archonsLoc[nArchons] = here;
 		archonsId[nArchons] = myID;
 		nArchons += 1;
-		int initialMask = 12312234;
-		Messages.sendMapLocation(initialMask, here, MapEdges.maxBroadcastDistSq());
+		Messages.sendInitialArchonLocation();
 		Clock.yield();
 		numTurns += 1;
 		Signal[] signals = rc.emptySignalQueue();
@@ -50,7 +49,7 @@ public class BotArchon extends Globals {
 			if (sig.getTeam() != us) continue;
 			int[] data = sig.getMessage();
 			if (data != null) {
-				if (data[0] == initialMask) {
+				if (data[0] == 0) {
 					archonsLoc[nArchons] = sig.getLocation();
 					archonsId[nArchons] = sig.getID();
 					nArchons += 1;
@@ -179,7 +178,6 @@ public class BotArchon extends Globals {
 		Direction[] dirs = new Direction[9];
 		boolean[] cmoves = new boolean[9];
 		MapLocation[] locs = new MapLocation[9];
-		boolean[] oddPos = new boolean[9];
 		double[] rubbles = new double[9];
 		double[] attacks = new double[9];
 		double[] nfriends = new double[9];
@@ -195,7 +193,6 @@ public class BotArchon extends Globals {
 			cmoves[i] = rc.canMove(dirs[i]);
 		}
 		for (int i = 0; i < 9; ++i) {
-			oddPos[i] = !isGoodTurretLocation(locs[i]);
 			rubbles[i] = rc.senseRubble(locs[i]);
 		}
 		RobotInfo[] infos;
@@ -253,14 +250,12 @@ public class BotArchon extends Globals {
 				scores[i] -= attacks[8] * 1000;
 				scores[i] += 500;
 			}
-//			if (oddPos[i]) {
-//				scores[i] += 100;
-//			}
 //			scores[i] += nfriends[i] * 50;
-			scores[i] += friends[i] * 5 + scouts[i];
-			scores[i] += archons[i] * 10;
+//			scores[i] += friends[i] * 5 + scouts[i];
+//			scores[i] += archons[i] * 10;
+			scores[i] -= locs[i].distanceSquaredTo(rallyPoint);
 		}
-		scores[8] += FastMath.rand256() - 128;
+		scores[8] += 128;
 		for (int i = 0; i < 8; ++i) {
 			if (rubbles[i] < GameConstants.RUBBLE_SLOW_THRESH && !cmoves[i]) {
 				scores[i] = -100000;
@@ -327,23 +322,13 @@ public class BotArchon extends Globals {
 			}
 			
 			spawnType = RobotType.TURRET;
-			if (nsoldies < 6 || rc.getRobotCount() < 15) {
+			if (nsoldies < 12 && rc.getRobotCount() < 15) {
 				spawnType = RobotType.SOLDIER;
 			}
 			if (nturrets > 1 && (nscout == 0 || (spawnCount - archonOrder - 0) % 5 == 0)) {
 				spawnType = RobotType.SCOUT;
 			}
 			
-			if (spawnType == RobotType.TURRET) {
-				for (Direction dir : Direction.values()) {
-					MapLocation tl = here.add(dir);
-					if (isGoodTurretLocation(tl) && rc.canBuild(dir, spawnType)) {
-						rc.build(dir, spawnType);
-						++spawnCount;
-						return;
-					}
-				}
-			}
 			for (Direction dir : Direction.values()) {
 				if (rc.canBuild(dir, spawnType)) {
 					rc.build(dir, spawnType);
