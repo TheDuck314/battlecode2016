@@ -99,7 +99,7 @@ public class BotTurret extends Globals {
 
 
 	public static MapLocation turretCenter = null;
-	public static int turretRadiusSq = 16;
+	public static int turretRadiusSq = 0;
 	
 	private static void processRallyPointSignals() {
 		for (Signal sig : currentSignals) {
@@ -144,6 +144,17 @@ public class BotTurret extends Globals {
 		}
 		return bestDir;
 	}
+	
+	public static int nearByTTMs() {
+		int count = 0;
+		RobotInfo[] infos = rc.senseNearbyRobots(9, us);
+		for (RobotInfo r : infos) {
+			if (r.type == RobotType.TTM) {
+				count += 1;
+			}
+		}
+		return count;
+	}
 
 	private static void turnTurret() throws GameActionException {
 //		RobotInfo[] infos;
@@ -174,14 +185,18 @@ public class BotTurret extends Globals {
 				isHappyShooting = false;
 			}
 		}
-		if (!isHappyShooting && betterDirection() != null) {
+		if (!rc.isCoreReady()) return;
+		if (!isHappyShooting
+				&& betterDirection() != null
+				&& nearByTTMs() < 1) {
 			rc.pack();
 			isTTM = true;
 			return;
 		}
 	}
 
-
+	private static int readyUnpackTurn = 0;
+	
 	private static void turnTTM() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 //		double ap = computeArmyPos(friendVec());
@@ -198,8 +213,12 @@ public class BotTurret extends Globals {
 		Direction dir = betterDirection();
 		if (dir != null) {
 			rc.move(dir);
+			readyUnpackTurn = 0;
 			return;
-		} else {
+		} else if (readyUnpackTurn == 0) {
+			readyUnpackTurn = rc.getRoundNum();
+			return;
+		} else if (rc.getRoundNum() - readyUnpackTurn >= 5) {
 			rc.unpack();
 			initTurret();
 			isTTM = false;

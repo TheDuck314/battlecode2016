@@ -37,6 +37,8 @@ public class BotArchon extends Globals {
 	public static int archonOrder = 0;
 	
 	public static MapLocation rallyPoint = null;
+	public static int rallyPointSq = 1;
+	public static int blockedTurn = 0;
 	
 	public static void initArchons() throws GameActionException {
 		Globals.update();
@@ -118,11 +120,45 @@ public class BotArchon extends Globals {
 		}
 	}
 	
+	private static boolean isMasterArchon() {
+		if (archonOrder == 0) {
+			return true;
+		} else {
+			for (int i = 0; i < nArchons; ++i) {
+				if (archonsId[i] < myID && rc.canSenseRobot(archonsId[i])) {
+					return false;
+				}
+			}
+			return true;
+		}
+	}
+	
+	private static int bestRallyPointRadiusSq() throws GameActionException {
+		for (Direction dir : Direction.values()) {
+			MapLocation loc = here.add(dir);
+			if (rc.onTheMap(loc) && !rc.isLocationOccupied(loc)) {
+				return rallyPointSq;
+			}
+		}
+		RobotInfo[] ris = rc.senseNearbyRobots(rallyPointSq, us);
+		for (RobotInfo r : ris) {
+			if (r.type == RobotType.TTM) {
+				return rallyPointSq;
+			}
+		}
+		if (rc.getTeamParts() <= 135) {
+			return rallyPointSq;
+		} else {
+			return rallyPointSq + 1;
+		}
+	}
+	
 	private static void sendRallyPoint() throws GameActionException {
 		if (!rc.isCoreReady()) return;
-		int rSq = 13;
-		Messages.sendRallyPoint(rallyPoint, rSq, 2 * mySensorRadiusSquared);
-		Debug.indicate("position", 2, "send center = " + rallyPoint + " rSq = " + rSq);
+		if (!isMasterArchon()) return;
+		rallyPointSq = bestRallyPointRadiusSq();
+		Messages.sendRallyPoint(rallyPoint, rallyPointSq, 2 * mySensorRadiusSquared);
+		Debug.indicate("position", 2, "send center = " + rallyPoint + " rSq = " + rallyPointSq);
 	}
 	
 	private static void avoidEnemy() throws GameActionException {
