@@ -24,8 +24,10 @@ public class BotScout extends Globals {
 	private static int lastTurretOwnershipBroadcastRound = -999999;
 	private static int[] turretOwnershipReceiveRoundById = new int[32001];
 	
+	private static MapLocation closestEnemyTurretLocation = null;
+	
 	public static void loop() {
-    	Debug.init("unpaired");
+    	Debug.init("msg");
     	origin = here;
     	exploredGrid[50][50] = true;    	
 		while (true) {
@@ -54,6 +56,16 @@ public class BotScout extends Globals {
 		
 		sendRadarInfo();
 		
+		if (rc.isCoreReady()) {
+			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
+			if (closestEnemyTurret != null) {
+				closestEnemyTurretLocation = closestEnemyTurret.location;
+			} else {
+				closestEnemyTurretLocation = null;
+			}
+		}
+
+		
 		trySendPartsOrNeutralLocation();
 		
 		if (tryFollowTurret()) {
@@ -65,15 +77,17 @@ public class BotScout extends Globals {
 	
 	private static boolean tryFollowTurret() throws GameActionException {
 		if (!rc.isCoreReady()) return false;
-		
+	
 		if (rc.canSenseRobot(turretFollowId)) {
 			MapLocation turretLoc = rc.senseRobot(turretFollowId).location;
-			Nav.goToDirect(turretLoc);
 			if (here.isAdjacentTo(turretLoc)) {
+				Nav.goToDirectSafelyAvoidingTurret(turretLoc, closestEnemyTurretLocation);
 				if (rc.getRoundNum() - lastTurretOwnershipBroadcastRound > 40) {
 					Messages.sendTurretOwnershipClaim(turretFollowId, 2*mySensorRadiusSquared);
 					lastTurretOwnershipBroadcastRound = rc.getRoundNum();
 				}
+			} else {
+				Nav.goToDirect(turretLoc);
 			}
 			rc.setIndicatorDot(turretLoc, 0, 255, 0);
 			return true;
@@ -94,12 +108,14 @@ public class BotScout extends Globals {
 		if (enableArchonFollowing && rc.getRoundNum() > 300) {
 			if (rc.canSenseRobot(archonFollowId)) {
 				MapLocation archonLoc = rc.senseRobot(archonFollowId).location;
-				Nav.goToDirect(archonLoc);
 				if (here.isAdjacentTo(archonLoc)) {
+					Nav.goToDirectSafelyAvoidingTurret(archonLoc, closestEnemyTurretLocation);
 					if (rc.getRoundNum() - lastTurretOwnershipBroadcastRound > 40) {
 						Messages.sendTurretOwnershipClaim(archonFollowId, 2*mySensorRadiusSquared);
 						lastTurretOwnershipBroadcastRound = rc.getRoundNum();
 					}
+				} else {
+					Nav.goToDirect(archonLoc);
 				}
 				rc.setIndicatorDot(archonLoc, 0, 255, 0);
 				return true;
@@ -281,6 +297,7 @@ public class BotScout extends Globals {
 		RobotInfo[] infos;
 		infos = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		for (RobotInfo e : infos) {
+			if (!e.type.canAttack()) continue;
 			for (int i = 0; i < 9; ++i) {
 				int distSq = e.location.distanceSquaredTo(locs[i]);
 				if (distSq <= e.type.attackRadiusSquared) {
