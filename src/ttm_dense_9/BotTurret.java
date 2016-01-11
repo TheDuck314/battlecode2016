@@ -135,7 +135,7 @@ public class BotTurret extends Globals {
 			MapLocation loc = here.add(dir);
 			if (!rc.onTheMap(loc)) continue;
 			if (rc.isLocationOccupied(loc)) continue;
-			if (rc.senseRubble(loc) > GameConstants.RUBBLE_OBSTRUCTION_THRESH) continue;
+			if (rc.senseRubble(loc) >= GameConstants.RUBBLE_OBSTRUCTION_THRESH) continue;
 			double score = turretLocationScore(loc);
 			if (score > bestScore) {
 				bestDir = dir;
