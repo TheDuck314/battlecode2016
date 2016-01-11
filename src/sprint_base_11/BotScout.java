@@ -297,7 +297,7 @@ public class BotScout extends Globals {
 		RobotInfo[] infos;
 		infos = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		for (RobotInfo e : infos) {
-			if (e.type == RobotType.ZOMBIEDEN) continue;
+			if (!e.type.canAttack()) continue;
 			for (int i = 0; i < 9; ++i) {
 				int distSq = e.location.distanceSquaredTo(locs[i]);
 				if (distSq <= e.type.attackRadiusSquared) {
