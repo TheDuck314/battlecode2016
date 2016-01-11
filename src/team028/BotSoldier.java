@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("radar");
+		Debug.init("turret");
 		FastMath.initRand(rc);
 		while (true) {
 			try {
@@ -28,6 +28,10 @@ public class BotSoldier extends Globals {
 	private static MapLocation lastKnownArchonLocation = null;
 	private static int lastKnownArchonLocationRound = -999999;
 	
+	private static int numTurnsBlocked = 0;
+	
+	private static MapLocation closestEnemyTurretLocation = null;
+	
 	private static void turn() throws GameActionException {
 		processSignals();
 
@@ -42,6 +46,15 @@ public class BotSoldier extends Globals {
 				return;
 			}
 		}
+		
+		Debug.indicate("turret", 0, "numEnemyTurrets = " + Radar.numEnemyTurrets);
+		FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
+		if (closestEnemyTurret != null) {
+			closestEnemyTurretLocation = closestEnemyTurret.location;
+		} else {
+			closestEnemyTurretLocation = null;
+		}
+		Debug.indicate("turret", 1, "closest enemy turret = " + (closestEnemyTurret == null ? null : closestEnemyTurret.location));
 		
 		lookForZombieDens();
 	}
@@ -79,6 +92,10 @@ public class BotSoldier extends Globals {
 						lastKnownArchonLocation = archonLoc;
 						lastKnownArchonLocationRound = rc.getRoundNum();
 					}
+					break;
+					
+				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
+					Messages.processEnemyTurretWarning(data);
 					break;
 					
 				default:
@@ -320,7 +337,19 @@ public class BotSoldier extends Globals {
 		}
 		
 		if (attackTarget != null) {
-			Nav.goToDirect(attackTarget);
+			//if (Nav.goToDirect(attackTarget)) {
+			if (Nav.goToDirectSafelyAvoidingTurret(attackTarget, closestEnemyTurretLocation)) {
+				numTurnsBlocked = 0;
+				Debug.indicate("block", 0, "not blocked!");
+			} else {
+				numTurnsBlocked += 1;
+				Debug.indicate("block", 0, "blocked! numTurnsBlocked = " + numTurnsBlocked);
+				if (numTurnsBlocked >= 40) {
+					Debug.indicate("block", 1, "waited too long. setting attackTarget = null");
+					attackTarget = null;
+					numTurnsBlocked = 0;
+				}
+			}
 			return;
 		}
 		

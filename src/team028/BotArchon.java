@@ -15,8 +15,11 @@ public class BotArchon extends Globals {
 	
 	private static MapLocation currentDestination = null;
 	
+	private static MapLocation closestEnemyTurretLocation = null;
+	
 	public static void loop() throws GameActionException {
-		Debug.init("parts");
+		rc.setIndicatorString(0, "5f52f26d9a8495f212e647744ab2c39b45f1863c");
+		Debug.init("turret");
 		FastMath.initRand(rc);
 		//initArchons();
 
@@ -65,16 +68,17 @@ public class BotArchon extends Globals {
 	}
 	
 	private static void turn() throws GameActionException {
-		if (rc.getRoundNum() <= 100 && rallyPoint != null && here.distanceSquaredTo(rallyPoint) > 2) {
+		/*if (rc.getRoundNum() <= 100 && rallyPoint != null && here.distanceSquaredTo(rallyPoint) > 2) {
 			if (rc.isCoreReady()) {
 			    Nav.goToDirectSafely(rallyPoint);
 			}
 			return;
-		}
+		}*/
 		
 		processSignals();
 		MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
 
+		
 		//trySendAttackTarget();
 		sendRadarInfo();
 		
@@ -83,6 +87,15 @@ public class BotArchon extends Globals {
 		tryRepairAlly();
 
 		if (rc.isCoreReady()) {
+			Debug.indicate("turret", 0, "numEnemyTurrets = " + Radar.numEnemyTurrets);
+			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
+			if (closestEnemyTurret != null) {
+				closestEnemyTurretLocation = closestEnemyTurret.location;
+			} else {
+				closestEnemyTurretLocation = null;
+			}
+			Debug.indicate("turret", 1, "closest enemy turret = " + (closestEnemyTurret == null ? null : closestEnemyTurret.location));
+			
 			if (retreatIfNecessary()) {
 				return;
 			}
@@ -134,18 +147,10 @@ public class BotArchon extends Globals {
 		}
 	}
 	
-	private static void trySendAttackTarget() throws GameActionException {
-		RobotInfo[] targets = rc.senseHostileRobots(here, mySensorRadiusSquared);
-		int numTargets = (targets.length < 3 ? targets.length : 3);
-		for (int i = 0; i < numTargets; ++i) {
-			Messages.sendAttackTarget(targets[i].location, 9 * mySensorRadiusSquared);
-		}
-	}
-	
 	private static void trySpawn() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 
-		RobotType spawnType = RobotType.SOLDIER;
+		/*RobotType spawnType = RobotType.SOLDIER;
 		if (rc.getRoundNum() > 400) {
 			if (spawnCount % 4 == 0) {
 				spawnType = RobotType.TURRET;
@@ -153,6 +158,34 @@ public class BotArchon extends Globals {
 		}
 		if (spawnCount % 10 == 0) {
 			spawnType = RobotType.SCOUT;
+		}*/
+		
+		RobotType spawnType;
+		if (rc.getRoundNum() < 250) {
+			if (spawnCount % 8 == 0) {
+				spawnType = RobotType.SCOUT;
+			} else {
+				spawnType = RobotType.SOLDIER;			
+			}
+		} else if (rc.getRobotCount() < 40) {
+			switch (spawnCount % 3) {
+			case 0:
+				spawnType = RobotType.SOLDIER;
+				break;
+			case 1:
+				spawnType = RobotType.TURRET;
+				break;
+			case 2:
+			default:
+				spawnType = RobotType.SCOUT;
+				break;
+			}
+		} else {
+			if (spawnCount % 2 == 0) {
+				spawnType = RobotType.SCOUT;
+			} else {
+				spawnType = RobotType.TURRET;
+			}
 		}
 		
 		if (!rc.hasBuildRequirements(spawnType)) return;
@@ -208,6 +241,9 @@ public class BotArchon extends Globals {
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
+				case Messages.CHANNEL_MAP_EDGES:
+					Messages.processMapEdges(data);
+					break;
 				case Messages.CHANNEL_FOUND_PARTS:
 					PartsLocation partsLoc = Messages.parsePartsLocation(data);
 					Debug.indicate("parts", 0, "parts at " + partsLoc.location);
@@ -218,17 +254,8 @@ public class BotArchon extends Globals {
 					considerDestination(neutralLoc);
 					break;
 					
-				case Messages.CHANNEL_MAP_MIN_X:
-					Messages.processMapMinX(data);
-					break;
-				case Messages.CHANNEL_MAP_MAX_X:
-					Messages.processMapMaxX(data);
-					break;
-				case Messages.CHANNEL_MAP_MIN_Y:
-					Messages.processMapMinY(data);
-					break;
-				case Messages.CHANNEL_MAP_MAX_Y:
-					Messages.processMapMaxY(data);
+				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
+					Messages.processEnemyTurretWarning(data);
 					break;
 					
 				default:
@@ -237,6 +264,7 @@ public class BotArchon extends Globals {
 				// simple signal with no message
 			}
 		}
+		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
 	
 	private static void pickDestination() throws GameActionException {
@@ -272,7 +300,7 @@ public class BotArchon extends Globals {
 	private static void goToDestination() throws GameActionException {
 		Debug.indicate("parts", 1, "destination = " + currentDestination);
 		if (currentDestination != null) {
-			Nav.goToDirectSafely(currentDestination);
+			Nav.goToDirectSafelyAvoidingTurret(currentDestination, closestEnemyTurretLocation);
 		}
 	}
 	
@@ -287,7 +315,7 @@ public class BotArchon extends Globals {
 		}
 		avgX /= allies.length;
 		avgY /= allies.length;
-		Nav.goToDirect(new MapLocation(avgX, avgY));
+		Nav.goToDirectSafelyAvoidingTurret(new MapLocation(avgX, avgY), closestEnemyTurretLocation);
 	}
 	
 	private static boolean retreatIfNecessary() throws GameActionException {
@@ -299,6 +327,12 @@ public class BotArchon extends Globals {
 			if (!hostileType.canAttack()) continue;			
 			mustRetreat = true;
 			retreatTarget = retreatTarget.add(hostile.location.directionTo(here));
+		}
+		if (closestEnemyTurretLocation != null) {
+			if (here.distanceSquaredTo(closestEnemyTurretLocation) <= RobotType.TURRET.attackRadiusSquared) {
+				mustRetreat = true;
+				retreatTarget = retreatTarget.add(closestEnemyTurretLocation.directionTo(here));
+			}
 		}
 		if (mustRetreat) {
 			if (!here.equals(retreatTarget)) {

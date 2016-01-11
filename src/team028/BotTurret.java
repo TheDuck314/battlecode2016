@@ -69,30 +69,70 @@ public class BotTurret extends Globals {
 		lookForAFight();
 	}
 
+	private static double enemyScore(RobotType type, double health) {
+		switch(type) {
+		case ARCHON:
+			return 0.0001;
+		case ZOMBIEDEN:
+			return 0.00001;
+			
+		case SCOUT:
+			return 0.25 * RobotType.TURRET.attackPower / (health * RobotType.TURRET.attackDelay);
+		case TTM:
+			return 0.5 * RobotType.TURRET.attackPower / (health * RobotType.TURRET.attackDelay);
+		case TURRET:
+			return type.attackPower / (health * type.attackDelay);
+
+		default:
+			return type.attackPower / (health * type.attackDelay);
+		}
+	}
+	
 	public static boolean tryToAttackAnEnemy(RobotInfo[] attackableEnemies) throws GameActionException {
 		MapLocation bestTarget = null;
-		double minHealth = Double.MAX_VALUE;
+		double maxScore = -99;
+		boolean weAreAttacked = false;
 		for (RobotInfo hostile : attackableEnemies) {
 			if (!rc.canAttackLocation(hostile.location)) continue;
-			if (hostile.health < minHealth) {
-				minHealth = hostile.health;
-				bestTarget = hostile.location;
+			boolean hostileIsAttackingUs = hostile.location.distanceSquaredTo(here) <= hostile.type.attackRadiusSquared;
+			if (weAreAttacked) {
+				if (!hostileIsAttackingUs) {
+					continue;
+				}
+			} else {
+				if (hostileIsAttackingUs) {
+					weAreAttacked = true;
+					maxScore = -99;
+				}
 			}
-			if (hostile.type == RobotType.ARCHON 
-					|| hostile.type == RobotType.TURRET
-					|| hostile.type == RobotType.TTM) {
-				bestTarget = hostile.location;
-				break;
+			
+			double score = enemyScore(hostile.type, hostile.health);
+			if (score > maxScore) {
+				maxScore = score;
+				bestTarget = hostile.location;				
 			}
 		}
 		for (int i = 0; i < Radar.numCachedEnemies; ++i) {
 			FastRobotInfo hostile = Radar.enemyCache[i];
+			if (here.distanceSquaredTo(hostile.location) <= mySensorRadiusSquared) continue;
 			if (!rc.canAttackLocation(hostile.location)) continue;
-			if (bestTarget == null
-					|| hostile.type == RobotType.ARCHON 
-					|| hostile.type == RobotType.TURRET
-					|| hostile.type == RobotType.TTM) {
-				bestTarget = hostile.location;
+			
+			boolean hostileIsAttackingUs = hostile.location.distanceSquaredTo(here) <= hostile.type.attackRadiusSquared;
+			if (weAreAttacked) {
+				if (!hostileIsAttackingUs) {
+					continue;
+				}
+			} else {
+				if (hostileIsAttackingUs) {
+					weAreAttacked = true;
+					maxScore = -99;
+				}
+			}
+			
+			double score = enemyScore(hostile.type, hostile.type.maxHealth);
+			if (score > maxScore) {
+				maxScore = score;
+				bestTarget = hostile.location;				
 			}			
 		}
 		if (bestTarget != null) {

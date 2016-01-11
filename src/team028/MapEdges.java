@@ -1,8 +1,6 @@
 package team028;
 
-import battlecode.common.GameActionException;
-import battlecode.common.GameConstants;
-import battlecode.common.MapLocation;
+import battlecode.common.*;
 
 public class MapEdges extends Globals {
 	public static int UNKNOWN = -999999999;
@@ -17,17 +15,25 @@ public class MapEdges extends Globals {
 	// of the boundaries
 	public static int maxBroadcastDistSq() {
 		int maxWidth;
-		if (minX == UNKNOWN || maxX == UNKNOWN) {
+		if (minX == UNKNOWN && maxX == UNKNOWN) {
 			maxWidth = GameConstants.MAP_MAX_WIDTH;
+		} else if (minX != UNKNOWN && maxX != UNKNOWN) {
+			maxWidth = Math.max(maxX - here.x, here.x - minX);
+		} else if (minX == UNKNOWN) {
+			maxWidth = Math.max(maxX - here.x, GameConstants.MAP_MAX_WIDTH - (maxX - here.x));
 		} else {
-			maxWidth = maxX - minX;
+			maxWidth = Math.max(GameConstants.MAP_MAX_WIDTH - (here.x - minX), here.x - minX);
 		}
 		
 		int maxHeight;
 		if (minY == UNKNOWN || maxY == UNKNOWN) {
 			maxHeight = GameConstants.MAP_MAX_WIDTH;
+		} else if (minY != UNKNOWN && maxY != UNKNOWN) {
+			maxHeight = Math.max(maxY - here.y, here.y - minY);
+		} else if (minY == UNKNOWN) {
+			maxHeight = Math.max(maxY - here.y, GameConstants.MAP_MAX_WIDTH - (maxY - here.y));
 		} else {
-			maxHeight = maxY - minY;
+			maxHeight = Math.max(GameConstants.MAP_MAX_WIDTH - (here.y - minY), here.y - minY);
 		}
 		
 		return (maxWidth * maxWidth) + (maxHeight * maxHeight);
@@ -42,12 +48,13 @@ public class MapEdges extends Globals {
 	
 	// visionRange should be (int)Math.sqrt(sensorRadiusSquared)
 	public static void detectAndBroadcastMapEdges(int visionRange) throws GameActionException {
+		boolean shouldSend = false;
 		if (minX == UNKNOWN) {
 			if (!rc.onTheMap(here.add(-visionRange, 0))) {
 				for (int r = 1; r <= visionRange; ++r) {
 					if (!rc.onTheMap(here.add(-r, 0))) {
 						minX = here.x - r + 1;
-						Messages.sendMapMinX(maxBroadcastDistSq());
+						shouldSend = true;
 						break;
 					}
 				}
@@ -59,7 +66,7 @@ public class MapEdges extends Globals {
 				for (int r = 1; r <= visionRange; ++r) {
 					if (!rc.onTheMap(here.add(r, 0))) {
 						maxX = here.x + r - 1;
-						Messages.sendMapMaxX(maxBroadcastDistSq());
+						shouldSend = true;
 						break;
 				    }
 				}
@@ -71,7 +78,7 @@ public class MapEdges extends Globals {
 				for (int r = 1; r <= visionRange; ++r) {
 					if (!rc.onTheMap(here.add(0, -r))) {
 						minY = here.y - r + 1;
-						Messages.sendMapMinY(maxBroadcastDistSq());
+						shouldSend = true;
 						break;
 					}
 				}
@@ -83,11 +90,14 @@ public class MapEdges extends Globals {
 				for (int r = 1; r <= visionRange; ++r) {
 					if (!rc.onTheMap(here.add(0, r))) {
 						maxY = here.y + r - 1;
-						Messages.sendMapMaxY(maxBroadcastDistSq());
+						shouldSend = true;
 						break;
 					}
 				}
 			}
-        }
+		}
+		if (shouldSend) {
+			Messages.sendKnownMapEdges(maxBroadcastDistSq());
+		};
 	}
 }

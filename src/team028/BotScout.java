@@ -14,15 +14,17 @@ public class BotScout extends Globals {
 	private static MapLocation[] dangerMemory = new MapLocation[DANGER_MEMORY_LENGTH];
 	private static int dangerMemoryPointer = 0;
 
-	private static int turretFollowId = -1;
-	
 	private static int lastPartsOrNeutralSignalRound = -999999;
 	
 	private static int lastGlobalRadarBroadcastRound = 0;
 	
+	private static int turretFollowId = -1;
+	private static int lastTurretOwnershipBroadcastRound = -999999;
+	private static int[] turretOwnershipReceiveRoundById = new int[32001];
+	
 
 	public static void loop() {
-    	Debug.init("radar");
+    	Debug.init("turret");
     	origin = here;
     	exploredGrid[50][50] = true;    	
 		while (true) {
@@ -40,18 +42,12 @@ public class BotScout extends Globals {
 		processSignals();		
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
 
-		//trySendAttackTarget();
 		sendRadarInfo();
 		
 		trySendPartsOrNeutralLocation();
 		
-//		retreatIfNecessary();
-//		explore();
-		
-		if (rc.getID() % 2 == 0) {
-			if (tryFollowTurret()) {
-				return;
-			}
+		if (tryFollowTurret()) {
+			return;
 		}
 		
 		moveAround();
@@ -63,6 +59,12 @@ public class BotScout extends Globals {
 		if (rc.canSenseRobot(turretFollowId)) {
 			MapLocation turretLoc = rc.senseRobot(turretFollowId).location;
 			Nav.goToDirect(turretLoc);
+			if (here.isAdjacentTo(turretLoc)) {
+				if (rc.getRoundNum() - lastTurretOwnershipBroadcastRound > 40) {
+					Messages.sendTurretOwnershipClaim(turretFollowId, 2*mySensorRadiusSquared);
+					lastTurretOwnershipBroadcastRound = rc.getRoundNum();
+				}
+			}
 			rc.setIndicatorDot(turretLoc, 0, 255, 0);
 			return true;
 		}
@@ -70,10 +72,12 @@ public class BotScout extends Globals {
 		RobotInfo[] nearbyAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
 		for (RobotInfo ally : nearbyAllies) {
 			if (ally.type == RobotType.TTM || ally.type == RobotType.TURRET) {
-				turretFollowId = ally.ID;
-				Nav.goToDirect(ally.location);
-				rc.setIndicatorDot(ally.location, 0, 255, 0);
-				return true;
+				if (rc.getRoundNum() - turretOwnershipReceiveRoundById[ally.ID] > 80) {
+					turretFollowId = ally.ID;
+					Nav.goToDirect(ally.location);
+					rc.setIndicatorDot(ally.location, 0, 255, 0);
+					return true;
+				}
 			}
 		}
 		
@@ -107,38 +111,61 @@ public class BotScout extends Globals {
 		Debug.indicate("radar", 0, "sendRaderInfo: hostiles.length = " + hostiles.length);
 		if (hostiles.length == 0) return;
 		
-		int rangeSq = 9*mySensorRadiusSquared;
+		int radarRangeSq = 9*mySensorRadiusSquared;
 		if (rc.getRoundNum() - lastGlobalRadarBroadcastRound > 50) {
-			rangeSq = MapEdges.maxBroadcastDistSq();
+			radarRangeSq = MapEdges.maxBroadcastDistSq();
 			lastGlobalRadarBroadcastRound = rc.getRoundNum();
 		}
 		
 		if (hostiles.length <= 5) {
-			Messages.sendRadarData(hostiles, rangeSq);
+			Messages.sendRadarData(hostiles, radarRangeSq);
 		} else {
-			Messages.sendRadarData(Util.truncateArray(hostiles, 5), rangeSq);
+			Messages.sendRadarData(Util.truncateArray(hostiles, 5), radarRangeSq);
 		}
 		
+		int turretWarningRangeSq = 9*mySensorRadiusSquared;
+		boolean first = true;
 		for (RobotInfo hostile : hostiles) {
 			if (hostile.type == RobotType.TURRET) {
 				if (!Radar.turretIsKnown(hostile.ID, hostile.location)) {
+					if (first) {
+						Debug.indicate("turret", 0, "");
+						first = false;
+					}
+					Debug.indicateAppend("turret", 0, "found turret with id " + hostile.ID + ", loc = " + hostile.location + "; ");
 					Radar.addEnemyTurret(hostile.ID, hostile.location);
-					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, 9*mySensorRadiusSquared);
+					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, turretWarningRangeSq);
+				}
+			}
+		}
+		
+		// Check to see whether the closest turret to us has moved or gone missing.
+		FastTurretInfo closestTurret = Radar.findClosestEnemyTurret();
+		if (closestTurret != null) {
+			int distSq = here.distanceSquaredTo(closestTurret.location);
+			if (distSq <= mySensorRadiusSquared) {
+				int closestTurretId = closestTurret.ID;
+				if (rc.canSenseRobot(closestTurretId)) {
+					MapLocation actualLocation = rc.senseRobot(closestTurret.ID).location;
+					if (!actualLocation.equals(closestTurret.location)) {
+						// The turret is not where we thought it was.
+						// Tell people that the turret has moved.
+						Debug.indicate("turret", 1, "sending warning that turret with id " + closestTurretId 
+								+ " has moved from " + closestTurret.location + " to " + actualLocation);
+						Radar.addEnemyTurret(closestTurretId, actualLocation);
+						Messages.sendEnemyTurretWarning(closestTurretId, actualLocation, turretWarningRangeSq);
+					}
+				} else {
+					// We can't sense the turret, so it is not where we thought
+					// it was. Tell people that the turret is gone.
+					Debug.indicate("turret", 1, "sending warning that turret with id " + closestTurretId 
+							+ " has gone missing from " + closestTurret.location);
+					Radar.removeEnemyTurret(closestTurretId);
+					Messages.sendEnemyTurretMissing(closestTurretId, turretWarningRangeSq);
 				}
 			}
 		}
 	}
-	
-	private static void trySendAttackTarget() throws GameActionException {
-		RobotInfo[] targets = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
-		int numSent = 0;
-		for (RobotInfo target : targets) {
-			Messages.sendAttackTarget(target.location, 9 * mySensorRadiusSquared);
-			++numSent;
-			if (numSent >= 3) return;
-		}
-	}
-	
 
 	private static void processSignals() {
 		Signal[] signals = rc.emptySignalQueue();
@@ -148,23 +175,23 @@ public class BotScout extends Globals {
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
-				case Messages.CHANNEL_MAP_MIN_X:
-					Messages.processMapMinX(data);
+				case Messages.CHANNEL_MAP_EDGES:
+					Messages.processMapEdges(data);
 					break;
-				case Messages.CHANNEL_MAP_MAX_X:
-					Messages.processMapMaxX(data);
-					break;
-				case Messages.CHANNEL_MAP_MIN_Y:
-					Messages.processMapMinY(data);
-					break;
-				case Messages.CHANNEL_MAP_MAX_Y:
-					Messages.processMapMaxY(data);
+					
+				case Messages.CHANNEL_TURRET_OWNERSHIP:
+					int turretId = Messages.parseTurretOwnershipClaim(data);
+					if (turretId == turretFollowId) {
+						turretFollowId = -1;
+					}
+					turretOwnershipReceiveRoundById[turretId] = rc.getRoundNum();
 					break;
 					
 				default:
 				}
 			}
 		}
+		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
 	
 	private static int nFriend = 0;

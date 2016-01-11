@@ -51,19 +51,20 @@ public class Nav extends Globals {
 	}
 	
 	// Go to the destination. At each step, move either forward
-	// or 45 degrees left or right. Clear rubble if necessary
-	public static void goToDirect(MapLocation dest) throws GameActionException {
-		if (here.equals(dest)) return;
+	// or 45 degrees left or right. Clear rubble if necessary.
+	// Returns true if it either moved or cleared rubble
+	public static boolean goToDirect(MapLocation dest) throws GameActionException {
+		if (here.equals(dest)) return false;
 
         Direction forward = here.directionTo(dest);
 	    MapLocation forwardLoc = here.add(forward);
 		if (here.isAdjacentTo(dest)) {
 			if (rc.canMove(forward)) {
 				rc.move(forward);
-				return;
+				return true;
 			} else if (rc.senseRubble(forwardLoc) > GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
 				rc.clearRubble(forward);
-				return;
+				return true;
 			}
 		}
 		
@@ -91,7 +92,7 @@ public class Nav extends Globals {
 	    for (int i = 0; i < 3; ++i) {
 	    	if (rc.canMove(dirs[i]) && rubbles[i] < GameConstants.RUBBLE_SLOW_THRESH) {
 	    		rc.move(dirs[i]);
-	    		return;
+	    		return true;
 	    	} else if (rubbles[i] >= GameConstants.RUBBLE_SLOW_THRESH && rubbles[i] < bestRubble) {
 	    		bestRubble = rubbles[i];
 	    		bestDir = dirs[i];
@@ -100,7 +101,9 @@ public class Nav extends Globals {
 	    
 	    if (bestDir != null) {
 	    	rc.clearRubble(bestDir);
+	    	return true;
 	    }
+	    return false;
 	}
 	
 	public static boolean enemyAttacksLocation(MapLocation loc, RobotInfo[] hostiles) {
@@ -113,8 +116,25 @@ public class Nav extends Globals {
 		return false;
 	}
 	
+	public static boolean enemyOrTurretAttacksLocation(MapLocation loc, RobotInfo[] hostiles,
+			MapLocation turretLocation) {
+		for (RobotInfo hostile : hostiles) {
+			int distSq = hostile.location.distanceSquaredTo(loc);
+			if (distSq <= hostile.type.attackRadiusSquared) {
+				return true;
+			}		
+		}
+		if (turretLocation != null) {
+			if (turretLocation.distanceSquaredTo(loc) <= RobotType.TURRET.attackRadiusSquared) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	// Go to the destination. At each step, move either forward
-	// or 45 degrees left or right. Clear rubble if necessary
+	// or 45 degrees left or right. Clear rubble if necessary.
+	// Avoids going in range of any hostile robot that we can see.
 	public static void goToDirectSafely(MapLocation dest) throws GameActionException {
 		if (here.equals(dest)) return;
 
@@ -168,6 +188,69 @@ public class Nav extends Globals {
 	    if (bestDir != null) {
 	    	rc.clearRubble(bestDir);
 	    }
+	}
+	
+	
+	// Go to the destination. At each step, move either forward
+	// or 45 degrees left or right. Clear rubble if necessary.
+	// Avoids going in range of any hostile robot that we can see.
+	// Also avoids going in range of a turret at the location turretLocation.
+	public static boolean goToDirectSafelyAvoidingTurret(MapLocation dest,
+			MapLocation turretLocation) throws GameActionException {
+		if (here.equals(dest)) return false;
+
+		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+
+        Direction forward = here.directionTo(dest);
+	    MapLocation forwardLoc = here.add(forward);
+		if (here.isAdjacentTo(dest)) {
+			if (rc.canMove(forward) && !enemyOrTurretAttacksLocation(dest, hostiles, turretLocation)) {
+				rc.move(forward);
+				return true;
+			} else if (rc.senseRubble(forwardLoc) > GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
+				rc.clearRubble(forward);
+				return true;
+			}
+		}
+		
+		Direction left = forward.rotateLeft();
+		Direction right = forward.rotateRight();
+		MapLocation leftLoc = here.add(left);
+		MapLocation rightLoc = here.add(right);
+	    double forwardRubble = rc.senseRubble(forwardLoc);
+		double leftRubble = rc.senseRubble(leftLoc);
+		double rightRubble = rc.senseRubble(rightLoc);
+	    
+		Direction[] dirs;
+		double[] rubbles;
+		
+	    if (leftLoc.distanceSquaredTo(dest) < rightLoc.distanceSquaredTo(dest)) {
+	    	dirs = new Direction[] { forward, left, right };
+	    	rubbles = new double[] { forwardRubble, leftRubble, rightRubble };
+	    } else {
+	    	dirs = new Direction[] { forward, right, left };
+	    	rubbles = new double[] { forwardRubble, rightRubble, leftRubble };
+	    }
+	    
+	    Direction bestDir = null;
+	    double bestRubble = Double.MAX_VALUE;
+	    for (int i = 0; i < 3; ++i) {
+	    	if (rc.canMove(dirs[i]) && rubbles[i] < GameConstants.RUBBLE_SLOW_THRESH) {
+	    		if (!enemyOrTurretAttacksLocation(here.add(dirs[i]), hostiles, turretLocation)) {
+	    			rc.move(dirs[i]);
+	    			return true;
+	    		}
+	    	} else if (rubbles[i] >= GameConstants.RUBBLE_SLOW_THRESH && rubbles[i] < bestRubble) {
+	    		bestRubble = rubbles[i];
+	    		bestDir = dirs[i];
+	    	}
+	    }
+	    
+	    if (bestDir != null) {
+	    	rc.clearRubble(bestDir);
+	    	return true;
+	    }
+	    return false;
 	}
 	
 	// Always move if possible, but prefer to move toward the destination

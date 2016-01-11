@@ -4,25 +4,34 @@ import battlecode.common.*;
 
 public class Radar extends Globals {	
 	public static MapLocation[] enemyTurretLocationById = new MapLocation[32001];
+	public static boolean[] haveSeenTurretId = new boolean[32001];
 	public static int[] enemyTurretIds = new int[1000];
 	public static int numEnemyTurrets = 0;
 	
 	public static void addEnemyTurret(int id, MapLocation loc) {
-		if (enemyTurretLocationById[id] == null) {
+		if (!haveSeenTurretId[id]) {
 			enemyTurretIds[numEnemyTurrets++] = id;
+			haveSeenTurretId[id] = true;
 		}
 		enemyTurretLocationById[id] = loc;
 	}
 	
-	public static MapLocation findClosestEnemyTurret() {
-		MapLocation ret = null;
+	public static void removeEnemyTurret(int id) {
+		enemyTurretLocationById[id] = null;
+	}
+	
+	public static FastTurretInfo findClosestEnemyTurret() {
+		FastTurretInfo ret = null;
 		int bestDistSq = Integer.MAX_VALUE;
 		for (int i = 0; i < numEnemyTurrets; ++i) {
-			MapLocation turretLoc = enemyTurretLocationById[enemyTurretIds[i]];
-			int distSq = here.distanceSquaredTo(turretLoc);
-			if (distSq < bestDistSq) {
-				bestDistSq = distSq;
-				ret = turretLoc;
+			int turretId = enemyTurretIds[i];
+			MapLocation turretLoc = enemyTurretLocationById[turretId];
+			if (turretLoc != null) {
+				int distSq = here.distanceSquaredTo(turretLoc);
+				if (distSq < bestDistSq) {
+					bestDistSq = distSq;
+					ret = new FastTurretInfo(turretId, turretLoc);
+				}
 			}
 		}
 		return ret;

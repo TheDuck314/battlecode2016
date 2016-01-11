@@ -3,9 +3,9 @@ package team028;
 import battlecode.common.*;
 
 public class FastRobotInfo {
-	public MapLocation location;
-	public RobotType type;
-	public int round;
+	public final MapLocation location;
+	public final RobotType type;
+	public final int round;
 	
 	public FastRobotInfo(MapLocation location, RobotType type, int round) {
 		this.location = location;
