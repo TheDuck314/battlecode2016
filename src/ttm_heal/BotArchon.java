@@ -257,8 +257,9 @@ public class BotArchon extends Globals {
 //				scores[i] += 100;
 //			}
 //			scores[i] += nfriends[i] * 50;
-			scores[i] += friends[i] * 5 + scouts[i];
-			scores[i] += archons[i] * 10;
+//			scores[i] += friends[i] * 5 + scouts[i];
+//			scores[i] += archons[i] * 10;
+			scores[i] -= locs[i].distanceSquaredTo(rallyPoint);
 		}
 		scores[8] += FastMath.rand256() - 128;
 		for (int i = 0; i < 8; ++i) {
