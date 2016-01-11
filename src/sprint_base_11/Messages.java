@@ -3,6 +3,14 @@ package sprint_base_11;
 import battlecode.common.*;
 
 public class Messages extends Globals {
+	
+	private static int currentMsgDebugIndicatorLineNumber = 2;
+	private static int msgDILN() {
+		currentMsgDebugIndicatorLineNumber += 1;
+		currentMsgDebugIndicatorLineNumber %= 3;
+		return currentMsgDebugIndicatorLineNumber;
+	}
+	
 	public static final int CHANNEL_MASK = 0xf0000000;
 	public static final int CHANNEL_MASK_INVERSE = ~CHANNEL_MASK;
 	public static final int CHANNEL_TURRET_TARGET = 0x10000000;
@@ -48,6 +56,7 @@ public class Messages extends Globals {
 	
 	public static void sendTurretTarget(MapLocation loc, int radiusSq) throws GameActionException {
 		sendMapLocation(CHANNEL_TURRET_TARGET, loc, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendTurretTarget " + radiusSq);
 	}
 	
 	public static MapLocation parseTurretTarget(int[] data) {
@@ -56,6 +65,7 @@ public class Messages extends Globals {
 
 	public static void sendZombieDenLocation(MapLocation loc, int radiusSq) throws GameActionException {
 		sendMapLocation(CHANNEL_ZOMBIE_DEN, loc, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendZombieDenLocation " + radiusSq);
 	}
 	
 	public static MapLocation parseZombieDenLocation(int[] data) {
@@ -64,6 +74,7 @@ public class Messages extends Globals {
 	
 	public static void sendArchonLocation(MapLocation loc, int radiusSq) throws GameActionException {
 		sendMapLocation(CHANNEL_ARCHON_LOCATION, loc, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendArchonLocation " + radiusSq);
 	}
 	
 	public static MapLocation parseArchonLocation(int[] data) {
@@ -74,6 +85,7 @@ public class Messages extends Globals {
 		int data0 = CHANNEL_FOUND_PARTS | (CHANNEL_MASK_INVERSE & numParts);
 		int data1 = intFromMapLocation(loc);
 		rc.broadcastMessageSignal(data0, data1, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendPartsLocation " + radiusSq);
 	}
 	
 	// outPartsLoc is set to the MapLocation of the found parts
@@ -86,6 +98,7 @@ public class Messages extends Globals {
 	
 	public static void sendNeutralLocation(MapLocation loc, int radiusSq) throws GameActionException {
 		sendMapLocation(CHANNEL_FOUND_NEUTRAL, loc, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendNeutralLocation " + radiusSq);
 	}
 	
 	public static MapLocation parseNeutralLocation(int[] data) {
@@ -127,6 +140,7 @@ public class Messages extends Globals {
 		int value = minX << 24 | maxX << 16 | minY << 8 | maxY;
 		sendInt(CHANNEL_MAP_EDGES, value, radiusSq);
 		Debug.indicate("edges", 1, "send: value=" + Integer.toHexString(value) + " MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
+		Debug.indicate("msg", msgDILN(), "sendKnownMapEdges " + radiusSq);
 	}
 	
 	public static void processMapEdges(int[] data) {
@@ -149,12 +163,14 @@ public class Messages extends Globals {
 		int data0 = id;
 		int data1 = intFromMapLocation(loc);
 		rc.broadcastMessageSignal(CHANNEL_ENEMY_TURRET_WARNING | data0, data1, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendEnemyTurretWarning " + radiusSq);
 	}
 	
 	public static void sendEnemyTurretMissing(int id, int radiusSq) throws GameActionException {
 		int data0 = id;
 		int data1 = ENEMY_TURRET_MISSING_VALUE;
-		rc.broadcastMessageSignal(CHANNEL_ENEMY_TURRET_WARNING | data0, data1, radiusSq);		
+		rc.broadcastMessageSignal(CHANNEL_ENEMY_TURRET_WARNING | data0, data1, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendEnemyTurretMissing " + radiusSq);
 	}
 	
 	public static void processEnemyTurretWarning(int[] data) {
@@ -179,6 +195,7 @@ public class Messages extends Globals {
 		int data0 = (int)(data >> 32);
 		int data1 = (int)(data & 0x00000000ffffffffL);
 		rc.broadcastMessageSignal(CHANNEL_RADAR | (CHANNEL_MASK_INVERSE & data0), data1, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendRadarData " + radiusSq);
 	}
 	
 	public static void addRadarDataToEnemyCache(int[] intData, MapLocation origin, int maxDistSq) {
@@ -225,6 +242,7 @@ public class Messages extends Globals {
 	
 	public static void sendTurretOwnershipClaim(int turretId, int radiusSq) throws GameActionException {
 		sendInt(CHANNEL_TURRET_OWNERSHIP, turretId, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendTurretOwnershipClaim " + radiusSq);
 	}
 	
 	public static int parseTurretOwnershipClaim(int[] data) {
@@ -233,5 +251,6 @@ public class Messages extends Globals {
 	
 	public static void sendUnpairedScoutReport(int radiusSq) throws GameActionException {
 		rc.broadcastMessageSignal(CHANNEL_UNPAIRED_SCOUT_REPORT, 0, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendUnpairedScoutReport " + radiusSq);
 	}	
 }
