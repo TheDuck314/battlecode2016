@@ -15,17 +15,25 @@ public class MapEdges extends Globals {
 	// of the boundaries
 	public static int maxBroadcastDistSq() {
 		int maxWidth;
-		if (minX == UNKNOWN || maxX == UNKNOWN) {
+		if (minX == UNKNOWN && maxX == UNKNOWN) {
 			maxWidth = GameConstants.MAP_MAX_WIDTH;
+		} else if (minX != UNKNOWN && maxX != UNKNOWN) {
+			maxWidth = Math.max(maxX - here.x, here.x - minX);
+		} else if (minX == UNKNOWN) {
+			maxWidth = Math.max(maxX - here.x, GameConstants.MAP_MAX_WIDTH - (maxX - here.x));
 		} else {
-			maxWidth = maxX - minX;
+			maxWidth = Math.max(GameConstants.MAP_MAX_WIDTH - (here.x - minX), here.x - minX);
 		}
 		
 		int maxHeight;
 		if (minY == UNKNOWN || maxY == UNKNOWN) {
 			maxHeight = GameConstants.MAP_MAX_WIDTH;
+		} else if (minY != UNKNOWN && maxY != UNKNOWN) {
+			maxHeight = Math.max(maxY - here.y, here.y - minY);
+		} else if (minY == UNKNOWN) {
+			maxHeight = Math.max(maxY - here.y, GameConstants.MAP_MAX_WIDTH - (maxY - here.y));
 		} else {
-			maxHeight = maxY - minY;
+			maxHeight = Math.max(GameConstants.MAP_MAX_WIDTH - (here.y - minY), here.y - minY);
 		}
 		
 		return (maxWidth * maxWidth) + (maxHeight * maxHeight);
