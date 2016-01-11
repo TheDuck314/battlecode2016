@@ -246,7 +246,7 @@ public class BotArchon extends Globals {
 		double[] scores = new double[9];
 		for (int i = 0; i < 9; ++i) {
 			scores[i] = -attacks[i] * 1000;
-			if (locs[i] == dangerousLoc) {
+			if (locs[i].equals(dangerousLoc)) {
 				scores[i] -= 2000;
 			}
 			if (rubbles[i] >= GameConstants.RUBBLE_SLOW_THRESH) {
