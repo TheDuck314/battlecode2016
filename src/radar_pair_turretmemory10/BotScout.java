@@ -166,17 +166,6 @@ public class BotScout extends Globals {
 			}
 		}
 	}
-	
-	private static void trySendAttackTarget() throws GameActionException {
-		RobotInfo[] targets = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
-		int numSent = 0;
-		for (RobotInfo target : targets) {
-			Messages.sendAttackTarget(target.location, 9 * mySensorRadiusSquared);
-			++numSent;
-			if (numSent >= 3) return;
-		}
-	}
-	
 
 	private static void processSignals() {
 		Signal[] signals = rc.emptySignalQueue();
@@ -186,17 +175,8 @@ public class BotScout extends Globals {
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
-				case Messages.CHANNEL_MAP_MIN_X:
-					Messages.processMapMinX(data);
-					break;
-				case Messages.CHANNEL_MAP_MAX_X:
-					Messages.processMapMaxX(data);
-					break;
-				case Messages.CHANNEL_MAP_MIN_Y:
-					Messages.processMapMinY(data);
-					break;
-				case Messages.CHANNEL_MAP_MAX_Y:
-					Messages.processMapMaxY(data);
+				case Messages.CHANNEL_MAP_EDGES:
+					Messages.processMapEdges(data);
 					break;
 					
 				case Messages.CHANNEL_TURRET_OWNERSHIP:
@@ -211,6 +191,7 @@ public class BotScout extends Globals {
 				}
 			}
 		}
+		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
 	
 	private static int nFriend = 0;

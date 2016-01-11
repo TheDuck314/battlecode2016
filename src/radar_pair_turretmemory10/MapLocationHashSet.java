@@ -1,6 +1,6 @@
 package radar_pair_turretmemory10;
 
-import battlecode.common.MapLocation;
+import battlecode.common.*;
 
 public class MapLocationHashSet {
 	private int size = 97;

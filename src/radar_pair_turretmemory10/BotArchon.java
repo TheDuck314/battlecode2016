@@ -146,14 +146,6 @@ public class BotArchon extends Globals {
 		}
 	}
 	
-	private static void trySendAttackTarget() throws GameActionException {
-		RobotInfo[] targets = rc.senseHostileRobots(here, mySensorRadiusSquared);
-		int numTargets = (targets.length < 3 ? targets.length : 3);
-		for (int i = 0; i < numTargets; ++i) {
-			Messages.sendAttackTarget(targets[i].location, 9 * mySensorRadiusSquared);
-		}
-	}
-	
 	private static void trySpawn() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 
@@ -248,6 +240,9 @@ public class BotArchon extends Globals {
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
+				case Messages.CHANNEL_MAP_EDGES:
+					Messages.processMapEdges(data);
+					break;
 				case Messages.CHANNEL_FOUND_PARTS:
 					PartsLocation partsLoc = Messages.parsePartsLocation(data);
 					Debug.indicate("parts", 0, "parts at " + partsLoc.location);
@@ -262,25 +257,13 @@ public class BotArchon extends Globals {
 					Messages.processEnemyTurretWarning(data);
 					break;
 					
-				case Messages.CHANNEL_MAP_MIN_X:
-					Messages.processMapMinX(data);
-					break;
-				case Messages.CHANNEL_MAP_MAX_X:
-					Messages.processMapMaxX(data);
-					break;
-				case Messages.CHANNEL_MAP_MIN_Y:
-					Messages.processMapMinY(data);
-					break;
-				case Messages.CHANNEL_MAP_MAX_Y:
-					Messages.processMapMaxY(data);
-					break;
-					
 				default:
 				}
 			} else {
 				// simple signal with no message
 			}
 		}
+		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
 	
 	private static void pickDestination() throws GameActionException {

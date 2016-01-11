@@ -1,8 +1,6 @@
 package radar_pair_turretmemory10;
 
-import battlecode.common.Direction;
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
+import battlecode.common.*;
 
 //awful hacks for faster math
 public class FastMath {

@@ -9,15 +9,12 @@ public class Messages extends Globals {
 	public static final int CHANNEL_ZOMBIE_DEN = 0x20000000;
 	public static final int CHANNEL_FOUND_PARTS = 0x30000000;
 	public static final int CHANNEL_ENEMY_TURRET_WARNING = 0x40000000;
-	public static final int CHANNEL_MAP_MIN_X = 0x50000000;
-	public static final int CHANNEL_MAP_MAX_X = 0x60000000;
-	public static final int CHANNEL_MAP_MIN_Y = 0x70000000;
-	public static final int CHANNEL_MAP_MAX_Y = 0x80000000;
-	public static final int CHANNEL_ATTACK_TARGET = 0x90000000;
+	
 	public static final int CHANNEL_ARCHON_LOCATION = 0xa0000000;
 	public static final int CHANNEL_RADAR = 0xb0000000;
 	public static final int CHANNEL_FOUND_NEUTRAL = 0xc0000000;
 	public static final int CHANNEL_TURRET_OWNERSHIP = 0xd0000000;
+	public static final int CHANNEL_MAP_EDGES = 0xe0000000;
 	
 	public static final int ENEMY_TURRET_MISSING_VALUE = 0xffffffff;
 	
@@ -48,8 +45,6 @@ public class Messages extends Globals {
 		return data[1];
 	}
 	
-	
-	
 	public static void sendTurretTarget(MapLocation loc, int radiusSq) throws GameActionException {
 		sendMapLocation(CHANNEL_TURRET_TARGET, loc, radiusSq);
 	}
@@ -63,14 +58,6 @@ public class Messages extends Globals {
 	}
 	
 	public static MapLocation parseZombieDenLocation(int[] data) {
-		return parseMapLocation(data);
-	}
-	
-	public static void sendAttackTarget(MapLocation loc, int radiusSq) throws GameActionException {
-		sendMapLocation(CHANNEL_ATTACK_TARGET, loc, radiusSq);
-	}
-	
-	public static MapLocation parseAttackTarget(int[] data) {
 		return parseMapLocation(data);
 	}
 	
@@ -104,54 +91,59 @@ public class Messages extends Globals {
 		return parseMapLocation(data);
 	}
 	
-	public static void sendMapMinX(int radiusSq) throws GameActionException {
-		sendInt(CHANNEL_MAP_MIN_X, MapEdges.minX, radiusSq);
+	private static int compressMapEdges(int original) {
+		if (original == MapEdges.UNKNOWN) {
+			return 127;
+		} else {
+			// max map size is 100 < 110
+			return (original + 33000) % 110;
+		}
 	}
-
-	public static void sendMapMaxX(int radiusSq) throws GameActionException {
-		sendInt(CHANNEL_MAP_MAX_X, MapEdges.maxX, radiusSq);
+	
+	private static int parseMapEdgesMax(int compressed, int reference) {
+		if (compressed == 127) return MapEdges.UNKNOWN;
+		int original = (reference / 110 + 1) * 110 + compressed;
+		while (original >= reference) {
+			original -= 110;
+		}
+		return original + 110;
 	}
-
-	public static void sendMapMinY(int radiusSq) throws GameActionException {
-		sendInt(CHANNEL_MAP_MIN_Y, MapEdges.minY, radiusSq);
-	}
-
-	public static void sendMapMaxY(int radiusSq) throws GameActionException {
-		sendInt(CHANNEL_MAP_MAX_Y, MapEdges.maxY, radiusSq);
+	
+	private static int parseMapEdgesMin(int compressed, int reference) {
+		if (compressed == 127) return MapEdges.UNKNOWN;
+		int original = (reference / 110 + 1) * 110 + compressed;
+		while (original > reference) {
+			original -= 110;
+		}
+		return original;
 	}
 	
 	public static void sendKnownMapEdges(int radiusSq) throws GameActionException {
-		if (MapEdges.minX != MapEdges.UNKNOWN) {
-			sendMapMinX(radiusSq);
-		}
-		if (MapEdges.maxX != MapEdges.UNKNOWN) {
-			sendMapMaxX(radiusSq);
-		}
-		if (MapEdges.minY != MapEdges.UNKNOWN) {
-			sendMapMinY(radiusSq);
-		}
-		if (MapEdges.maxY != MapEdges.UNKNOWN) {
-			sendMapMaxY(radiusSq);
-		}
-	}
-
-	
-	public static void processMapMinX(int[] data) {
-		MapEdges.minX = parseInt(data);
-	}
-
-	public static void processMapMaxX(int[] data) {
-		MapEdges.maxX = parseInt(data);
+		int minX = compressMapEdges(MapEdges.minX);
+		int maxX = compressMapEdges(MapEdges.maxX);
+		int minY = compressMapEdges(MapEdges.minY);
+		int maxY = compressMapEdges(MapEdges.maxY);
+		int value = minX << 24 | maxX << 16 | minY << 8 | maxY;
+		sendInt(CHANNEL_MAP_EDGES, value, radiusSq);
+		Debug.indicate("edges", 1, "send: value=" + Integer.toHexString(value) + " MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
 	
-	public static void processMapMinY(int[] data) {
-		MapEdges.minY = parseInt(data);
+	public static void processMapEdges(int[] data) {
+		int value = parseInt(data);
+		int maxY = value & 0x000000ff;
+		value >>>= 8;
+		int minY = value & 0x000000ff;
+		value >>>= 8;
+		int maxX = value & 0x000000ff;
+		value >>>= 8;
+		int minX = value & 0x000000ff;
+		if (MapEdges.minX == MapEdges.UNKNOWN) MapEdges.minX = parseMapEdgesMin(minX, here.x);
+		if (MapEdges.maxX == MapEdges.UNKNOWN) MapEdges.maxX = parseMapEdgesMax(maxX, here.x);
+		if (MapEdges.minY == MapEdges.UNKNOWN) MapEdges.minY = parseMapEdgesMin(minY, here.y);
+		if (MapEdges.maxY == MapEdges.UNKNOWN) MapEdges.maxY = parseMapEdgesMax(maxY, here.y);
+		Debug.indicate("edges", 2, "receive: value=" + Integer.toHexString(parseInt(data)) + " MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
-
-	public static void processMapMaxY(int[] data) {
-		MapEdges.maxY = parseInt(data);
-	}
-		
+	
 	public static void sendEnemyTurretWarning(int id, MapLocation loc, int radiusSq) throws GameActionException {
 		int data0 = id;
 		int data1 = intFromMapLocation(loc);

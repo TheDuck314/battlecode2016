@@ -1,9 +1,6 @@
 package radar_pair_turretmemory10;
 
-import battlecode.common.MapLocation;
-import battlecode.common.RobotController;
-import battlecode.common.RobotType;
-import battlecode.common.Team;
+import battlecode.common.*;
 
 public class Globals {
 	public static RobotController rc;
