@@ -51,19 +51,20 @@ public class Nav extends Globals {
 	}
 	
 	// Go to the destination. At each step, move either forward
-	// or 45 degrees left or right. Clear rubble if necessary
-	public static void goToDirect(MapLocation dest) throws GameActionException {
-		if (here.equals(dest)) return;
+	// or 45 degrees left or right. Clear rubble if necessary.
+	// Returns true if it either moved or cleared rubble
+	public static boolean goToDirect(MapLocation dest) throws GameActionException {
+		if (here.equals(dest)) return false;
 
         Direction forward = here.directionTo(dest);
 	    MapLocation forwardLoc = here.add(forward);
 		if (here.isAdjacentTo(dest)) {
 			if (rc.canMove(forward)) {
 				rc.move(forward);
-				return;
+				return true;
 			} else if (rc.senseRubble(forwardLoc) > GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
 				rc.clearRubble(forward);
-				return;
+				return true;
 			}
 		}
 		
@@ -91,7 +92,7 @@ public class Nav extends Globals {
 	    for (int i = 0; i < 3; ++i) {
 	    	if (rc.canMove(dirs[i]) && rubbles[i] < GameConstants.RUBBLE_SLOW_THRESH) {
 	    		rc.move(dirs[i]);
-	    		return;
+	    		return true;
 	    	} else if (rubbles[i] >= GameConstants.RUBBLE_SLOW_THRESH && rubbles[i] < bestRubble) {
 	    		bestRubble = rubbles[i];
 	    		bestDir = dirs[i];
@@ -100,7 +101,9 @@ public class Nav extends Globals {
 	    
 	    if (bestDir != null) {
 	    	rc.clearRubble(bestDir);
+	    	return true;
 	    }
+	    return false;
 	}
 	
 	public static boolean enemyAttacksLocation(MapLocation loc, RobotInfo[] hostiles) {

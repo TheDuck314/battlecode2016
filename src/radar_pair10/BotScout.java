@@ -14,12 +14,11 @@ public class BotScout extends Globals {
 	private static MapLocation[] dangerMemory = new MapLocation[DANGER_MEMORY_LENGTH];
 	private static int dangerMemoryPointer = 0;
 
-	private static int turretFollowId = -1;
-	
 	private static int lastPartsOrNeutralSignalRound = -999999;
 	
 	private static int lastGlobalRadarBroadcastRound = 0;
 	
+	private static int turretFollowId = -1;
 	private static int lastTurretOwnershipBroadcastRound = -999999;
 	private static int[] turretOwnershipReceiveRoundById = new int[32001];
 	
