@@ -218,6 +218,8 @@ public class BotScout extends Globals {
 					int turretId = Messages.parseTurretOwnershipClaim(data);
 					if (turretId == turretFollowId) {
 						turretFollowId = -1;
+					} else if (turretId == archonFollowId) {
+						archonFollowId = -1;
 					}
 					turretOwnershipReceiveRoundById[turretId] = rc.getRoundNum();
 					break;
