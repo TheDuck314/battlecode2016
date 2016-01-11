@@ -321,13 +321,18 @@ public class BotArchon extends Globals {
 		if (allies.length == 0) return;
 		int avgX = 0;
 		int avgY = 0;
+		int N = 0;
 		for (RobotInfo ally : allies) {
+			if (ally.type == RobotType.SCOUT) continue;
 			avgX += ally.location.x;
-			avgY += ally.location.y;
+			avgY += ally.location.y;			
+			N += 1;
 		}
-		avgX /= allies.length;
-		avgY /= allies.length;
-		Nav.goToDirectSafelyAvoidingTurret(new MapLocation(avgX, avgY), closestEnemyTurretLocation);
+		if (N != 0) {
+			avgX /= N;
+			avgY /= N;
+			Nav.goToDirectSafelyAvoidingTurret(new MapLocation(avgX, avgY), closestEnemyTurretLocation);
+		}
 	}
 	
 	private static boolean retreatIfNecessary() throws GameActionException {
