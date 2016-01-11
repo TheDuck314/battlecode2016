@@ -97,7 +97,7 @@ public class BotScout extends Globals {
 				Nav.goToDirect(archonLoc);
 				if (here.isAdjacentTo(archonLoc)) {
 					if (rc.getRoundNum() - lastTurretOwnershipBroadcastRound > 40) {
-						Messages.sendTurretOwnershipClaim(turretFollowId, 2*mySensorRadiusSquared);
+						Messages.sendTurretOwnershipClaim(archonFollowId, 2*mySensorRadiusSquared);
 						lastTurretOwnershipBroadcastRound = rc.getRoundNum();
 					}
 				}
