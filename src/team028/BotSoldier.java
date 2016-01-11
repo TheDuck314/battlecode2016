@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("turret");
+		Debug.init("micro");
 		FastMath.initRand(rc);
 		while (true) {
 			try {
@@ -18,7 +18,6 @@ public class BotSoldier extends Globals {
 	}
 	
 	private static MapLocation attackTarget = null;
-	private static int attackTargetReceivedRound = -9999;
 	
 	private static Direction wanderDirection = null;
 
@@ -41,20 +40,19 @@ public class BotSoldier extends Globals {
 			return;
 		}
 		
+		//Debug.indicate("micro", 2, "inHealingState = " + inHealingState);
 		if (inHealingState) {
 			if (tryToHealAtArchon()) {
 				return;
 			}
 		}
 		
-		Debug.indicate("turret", 0, "numEnemyTurrets = " + Radar.numEnemyTurrets);
 		FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
 		if (closestEnemyTurret != null) {
 			closestEnemyTurretLocation = closestEnemyTurret.location;
 		} else {
 			closestEnemyTurretLocation = null;
 		}
-		Debug.indicate("turret", 1, "closest enemy turret = " + (closestEnemyTurret == null ? null : closestEnemyTurret.location));
 		
 		lookForZombieDens();
 	}
@@ -105,9 +103,10 @@ public class BotSoldier extends Globals {
 	}
 
 	private static boolean tryToMicro() throws GameActionException {		
-		RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 		RobotInfo[] visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		if (visibleHostiles.length == 0) return false;
 
+		
 		if (inHealingState) {
 			// if we are in the healing state, then if we are under attack we should retreat.
 			// but if coreDelay >= cooldown delay, then we can optionally attack			
@@ -116,6 +115,7 @@ public class BotSoldier extends Globals {
 				    return true;
 				}
 			} else if (rc.isWeaponReady() && rc.getCoreDelay() >= myType.cooldownDelay) {
+				RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 				if (attackableHostiles.length > 0) {
 					chooseTargetAndAttack(attackableHostiles);
 					return true;
@@ -123,7 +123,53 @@ public class BotSoldier extends Globals {
 			}
 			return false;
 		}
+
+		RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
+
+		if (rc.isWeaponReady()) {
+			if (attackableHostiles.length > 0) { // we can shoot someone
+ 			    // retreat if there is slow zombie adjacent to us
+				if (rc.isCoreReady()) {
+					if (retreatFromSlowZombiesIfNecessary()) {
+					    return true;
+					}
+				}
+				// otherwise just shoot someone
+				chooseTargetAndAttack(attackableHostiles);
+				return true;
+			}
+			// we can't shoot anyone. try to help an ally or attack a helpless target
+			if (rc.isCoreReady()) {
+				if (tryMoveToHelpAlly(visibleHostiles)) {
+					return true;
+				}
+				if (tryMoveToAttackHelplessTarget(visibleHostiles)) {
+					return true;
+				}
+			}
+		} else if (rc.isCoreReady()) { // weapon is not ready
+			// since our weapon is on cooldown, we should retreat if there is
+			// ANYONE who can attack and is closer than max attack range. Next
+			// turn our weapon will be ready again and we can attack them
+			// from a safer distance
+			if (attackableHostiles.length > 0) {
+				if (tryToBackUpToMaintainMaxRange(attackableHostiles)) {
+					return true;
+				}
+				return true; // we are fighting, don't move
+			}
+			// otherwise try to help an ally or attack a helpless target
+			if (tryMoveToHelpAlly(visibleHostiles)) {
+				return true;
+			}
+			if (tryMoveToAttackHelplessTarget(visibleHostiles)) {
+				return true;
+			}
+		}
 		
+		return false;
+		
+		/*
 		if (attackableHostiles.length > 0) {
 			if (rc.isWeaponReady()) {	
 				chooseTargetAndAttack(attackableHostiles);
@@ -150,7 +196,7 @@ public class BotSoldier extends Globals {
 			return true;
 		}
 		
-		return false;
+		return false;*/
 	}
 	
 	private static void chooseTargetAndAttack(RobotInfo[] targets) throws GameActionException {
@@ -163,11 +209,109 @@ public class BotSoldier extends Globals {
 			}
 		}
 		if (bestTarget != null) {
-			Debug.indicate("micro", 0, "attacking " + bestTarget.type);
+			Debug.indicate("micro", 0, "attacking " + bestTarget.type + " at " + bestTarget.location);
 			rc.attackLocation(bestTarget.location);
 		}
 	}
 
+	// prefer to retreat along orthogonal directions since these give smaller delays
+	private static Direction[] retreatDirs = 
+		{ Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST,
+				Direction.NORTH_WEST, Direction.SOUTH_EAST, Direction.SOUTH_WEST, Direction.NORTH_WEST };
+	
+	// This function is called if we CAN shoot but we have to decide
+	// whether to retreat instead.
+	private static boolean retreatFromSlowZombiesIfNecessary() throws GameActionException {
+		RobotInfo[] zombies = rc.senseNearbyRobots(myAttackRadiusSquared, Team.ZOMBIE);
+		if (zombies.length == 0) return false;
+		
+		// check if we are being attacked by a non-fast zombie but could move 
+		// out of its attack range.
+		boolean mustRetreat = false;
+
+		boolean[] directionIsAdjacentToZombie = new boolean[8];
+		
+		for (RobotInfo zombie : zombies) {
+			switch (zombie.type) {
+			case BIGZOMBIE:
+			case STANDARDZOMBIE:
+				// we can kite big zombies and standard zombies
+				if (here.isAdjacentTo(zombie.location)) {
+					mustRetreat = true;
+					int toZombieDir = here.directionTo(zombie.location).ordinal();
+					directionIsAdjacentToZombie[toZombieDir] = true;
+					directionIsAdjacentToZombie[(toZombieDir+1)%8] = true;
+					directionIsAdjacentToZombie[(toZombieDir+7)%8] = true;
+				}
+				break;
+
+			case RANGEDZOMBIE:
+				// ranged zombies have a short cooldown delay, so kiting them
+				// isn't useful. However if there are big zombies or standard zombies
+				// attacking us then we should kite.
+				break;
+				
+			case FASTZOMBIE:
+				if (here.distanceSquaredTo(zombie.location) <= zombie.type.attackRadiusSquared) {
+					// if we are being attacked by a fast zombie we should probably just
+					// stand and fight, since fast zombies will get more hits on us if we try
+					// to kite
+					return false; 
+				}
+				break;
+
+			case ZOMBIEDEN: // zombie dens are not dangerous
+		    default:	
+			}
+		}
+		
+		if (mustRetreat) {
+			// try to find a direction that isn't adjacent to any big or standard zombies
+			for (Direction dir : retreatDirs) {
+				if (rc.canMove(dir) && !directionIsAdjacentToZombie[dir.ordinal()]) {
+					rc.move(dir);
+					Debug.indicate("micro", 0, "retreating from slow zombie(s)");
+					return true;
+				}
+			}
+		}
+		return false;
+	}
+	
+	private static boolean tryToBackUpToMaintainMaxRange(RobotInfo[] attackableHostiles) throws GameActionException {
+		RobotInfo closestHostile = Util.closest(attackableHostiles);
+		//Debug.indicate("micro", 1, "hello from tryToBackUpToMaintainMaxRange; numWithin5 = " + numWithin5 + ", numWithin2 = " + numWithin2);
+		
+		int threshold = here.distanceSquaredTo(closestHostile.location);
+		if (threshold > 5) return false; // we are already far enough away
+		int smallestCount = rc.senseHostileRobots(here, threshold).length;
+		
+		Direction bestRetreatDir = null;
+		for (Direction dir : retreatDirs) {
+			if (!rc.canMove(dir)) continue;
+			MapLocation dirLoc = here.add(dir);
+			int count = 0;
+  		    for (RobotInfo hostile : attackableHostiles) {
+  		    	if (hostile.location.distanceSquaredTo(dirLoc) <= threshold) {
+  		    		count += 1;
+  		    	}
+		    }
+  		    if (dir.equals(Direction.EAST)) {
+  		    	Debug.indicate("micro", 2, "tryToBackUpToMaintainMaxRange: EAST count = " + count);
+  		    }
+  		    if (count < smallestCount) {
+  		    	bestRetreatDir = dir;
+  		    	if (count == 0) break;
+  		    	smallestCount = count;
+  		    }
+		}
+		if (bestRetreatDir != null) {
+			Debug.indicate("micro", 0, "backing up to maintain max range; smallestCount = " + smallestCount);
+			rc.move(bestRetreatDir);
+			return true;
+		}
+		return false;
+	}
 
 	private static boolean retreatIfNecessary(RobotInfo[] visibleHostiles) throws GameActionException {
 		boolean mustRetreat = false;
@@ -225,7 +369,7 @@ public class BotSoldier extends Globals {
 		return false;
 	}
 	
-	private static boolean tryHelpAlly(RobotInfo[] visibleHostiles) throws GameActionException {
+	private static boolean tryMoveToHelpAlly(RobotInfo[] visibleHostiles) throws GameActionException {
 		MapLocation closestHostile = Util.closest(visibleHostiles).location;
 		
 		boolean allyIsFighting = false;
@@ -242,14 +386,14 @@ public class BotSoldier extends Globals {
 		
 		if (allyIsFighting) {
 			if (Nav.tryMoveInDirection(here.directionTo(closestHostile))) {
-				Debug.indicate("micro", 0, "helping ally fight hostile at " + closestHostile);
+				Debug.indicate("micro", 0, "moving to help ally fight hostile at " + closestHostile);
 				return true;
 			}
 		}
 		return false;
 	}
 	
-	private static boolean tryAttackHelplessTarget(RobotInfo[] visibleHostiles) throws GameActionException {
+	private static boolean tryMoveToAttackHelplessTarget(RobotInfo[] visibleHostiles) throws GameActionException {
 		RobotInfo closestHostile = Util.closest(visibleHostiles);
 		if (closestHostile.type.canAttack()) {
 			return false;

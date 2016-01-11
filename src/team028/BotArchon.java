@@ -21,8 +21,8 @@ public class BotArchon extends Globals {
 	private static int nextUnpairedScoutCount = 0;
 	
 	public static void loop() throws GameActionException {
-		rc.setIndicatorString(0, "2fb2e406dc4207e0e6d0da4f69ece4fac077fa3b");
-		Debug.init("unpaired");
+		rc.setIndicatorString(0, "73161402733dfa8b6c39a80ea5686a2e840e61d4");
+		Debug.init("msg");
 		FastMath.initRand(rc);
 		//initArchons();
 		
@@ -321,13 +321,18 @@ public class BotArchon extends Globals {
 		if (allies.length == 0) return;
 		int avgX = 0;
 		int avgY = 0;
+		int N = 0;
 		for (RobotInfo ally : allies) {
+			if (ally.type == RobotType.SCOUT) continue;
 			avgX += ally.location.x;
-			avgY += ally.location.y;
+			avgY += ally.location.y;			
+			N += 1;
 		}
-		avgX /= allies.length;
-		avgY /= allies.length;
-		Nav.goToDirectSafelyAvoidingTurret(new MapLocation(avgX, avgY), closestEnemyTurretLocation);
+		if (N != 0) {
+			avgX /= N;
+			avgY /= N;
+			Nav.goToDirectSafelyAvoidingTurret(new MapLocation(avgX, avgY), closestEnemyTurretLocation);
+		}
 	}
 	
 	private static boolean retreatIfNecessary() throws GameActionException {
