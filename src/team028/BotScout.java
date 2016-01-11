@@ -22,9 +22,8 @@ public class BotScout extends Globals {
 	private static int lastTurretOwnershipBroadcastRound = -999999;
 	private static int[] turretOwnershipReceiveRoundById = new int[32001];
 	
-
 	public static void loop() {
-    	Debug.init("turret");
+    	Debug.init("unpaired");
     	origin = here;
     	exploredGrid[50][50] = true;    	
 		while (true) {
@@ -42,6 +41,15 @@ public class BotScout extends Globals {
 		processSignals();		
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
 
+		if (rc.getRoundNum() % 50 == 0) {
+			if (!rc.canSenseRobot(turretFollowId)) {
+				Messages.sendUnpairedScoutReport(MapEdges.maxBroadcastDistSq());
+				Debug.indicate("unpaired", 0, "sent unpaired message");
+			} else {
+				Debug.indicate("unpaired", 0, "I am paired!");
+			}
+		}
+		
 		sendRadarInfo();
 		
 		trySendPartsOrNeutralLocation();

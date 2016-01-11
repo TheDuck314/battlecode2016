@@ -9,6 +9,7 @@ public class Messages extends Globals {
 	public static final int CHANNEL_ZOMBIE_DEN = 0x20000000;
 	public static final int CHANNEL_FOUND_PARTS = 0x30000000;
 	public static final int CHANNEL_ENEMY_TURRET_WARNING = 0x40000000;
+	public static final int CHANNEL_UNPAIRED_SCOUT_REPORT = 0x50000000;
 	
 	public static final int CHANNEL_ARCHON_LOCATION = 0xa0000000;
 	public static final int CHANNEL_RADAR = 0xb0000000;
@@ -229,4 +230,8 @@ public class Messages extends Globals {
 	public static int parseTurretOwnershipClaim(int[] data) {
 		return parseInt(data);
 	}
+	
+	public static void sendUnpairedScoutReport(int radiusSq) throws GameActionException {
+		rc.broadcastMessageSignal(CHANNEL_UNPAIRED_SCOUT_REPORT, 0, radiusSq);
+	}	
 }

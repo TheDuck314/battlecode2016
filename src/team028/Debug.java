@@ -8,7 +8,7 @@ public class Debug extends Globals {
     private static String[] currentIndicatorStrings = new String[GameConstants.NUMBER_OF_INDICATOR_STRINGS];
 
     public static void init(String debugSet) {
-        // activeDebugSet = debugSet;
+        activeDebugSet = debugSet;
     }
 
     public static void indicate(String debugSet, int indicator, String message) {

@@ -17,11 +17,18 @@ public class BotArchon extends Globals {
 	
 	private static MapLocation closestEnemyTurretLocation = null;
 	
+	private static int lastUnpairedScoutCount = 0;
+	private static int nextUnpairedScoutCount = 0;
+	
 	public static void loop() throws GameActionException {
-		rc.setIndicatorString(0, "5f52f26d9a8495f212e647744ab2c39b45f1863c");
-		Debug.init("turret");
+		rc.setIndicatorString(0, "2fb2e406dc4207e0e6d0da4f69ece4fac077fa3b");
+		Debug.init("unpaired");
 		FastMath.initRand(rc);
 		//initArchons();
+		
+		nArchons = rc.getRobotCount();
+		Debug.indicate("unpaired", 2, "nArchons = " + nArchons);
+		Clock.yield();
 
 		while (true) {
 			try {
@@ -76,8 +83,18 @@ public class BotArchon extends Globals {
 		}*/
 		
 		processSignals();
-		MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
-
+		
+		if (rc.getRoundNum() >= 20) {
+			MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
+		}
+		
+		if (rc.getRoundNum() % 50 == 25) {
+			lastUnpairedScoutCount = nextUnpairedScoutCount;
+			nextUnpairedScoutCount = 0;
+		}
+		
+		Debug.indicate("unpaired", 0, "lastUnpairedScoutCount = " + lastUnpairedScoutCount);
+		Debug.indicate("unpaired", 1, "nextUnpairedScoutCount = " + nextUnpairedScoutCount);
 		
 		//trySendAttackTarget();
 		sendRadarInfo();
@@ -167,24 +184,14 @@ public class BotArchon extends Globals {
 			} else {
 				spawnType = RobotType.SOLDIER;			
 			}
-		} else if (rc.getRobotCount() < 40) {
-			switch (spawnCount % 3) {
-			case 0:
-				spawnType = RobotType.SOLDIER;
-				break;
-			case 1:
-				spawnType = RobotType.TURRET;
-				break;
-			case 2:
-			default:
-				spawnType = RobotType.SCOUT;
-				break;
-			}
 		} else {
 			if (spawnCount % 2 == 0) {
-				spawnType = RobotType.SCOUT;
+				spawnType = RobotType.SOLDIER;
 			} else {
 				spawnType = RobotType.TURRET;
+			}
+			if (lastUnpairedScoutCount < 2 + 0.1 * rc.getRobotCount()) {
+				spawnType = RobotType.SCOUT;
 			}
 		}
 		
@@ -197,6 +204,7 @@ public class BotArchon extends Globals {
 				++spawnCount;
 				if (spawnType == RobotType.SCOUT) {
 					Messages.sendKnownMapEdges(2); // tell scout known map edges
+					lastUnpairedScoutCount += nArchons;
 				}
 			}
 		}
@@ -256,6 +264,10 @@ public class BotArchon extends Globals {
 					
 				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
 					Messages.processEnemyTurretWarning(data);
+					break;
+					
+				case Messages.CHANNEL_UNPAIRED_SCOUT_REPORT:
+					nextUnpairedScoutCount += 1;
 					break;
 					
 				default:
