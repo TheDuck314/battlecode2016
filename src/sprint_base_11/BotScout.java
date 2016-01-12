@@ -168,11 +168,19 @@ public class BotScout extends Globals {
 			lastGlobalRadarBroadcastRound = rc.getRoundNum();
 		}
 		
-		if (hostiles.length <= 5) {
-			Messages.sendRadarData(hostiles, radarRangeSq);
-		} else {
-			Messages.sendRadarData(Util.truncateArray(hostiles, 5), radarRangeSq);
+		RobotInfo[] hostilesToSend = new RobotInfo[5];
+		int numberHostilesToSend = 0;
+		for (RobotInfo h: hostiles) {
+			if (Radar.addEnemyToCache(h)) {
+				hostilesToSend[numberHostilesToSend] = h;
+				numberHostilesToSend += 1;
+				if (numberHostilesToSend >= 5) {
+					break;
+				}
+			}
 		}
+		
+		Messages.sendRadarData(hostilesToSend, numberHostilesToSend, radarRangeSq);
 		
 		int turretWarningRangeSq = 9*mySensorRadiusSquared;
 		boolean first = true;

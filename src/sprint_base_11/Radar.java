@@ -64,6 +64,10 @@ public class Radar extends Globals {
 		return true;
 	}
 	
+	public static boolean addEnemyToCache(RobotInfo info) {
+		return addEnemyToCache(new FastRobotInfo(info.location, info.type, rc.getRoundNum()));
+	}
+	
 	public static void clearEnemyCache() {
 		haveSeenEnemyLoc = new int[100][100];
 		enemyCache = new FastRobotInfo[1000];
