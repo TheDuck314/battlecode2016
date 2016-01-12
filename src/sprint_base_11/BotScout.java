@@ -305,6 +305,7 @@ public class BotScout extends Globals {
 					
 				case Messages.CHANNEL_ZOMBIE_DEN_LIST:
 					receiveZombieDenList(data, sig.getLocation());
+					break;
 
 				case Messages.CHANNEL_RADAR:
 					Messages.addRadarDataToEnemyCache(data, sig.getLocation(), myAttackRadiusSquared);
