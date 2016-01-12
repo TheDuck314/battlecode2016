@@ -244,10 +244,17 @@ public class BotArchon extends Globals {
 				default:
 					spawnType = RobotType.SCOUT;
 				}
-			} else if (spawnCount % 2 == 0) {
-				spawnType = RobotType.SOLDIER;
 			} else {
-				spawnType = RobotType.TURRET;
+				switch (spawnCount % 3) {
+				case 0:
+					spawnType = RobotType.SOLDIER;
+					break;
+				case 1:
+					spawnType = RobotType.TURRET;
+					break;
+				default:
+					spawnType = RobotType.SCOUT;
+				}
 			}
 		}
 		
