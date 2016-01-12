@@ -28,7 +28,7 @@ public class BotArchon extends Globals {
 	private static MapLocation lastDenTarget = null;
 	
 	public static void loop() throws GameActionException {
-		rc.setIndicatorString(0, "b4a19e9ffa97647665f30699ae4e3fc7b850f69b");
+		rc.setIndicatorString(0, "41bd9daf1997dbe55d320f76267c8be1064eab87");
 //		Debug.init("kill");
 		FastMath.initRand(rc);
 //		for (int i = 0; i < 1000000; ++i) {
