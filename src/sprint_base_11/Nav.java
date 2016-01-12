@@ -284,7 +284,7 @@ public class Nav extends Globals {
 	
 	// Always move if possible, but prefer to move toward the destination
 	// Don't move next to an archon, or in range of the given turret
-	public static void swarmToAvoidingArchons(MapLocation dest, MapLocation turretLocation) throws GameActionException {
+	public static void swarmToAvoidingArchonsAndTurret(MapLocation dest, MapLocation turretLocation) throws GameActionException {
 		MapLocation[] nearbyArchons = new MapLocation[10];
 		int numArchons = 0;
 		RobotInfo[] allies = rc.senseNearbyRobots(8, us);
