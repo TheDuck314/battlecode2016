@@ -97,7 +97,7 @@ public class BotArchon extends Globals {
 			MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
 		}
 		
-		if (rc.getRoundNum() % 50 == 25) {
+		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == Globals.checkUnpairedScoutInterval / 2) {
 			lastUnpairedScoutCount = nextUnpairedScoutCount;
 			nextUnpairedScoutCount = 0;
 		}
@@ -177,7 +177,7 @@ public class BotArchon extends Globals {
 		Debug.indicate("radar", 0, "sendRaderInfo: hostiles.length = " + hostiles.length);
 		if (hostiles.length == 0) return;
 		
-		int rangeSq = 9*mySensorRadiusSquared;
+		int rangeSq = 4*mySensorRadiusSquared;
 		
 		RobotInfo[] hostilesToSend = new RobotInfo[5];
 		int numberHostilesToSend = 0;
@@ -233,13 +233,21 @@ public class BotArchon extends Globals {
 				spawnType = RobotType.SOLDIER;			
 			}
 		} else {
-			if (spawnCount % 2 == 0) {
+			if (lastUnpairedScoutCount < 1) {
+				switch (spawnCount % 4) {
+				case 0:
+					spawnType = RobotType.SOLDIER;
+					break;
+				case 2:
+					spawnType = RobotType.TURRET;
+					break;
+				default:
+					spawnType = RobotType.SCOUT;
+				}
+			} else if (spawnCount % 2 == 0) {
 				spawnType = RobotType.SOLDIER;
 			} else {
 				spawnType = RobotType.TURRET;
-			}
-			if (lastUnpairedScoutCount < 2 + 0.1 * rc.getRobotCount()) {
-				spawnType = RobotType.SCOUT;
 			}
 		}
 		

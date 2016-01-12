@@ -17,6 +17,7 @@ public class BotScout extends Globals {
 	private static int lastPartsOrNeutralSignalRound = -999999;
 	
 	private static int lastGlobalRadarBroadcastRound = 0;
+	private static int lastRadarBroadcastRound = 0;
 	
 	private static int turretFollowId = -1;
 	private static int archonFollowId = -1;
@@ -45,12 +46,15 @@ public class BotScout extends Globals {
 	}
 	
 	private static void turn() throws GameActionException {
+		Globals.visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		Globals.visibleAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		
 		processSignals();		
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
 
-		if (rc.getRoundNum() % 50 == 0) {
+		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == 0) {
 			if (!rc.canSenseRobot(turretFollowId)) {
-				Messages.sendUnpairedScoutReport(MapEdges.maxBroadcastDistSq());
+				Messages.sendUnpairedScoutReport(9 * mySensorRadiusSquared);
 				Debug.indicate("unpaired", 0, "sent unpaired message");
 			} else {
 				Debug.indicate("unpaired", 0, "I am paired!");
@@ -58,6 +62,7 @@ public class BotScout extends Globals {
 		}
 		
 		sendRadarInfo();
+		sendTurretWarning();
 		
 		if (rc.isCoreReady()) {
 			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
@@ -68,7 +73,6 @@ public class BotScout extends Globals {
 			}
 		}
 
-		
 		trySendPartsOrNeutralLocation();
 		trySendZombieDenLocations();
 		
@@ -96,9 +100,8 @@ public class BotScout extends Globals {
 			rc.setIndicatorDot(turretLoc, 0, 255, 0);
 			return true;
 		}
-		
-		RobotInfo[] nearbyAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
-		for (RobotInfo ally : nearbyAllies) {
+
+		for (RobotInfo ally : visibleAllies) {
 			if (ally.type == RobotType.TTM || ally.type == RobotType.TURRET) {
 				if (rc.getRoundNum() - turretOwnershipReceiveRoundById[ally.ID] > 80) {
 					turretFollowId = ally.ID;
@@ -124,7 +127,7 @@ public class BotScout extends Globals {
 				rc.setIndicatorDot(archonLoc, 0, 255, 0);
 				return true;
 			}
-			for (RobotInfo ally : nearbyAllies) {
+			for (RobotInfo ally : visibleAllies) {
 				if (ally.type == RobotType.ARCHON) {
 					if (rc.getRoundNum() - turretOwnershipReceiveRoundById[ally.ID] > 80) {
 						archonFollowId = ally.ID;
@@ -194,11 +197,15 @@ public class BotScout extends Globals {
 	}
 	
 	private static void sendRadarInfo() throws GameActionException {
-		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
-		Debug.indicate("radar", 0, "sendRaderInfo: hostiles.length = " + hostiles.length);
-		if (hostiles.length == 0) return;
+		Debug.indicate("radar", 0, "sendRaderInfo: hostiles.length = " + visibleHostiles.length);
+		if (visibleHostiles.length == 0) return;
 		
-		int radarRangeSq = 9*mySensorRadiusSquared;
+		int radarRangeSq = 4*mySensorRadiusSquared;
+		if (visibleAllies.length == 0) {
+			if (rc.getRoundNum()-lastRadarBroadcastRound < 10) {
+				return;
+			}
+		}
 		if (rc.getRoundNum() - lastGlobalRadarBroadcastRound > 50) {
 			radarRangeSq = MapEdges.maxBroadcastDistSq();
 			lastGlobalRadarBroadcastRound = rc.getRoundNum();
@@ -206,7 +213,7 @@ public class BotScout extends Globals {
 		
 		RobotInfo[] hostilesToSend = new RobotInfo[5];
 		int numberHostilesToSend = 0;
-		for (RobotInfo h: hostiles) {
+		for (RobotInfo h: visibleHostiles) {
 			if (Radar.addEnemyToCache(h)) {
 				hostilesToSend[numberHostilesToSend] = h;
 				numberHostilesToSend += 1;
@@ -215,12 +222,14 @@ public class BotScout extends Globals {
 				}
 			}
 		}
-		
 		Messages.sendRadarData(hostilesToSend, numberHostilesToSend, radarRangeSq);
-		
+		lastRadarBroadcastRound = rc.getRoundNum();
+	}
+	
+	private static void sendTurretWarning() throws GameActionException {		
 		int turretWarningRangeSq = 9*mySensorRadiusSquared;
 		boolean first = true;
-		for (RobotInfo hostile : hostiles) {
+		for (RobotInfo hostile : visibleHostiles) {
 			if (hostile.type == RobotType.TURRET) {
 				if (!Radar.turretIsKnown(hostile.ID, hostile.location)) {
 					if (first) {
@@ -375,7 +384,7 @@ public class BotScout extends Globals {
 			rubbles[i] = rc.senseRubble(locs[i]);
 		}
 		RobotInfo[] infos;
-		infos = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		infos = visibleHostiles;
 		for (RobotInfo e : infos) {
 			if (!e.type.canAttack()) continue;
 			for (int i = 0; i < 9; ++i) {
@@ -387,7 +396,7 @@ public class BotScout extends Globals {
 				}
 			}
 		}
-		infos = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		infos = visibleAllies;
 		MapLocation friendVec = new MapLocation(0,0);
 		MapLocation scoutVec = new MapLocation(0,0);
 		MapLocation archonVec = new MapLocation(0,0);
