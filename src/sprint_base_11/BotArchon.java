@@ -29,7 +29,7 @@ public class BotArchon extends Globals {
 	
 	public static void loop() throws GameActionException {
 		rc.setIndicatorString(0, "5f52f26d9a8495f212e647744ab2c39b45f1863c");
-		Debug.init("msg");
+		Debug.init("kill");
 		FastMath.initRand(rc);
 		//initArchons();
 		
@@ -163,7 +163,7 @@ public class BotArchon extends Globals {
 			return;
 		}
 		
-		MapLocation closestDen = findClosestDenToStart();
+		MapLocation closestDen = knownZombieDens.findClosestMemberToLocation(startingLocation);
 		if (closestDen != null) {
 			Debug.indicate("dens", 0, "sending command to attack den at " + closestDen);
 			Messages.sendDenAttackCommand(closestDen, MapEdges.maxBroadcastDistSq());
@@ -367,6 +367,19 @@ public class BotArchon extends Globals {
 				}
 			} else {
 				// simple signal with no message
+				// for now these are only sent by soldiers who have just killed
+				// a zombie den. Check to see if we know of a zombie den within
+				// the soldier attack radius of the message origin.
+				MapLocation signalOrigin = sig.getLocation();
+				MapLocation killedDen = knownZombieDens.findClosestMemberToLocation(signalOrigin);
+				Debug.indicate("kill", 0, "got kill message. signalOrigin = " + signalOrigin + ", killedDen = " + killedDen);
+				if (killedDen != null 
+						&& killedDen.distanceSquaredTo(signalOrigin) <= RobotType.SOLDIER.attackRadiusSquared) {
+					knownZombieDens.remove(killedDen);
+					if (killedDen.equals(lastDenTarget)) {
+						lastDenTarget = null;
+					}
+				}
 			}
 		}
 		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
@@ -452,19 +465,5 @@ public class BotArchon extends Globals {
 			}
 		}
 		return false;
-	}
-	
-	private static MapLocation findClosestDenToStart() {
-		MapLocation ret = null;
-		int bestDistSq = Integer.MAX_VALUE;
-		for (int i = 0; i < knownZombieDens.size; ++i) {
-			MapLocation denLoc = knownZombieDens.locations[i];
-			int distSq = startingLocation.distanceSquaredTo(denLoc);
-			if (distSq < bestDistSq) {
-				bestDistSq = distSq;
-				ret = denLoc;
-			}
-		}
-		return ret;
 	}
 }

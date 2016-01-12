@@ -30,7 +30,7 @@ public class BotScout extends Globals {
 	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
 	
 	public static void loop() {
-    	Debug.init("msg");
+    	Debug.init("kill");
     	origin = here;
     	exploredGrid[50][50] = true;   
     	Debug.indicate("dens", 2, "dens received at birth: ");
@@ -321,6 +321,18 @@ public class BotScout extends Globals {
 					break;
 					
 				default:
+				}
+			} else {
+				// ` signal with no message
+				// for now these are only sent by soldiers who have just killed
+				// a zombie den. Check to see if we know of a zombie den within
+				// the soldier attack radius of the message origin.
+				MapLocation signalOrigin = sig.getLocation();
+				MapLocation killedDen = knownZombieDens.findClosestMemberToLocation(signalOrigin);
+				Debug.indicate("kill", 0, "got kill message. signalOrigin = " + signalOrigin + ", killedDen = " + killedDen);
+				if (killedDen != null 
+						&& killedDen.distanceSquaredTo(signalOrigin) <= RobotType.SOLDIER.attackRadiusSquared) {
+					knownZombieDens.remove(killedDen);
 				}
 			}
 		}

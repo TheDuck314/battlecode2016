@@ -52,4 +52,19 @@ public class MapLocationHashSet {
 			return false;
 		}
 	}
+	
+	public MapLocation findClosestMemberToLocation(MapLocation loc) {
+		MapLocation ret = null;
+		int bestDistSq = Integer.MAX_VALUE;
+		for (int i = 0; i < size; ++i) {
+			MapLocation denLoc = locations[i];
+			int distSq = loc.distanceSquaredTo(denLoc);
+			if (distSq < bestDistSq) {
+				bestDistSq = distSq;
+				ret = denLoc;
+			}
+		}
+		return ret;
+	}
+
 }

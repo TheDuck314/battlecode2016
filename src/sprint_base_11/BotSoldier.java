@@ -33,6 +33,11 @@ public class BotSoldier extends Globals {
 	
 	private static MapLocation closestEnemyTurretLocation = null;
 	
+	private static MapLocationHashSet destroyedZombieDens = new MapLocationHashSet();
+	private static boolean isAttackingZombieDen = false;
+	
+
+	
 	private static void turn() throws GameActionException {
 		processSignals();
 
@@ -72,9 +77,6 @@ public class BotSoldier extends Globals {
 			}
 		}
 	}
-	
-	private static MapLocationHashSet destroyedZombieDens = new MapLocationHashSet();
-	private static boolean isAttackingZombieDen = false;
 	
 	private static void addAttackTarget(MapLocation targetNew, boolean isZombieDen) {
 		if (isZombieDen && destroyedZombieDens.contains(targetNew)) {
@@ -169,10 +171,13 @@ public class BotSoldier extends Globals {
 			// if we are in the healing state, then if we are under attack we should retreat.
 			// but if coreDelay >= cooldown delay, then we can optionally attack			
 			if (rc.isCoreReady()) {
-				if (retreatIfNecessary(visibleHostiles)) {
-				    return true;
+				if (visibleHostiles.length > 0) {
+					if (fleeInHealingState(visibleHostiles)) {
+						return true;
+					}
 				}
-			} else if (rc.isWeaponReady() && rc.getCoreDelay() >= myType.cooldownDelay) {
+			}
+			if (rc.isWeaponReady() && rc.getCoreDelay() >= myType.cooldownDelay) {
 				RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 				if (attackableHostiles.length > 0) {
 					chooseTargetAndAttack(attackableHostiles);
@@ -269,6 +274,11 @@ public class BotSoldier extends Globals {
 		if (bestTarget != null) {
 			Debug.indicate("micro", 0, "attacking " + bestTarget.type + " at " + bestTarget.location);
 			rc.attackLocation(bestTarget.location);
+			if (bestTarget.type == RobotType.ZOMBIEDEN) {
+				if (rc.senseRobotAtLocation(bestTarget.location) == null) {
+					rc.broadcastSignal(20000);
+				}
+			}
 		}
 	}
 
@@ -391,6 +401,31 @@ public class BotSoldier extends Globals {
 		return false;
 	}
 
+	private static boolean fleeInHealingState(RobotInfo[] visibleHostiles) throws GameActionException {
+		boolean mustRetreat = false;
+		MapLocation retreatTarget = here;
+		for (RobotInfo hostile : visibleHostiles) {
+			RobotType hostileType = hostile.type;
+			if (!hostileType.canAttack()) continue;			
+			mustRetreat = true;
+			retreatTarget = retreatTarget.add(hostile.location.directionTo(here));
+		}
+		if (closestEnemyTurretLocation != null) {
+			if (here.distanceSquaredTo(closestEnemyTurretLocation) <= RobotType.TURRET.attackRadiusSquared) {
+				mustRetreat = true;
+				retreatTarget = retreatTarget.add(closestEnemyTurretLocation.directionTo(here));
+			}
+		}
+		if (mustRetreat) {
+			if (!here.equals(retreatTarget)) {
+				Direction retreatDir = here.directionTo(retreatTarget);
+				Nav.tryHardMoveInDirection(retreatDir);
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	private static boolean retreatIfNecessary(RobotInfo[] visibleHostiles) throws GameActionException {
 		boolean mustRetreat = false;
 		for (RobotInfo hostile : visibleHostiles) {
