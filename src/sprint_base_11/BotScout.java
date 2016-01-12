@@ -104,7 +104,7 @@ public class BotScout extends Globals {
 			} else {
 				Nav.goToDirect(turretLoc);
 			}
-			rc.setIndicatorDot(turretLoc, 0, 255, 0);
+			Debug.indicateDot("unpaired", turretLoc, 0, 255, 0);
 			return true;
 		}
 
@@ -113,7 +113,7 @@ public class BotScout extends Globals {
 				if (rc.getRoundNum() - turretOwnershipReceiveRoundById[ally.ID] > 80) {
 					turretFollowId = ally.ID;
 					Nav.goToDirect(ally.location);
-					rc.setIndicatorDot(ally.location, 0, 255, 0);
+					Debug.indicateDot("unpaired", ally.location, 0, 255, 0);
 					return true;
 				}
 			}
@@ -131,7 +131,7 @@ public class BotScout extends Globals {
 				} else {
 					Nav.goToDirect(archonLoc);
 				}
-				rc.setIndicatorDot(archonLoc, 0, 255, 0);
+				Debug.indicateDot("unpaired", archonLoc, 0, 255, 0);
 				return true;
 			}
 			for (RobotInfo ally : visibleAllies) {
@@ -139,7 +139,7 @@ public class BotScout extends Globals {
 					if (rc.getRoundNum() - turretOwnershipReceiveRoundById[ally.ID] > 80) {
 						archonFollowId = ally.ID;
 						Nav.goToDirect(ally.location);
-						rc.setIndicatorDot(ally.location, 0, 255, 0);
+						Debug.indicateDot("unpaired", ally.location, 0, 255, 0);
 						return true;
 					}
 				}
@@ -199,7 +199,7 @@ public class BotScout extends Globals {
 		}		
 		
 		for (int i = 0; i < knownZombieDens.size; ++i) {
-			rc.setIndicatorLine(here, knownZombieDens.locations[i], 0, 0, 255);
+			Debug.indicateLine("dens", here, knownZombieDens.locations[i], 0, 0, 255);
 		}
 	}
 	
@@ -445,7 +445,7 @@ public class BotScout extends Globals {
 			default:
 			}
 		}
-//		rc.setIndicatorLine(here, FastMath.addVec(friendVec, FastMath.addVec(here, FastMath.multiplyVec(-5,scoutVec))), 0, 255, 0);
+//		Debug.indicateLine("explore", here, FastMath.addVec(friendVec, FastMath.addVec(here, FastMath.multiplyVec(-5,scoutVec))), 0, 255, 0);
 		for (int i = 0; i < 9; ++i) {
 			friends[i] = FastMath.dotVec(dirs[i], friendVec);
 			scouts[i] = FastMath.dotVec(dirs[i], scoutVec);
@@ -591,7 +591,7 @@ public class BotScout extends Globals {
             			MapLocation gridLoc = gridLocation(gridX, gridY);
             			if (!isFarOffMap(gridLoc)) {
             				gridLoc = moveOntoMap(gridLoc);
-            				rc.setIndicatorDot(gridLoc, 0, 0, 255);
+            				Debug.indicateDot("explore", gridLoc, 0, 0, 255);
             				int distSq = origin.distanceSquaredTo(gridLoc);
                             if (distSq < bestDistSq) {
                                 bestDistSq = distSq;
@@ -613,7 +613,7 @@ public class BotScout extends Globals {
             	exploreDest = bestLoc;
             	exploreDestGridX = bestGridX;
             	exploreDestGridY = bestGridY;
-				rc.setIndicatorDot(exploreDest, 0, 255, 0);
+            	Debug.indicateDot("explore", exploreDest, 0, 255, 0);
 				return;
             }
         }
@@ -656,7 +656,7 @@ public class BotScout extends Globals {
 				if (isSquareSafe[d]) {
 					if (dirLocs[d].distanceSquaredTo(hostileLoc) <= hostileRangeSq) {
 						isSquareSafe[d] = false;
-						rc.setIndicatorDot(dirLocs[d], 255, 0, 0);
+						Debug.indicateDot("explore", dirLocs[d], 255, 0, 0);
 					}
 				}
 			}
@@ -749,7 +749,7 @@ public class BotScout extends Globals {
 		}
 
 		
-		rc.setIndicatorDot(exploreDest, 0, 255, 0);
+		Debug.indicateDot("explore", exploreDest, 0, 255, 0);
 		if (rc.isCoreReady()) {
 			Debug.indicate("explore", 1, "going to exploreDest");
 			Nav.goToBug(exploreDest/*, checkWhichSquaresAreSafe()*/);

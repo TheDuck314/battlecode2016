@@ -24,12 +24,24 @@ public class Debug extends Globals {
 
     public static void clear(String debugSet) {
         for (int i = 0; i < GameConstants.NUMBER_OF_INDICATOR_STRINGS; i++) {
-            indicate(debugSet, i, "");
+        	indicate(debugSet, i, "");
         }
     }
 
+    public static void indicateDot(String debugSet, MapLocation loc, int red, int green, int blue) {
+    	if (debugSet == activeDebugSet) {
+    		rc.setIndicatorDot(loc, red, green, blue);
+    	}
+    }
+
+    public static void indicateLine(String debugSet, MapLocation loc1, MapLocation loc2, int red, int green, int blue) {
+    	if (debugSet == activeDebugSet) {
+    		rc.setIndicatorLine(loc1, loc2, red, green, blue);
+    	}
+    }
+
     public static void debugBytecodes(String message) {
-        System.out.println(String.format("turn: %d, bytecodes: %d: %s\n", rc.getRoundNum(), Clock.getBytecodeNum(), message));
+    	System.out.println(String.format("turn: %d, bytecodes: %d: %s\n", rc.getRoundNum(), Clock.getBytecodeNum(), message));
     }
 
     static int timerStartRoundNum;

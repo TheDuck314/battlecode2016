@@ -75,7 +75,7 @@ public class BotArchon extends Globals {
 		}
 		rallyPoint = FastMath.multiplyVec(1.0/(double)nArchons, rallyPoint);
 		rallyPoint = rallyPoint.add(rallyPoint.directionTo(here), 0);
-		rc.setIndicatorDot(rallyPoint, 255, 0, 0);
+		Debug.indicateDot("rally", rallyPoint, 255, 0, 0);
 		for (int i = 0; i < nArchons; ++i) {
 			if (archonsId[i] < myID) {
 				archonOrder += 1;
@@ -146,10 +146,10 @@ public class BotArchon extends Globals {
 		//Debug.indicate("dens", 2, "");
 		for (int i = 0; i < knownZombieDens.size; ++i) {
 			//Debug.indicateAppend("dens", 2, ", " + knownZombieDens.locations[i]);
-			rc.setIndicatorLine(here, knownZombieDens.locations[i], 0, 0, 255);
+			Debug.indicateLine("dens", here, knownZombieDens.locations[i], 0, 0, 255);
 		}
 		if (lastDenTarget != null) {
-			rc.setIndicatorLine(here, lastDenTarget, 255, 0, 0);
+			Debug.indicateLine("dens", here, lastDenTarget, 255, 0, 0);
 		}
 		
 		// send global broadcasts at a certain interval

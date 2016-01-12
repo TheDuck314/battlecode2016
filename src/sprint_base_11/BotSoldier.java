@@ -10,7 +10,7 @@ public class BotSoldier extends Globals {
 			try {
 				Globals.update();
 				turn();
-				// setIndicator();
+				setIndicator();
 
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -66,14 +66,14 @@ public class BotSoldier extends Globals {
 	
 	private static void setIndicator() {
 		if (myID % 2 != 0) {
-			rc.setIndicatorDot(here, 100, 0, 0);
+			Debug.indicateDot("dens", here, 100, 0, 0);
 			if (attackTarget != null) {
-				rc.setIndicatorLine(here, attackTarget, 100, 0, 0);
+				Debug.indicateLine("dens", here, attackTarget, 100, 0, 0);
 			}
 		} else {
-			rc.setIndicatorDot(here, 0, 100, 0);
+			Debug.indicateDot("dens", here, 0, 100, 0);
 			if (attackTarget != null) {
-				rc.setIndicatorLine(here, attackTarget, 0, 100, 0);
+				Debug.indicateLine("dens", here, attackTarget, 0, 100, 0);
 			}
 		}
 	}
@@ -624,11 +624,11 @@ public class BotSoldier extends Globals {
 		
 		MapLocation fakeTarget = here.add(wanderDirection, 10);
 		
-		rc.setIndicatorDot(here, 0, 100, 0);
+		Debug.indicateDot("micro", here, 0, 100, 0);
 		
 		if (Nav.goToDirectSafelyAvoidingTurret(fakeTarget, closestEnemyTurretLocation)) {
 			Debug.indicate("micro", 0, "wandering");
-			rc.setIndicatorLine(here, fakeTarget, 100, 100, 0);
+			Debug.indicateLine("micro", here, fakeTarget, 100, 100, 0);
 		} else {
 			wanderDirection = Direction.values()[FastMath.rand256() % 8];
 		}
