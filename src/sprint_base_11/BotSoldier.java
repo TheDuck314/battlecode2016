@@ -221,6 +221,9 @@ public class BotSoldier extends Globals {
 				if (tryToBackUpToMaintainMaxRange(attackableHostiles)) {
 					return true;
 				}
+				if (tryMoveToAttackHelplessTarget(visibleHostiles)) {
+					return true;
+				}
 				return true; // we are fighting, don't move
 			}
 			// otherwise try to help an ally or attack a helpless target
