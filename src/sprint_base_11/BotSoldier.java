@@ -10,6 +10,8 @@ public class BotSoldier extends Globals {
 			try {
 				Globals.update();
 				turn();
+				setIndicator();
+
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -54,7 +56,50 @@ public class BotSoldier extends Globals {
 			closestEnemyTurretLocation = null;
 		}
 		
-		lookForZombieDens();
+		lookForAttackTarget();
+	}
+	
+	private static void setIndicator() {
+		if (myID % 2 != 0) {
+			rc.setIndicatorDot(here, 100, 0, 0);
+			if (attackTarget != null) {
+				rc.setIndicatorLine(here, attackTarget, 100, 0, 0);
+			}
+		} else {
+			rc.setIndicatorDot(here, 0, 100, 0);
+			if (attackTarget != null) {
+				rc.setIndicatorLine(here, attackTarget, 0, 100, 0);
+			}
+		}
+	}
+	
+	private static MapLocationHashSet destroyedZombieDens = new MapLocationHashSet();
+	private static boolean isAttackingZombieDen = false;
+	
+	private static void addAttackTarget(MapLocation targetNew, boolean isZombieDen) {
+		if (isZombieDen && destroyedZombieDens.contains(targetNew)) {
+			return;
+		}
+		if (attackTarget == null) {
+			attackTarget = targetNew;
+			isAttackingZombieDen = isZombieDen;
+		}
+		if (myID % 2 == 0) {
+			if (here.distanceSquaredTo(targetNew) < here.distanceSquaredTo(attackTarget)) {
+				isAttackingZombieDen = isZombieDen;
+				attackTarget = targetNew;
+			}
+		} else {
+			if (!isAttackingZombieDen && isZombieDen) {
+				isAttackingZombieDen = true;
+				attackTarget = targetNew;
+			} else if (isAttackingZombieDen && !isZombieDen) {
+				return;
+			} else if (here.distanceSquaredTo(targetNew) < here.distanceSquaredTo(attackTarget)) {
+				isAttackingZombieDen = isZombieDen;
+				attackTarget = targetNew;
+			}
+		}
 	}
 
 	private static void processSignals() {
@@ -76,9 +121,22 @@ public class BotSoldier extends Globals {
 					break;*/
 				case Messages.CHANNEL_RADAR:
 					MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
-					if (attackTarget == null
-							|| here.distanceSquaredTo(closest) < here.distanceSquaredTo(attackTarget)) {
-						attackTarget = closest;
+					addAttackTarget(closest, false);
+					break;
+					
+				case Messages.CHANNEL_DEN_ATTACK_COMMAND:
+					MapLocation denTarget = Messages.parseDenAttackCommand(data);
+					addAttackTarget(denTarget, true);
+					break;
+					
+				case Messages.CHANNEL_ZOMBIE_DEN:
+					MapLocation denLoc = Messages.parseZombieDenLocation(data);
+					if (Messages.parseZombieDenWasDestroyed(data)) {
+						destroyedZombieDens.add(denLoc);
+						if (denLoc.equals(attackTarget) && isAttackingZombieDen) {
+							isAttackingZombieDen = false;
+							attackTarget = null;
+						}
 					}
 					break;
 					
@@ -466,11 +524,11 @@ public class BotSoldier extends Globals {
 	}
 	
 	
-	private static void lookForZombieDens() throws GameActionException {
+	private static void lookForAttackTarget() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 		
 		if (attackTarget == null) {
-			Debug.indicate("radar", 0, "lookForZombieDens: attackTarget == null, numCachedEnemies = " + Radar.numCachedEnemies);
+			Debug.indicate("radar", 0, "lookForAttackTarget: attackTarget == null, numCachedEnemies = " + Radar.numCachedEnemies);
 			MapLocation closest = null;
 			int bestDistSq = Integer.MAX_VALUE;
 			for (int i = 0; i < Radar.numCachedEnemies; ++i) {
@@ -479,6 +537,7 @@ public class BotSoldier extends Globals {
 				if (distSq < bestDistSq) {
 					bestDistSq = distSq;
 					closest = hostile.location;
+					isAttackingZombieDen = hostile.type == RobotType.ZOMBIEDEN;
 				}
 			}
 			attackTarget = closest;
@@ -489,7 +548,13 @@ public class BotSoldier extends Globals {
 			if (rc.canSenseLocation(attackTarget)) {
 				RobotInfo targetInfo = rc.senseRobotAtLocation(attackTarget);
 				if (targetInfo == null || targetInfo.team == us) {
+					if (isAttackingZombieDen) {
+						destroyedZombieDens.add(attackTarget);
+					}
 					attackTarget = null;
+					isAttackingZombieDen = false;
+				} else if (targetInfo.type != RobotType.ZOMBIEDEN) {
+					isAttackingZombieDen = false;
 				}
 			}
 		}
@@ -505,6 +570,7 @@ public class BotSoldier extends Globals {
 				if (numTurnsBlocked >= 40) {
 					Debug.indicate("block", 1, "waited too long. setting attackTarget = null");
 					attackTarget = null;
+					isAttackingZombieDen = false;
 					numTurnsBlocked = 0;
 				}
 			}
