@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("micro");
+		Debug.init("micro");		
 		FastMath.initRand(rc);
 		while (true) {
 			try {
@@ -217,12 +217,13 @@ public class BotSoldier extends Globals {
 	// prefer to retreat along orthogonal directions since these give smaller delays
 	private static Direction[] retreatDirs = 
 		{ Direction.NORTH, Direction.EAST, Direction.SOUTH, Direction.WEST,
-				Direction.NORTH_WEST, Direction.SOUTH_EAST, Direction.SOUTH_WEST, Direction.NORTH_WEST };
+				Direction.NORTH_EAST, Direction.SOUTH_EAST, Direction.SOUTH_WEST, Direction.NORTH_WEST };
 	
 	// This function is called if we CAN shoot but we have to decide
 	// whether to retreat instead.
 	private static boolean retreatFromSlowZombiesIfNecessary() throws GameActionException {
 		RobotInfo[] zombies = rc.senseNearbyRobots(myAttackRadiusSquared, Team.ZOMBIE);
+		//Debug.indicate("micro", 1, "hello from retreatFromSlowZombiesIfNecessary");
 		if (zombies.length == 0) return false;
 		
 		// check if we are being attacked by a non-fast zombie but could move 
@@ -238,10 +239,15 @@ public class BotSoldier extends Globals {
 				// we can kite big zombies and standard zombies
 				if (here.isAdjacentTo(zombie.location)) {
 					mustRetreat = true;
-					int toZombieDir = here.directionTo(zombie.location).ordinal();
-					directionIsAdjacentToZombie[toZombieDir] = true;
-					directionIsAdjacentToZombie[(toZombieDir+1)%8] = true;
-					directionIsAdjacentToZombie[(toZombieDir+7)%8] = true;
+					Direction zombieDir = here.directionTo(zombie.location);
+					int zombieDirOrdinal = zombieDir.ordinal();
+					directionIsAdjacentToZombie[zombieDirOrdinal] = true;
+					directionIsAdjacentToZombie[(zombieDirOrdinal+1)%8] = true;
+					directionIsAdjacentToZombie[(zombieDirOrdinal+7)%8] = true;
+					if (!zombieDir.isDiagonal()) {
+						directionIsAdjacentToZombie[(zombieDirOrdinal+2)%8] = true;
+						directionIsAdjacentToZombie[(zombieDirOrdinal+6)%8] = true;
+					}
 				}
 				break;
 
@@ -265,7 +271,13 @@ public class BotSoldier extends Globals {
 			}
 		}
 		
+		
 		if (mustRetreat) {
+			//Debug.indicate("micro", 2, "");
+			//for (int i = 0; i < 8; ++i) {
+			//	Debug.indicateAppend("micro", 2, "" + Direction.values()[i] + ": " + directionIsAdjacentToZombie[i]);;
+			//}
+
 			// try to find a direction that isn't adjacent to any big or standard zombies
 			for (Direction dir : retreatDirs) {
 				if (rc.canMove(dir) && !directionIsAdjacentToZombie[dir.ordinal()]) {
@@ -282,31 +294,33 @@ public class BotSoldier extends Globals {
 		RobotInfo closestHostile = Util.closest(attackableHostiles);
 		//Debug.indicate("micro", 1, "hello from tryToBackUpToMaintainMaxRange; numWithin5 = " + numWithin5 + ", numWithin2 = " + numWithin2);
 		
-		int threshold = here.distanceSquaredTo(closestHostile.location);
-		if (threshold > 5) return false; // we are already far enough away
-		int smallestCount = rc.senseHostileRobots(here, threshold).length;
+		int closestHostileDistSq = here.distanceSquaredTo(closestHostile.location);
+		if (closestHostileDistSq > 5) return false;
 		
 		Direction bestRetreatDir = null;
+		int bestDistSq = closestHostileDistSq;
+		boolean foundOrthogonalRetreatDir = false;
 		for (Direction dir : retreatDirs) {
 			if (!rc.canMove(dir)) continue;
-			MapLocation dirLoc = here.add(dir);
-			int count = 0;
-  		    for (RobotInfo hostile : attackableHostiles) {
-  		    	if (hostile.location.distanceSquaredTo(dirLoc) <= threshold) {
-  		    		count += 1;
-  		    	}
-		    }
-  		    if (dir.equals(Direction.EAST)) {
-  		    	Debug.indicate("micro", 2, "tryToBackUpToMaintainMaxRange: EAST count = " + count);
-  		    }
-  		    if (count < smallestCount) {
-  		    	bestRetreatDir = dir;
-  		    	if (count == 0) break;
-  		    	smallestCount = count;
-  		    }
+			if (foundOrthogonalRetreatDir && dir.isDiagonal()) continue;
+			MapLocation dirLoc = here.add(dir);			
+			int smallestDistSq = Integer.MAX_VALUE;
+			for (RobotInfo hostile : attackableHostiles) {
+				int distSq = hostile.location.distanceSquaredTo(dirLoc);
+				if (distSq < smallestDistSq) {
+					smallestDistSq = distSq;
+				}
+			}
+			if (smallestDistSq > bestDistSq) {
+				bestDistSq = smallestDistSq;
+				bestRetreatDir = dir;
+				if (!dir.isDiagonal() && smallestDistSq >= 4) {
+					foundOrthogonalRetreatDir = true;
+				}
+			}
 		}
 		if (bestRetreatDir != null) {
-			Debug.indicate("micro", 0, "backing up to maintain max range; smallestCount = " + smallestCount);
+			Debug.indicate("micro", 0, "backing up to maintain max range");
 			rc.move(bestRetreatDir);
 			return true;
 		}
