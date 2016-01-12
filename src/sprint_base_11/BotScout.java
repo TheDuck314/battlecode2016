@@ -467,10 +467,18 @@ public class BotScout extends Globals {
 //			scores[i] += nfriends[i] * 50;
 			scores[i] += friends[i] - scouts[i] * 50;
 			scores[i] += archons[i] * 10;
+			int disEdge = 100;
+			disEdge = Math.min(disEdge, Math.abs(locs[i].x - MapEdges.minX));
+			disEdge = Math.min(disEdge, Math.abs(locs[i].x - MapEdges.maxX));
+			disEdge = Math.min(disEdge, Math.abs(locs[i].y - MapEdges.minY));
+			disEdge = Math.min(disEdge, Math.abs(locs[i].y - MapEdges.maxY));
+			if (disEdge < 4) {
+				scores[i] -= (4-disEdge) * 1000;
+			}
 		}
 		for (int i = 0; i < 8; ++i) {
 			if (dirs[i].isDiagonal()) {
-				scores[i] += 10;
+				scores[i] -= 10;
 			}
 			if (dirs[i] == lastDir) {
 				scores[i] += 100;
