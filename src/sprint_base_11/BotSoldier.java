@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("micro");		
+		Debug.init("dens");		
 		FastMath.initRand(rc);
 		while (true) {
 			try {

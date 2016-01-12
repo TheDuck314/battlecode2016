@@ -229,7 +229,7 @@ public class BotArchon extends Globals {
 			spawnType = RobotType.SCOUT;
 		}*/
 		
-		RobotType spawnType;
+		RobotType spawnType = RobotType.SOLDIER;
 		if (rc.getRoundNum() < 250) {
 			if (spawnCount % 8 == 0) {
 				spawnType = RobotType.SCOUT;
@@ -248,8 +248,19 @@ public class BotArchon extends Globals {
 				default:
 					spawnType = RobotType.SCOUT;
 				}
-			} else {
+			} else if (lastUnpairedScoutCount < 5) {
 				switch (spawnCount % 3) {
+				case 0:
+					spawnType = RobotType.SOLDIER;
+					break;
+				case 1:
+					spawnType = RobotType.TURRET;
+					break;
+				default:
+					spawnType = RobotType.SCOUT;
+				}
+			} else {
+				switch (spawnCount % 2) {
 				case 0:
 					spawnType = RobotType.SOLDIER;
 					break;
