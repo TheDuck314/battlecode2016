@@ -43,15 +43,33 @@ public class Radar extends Globals {
 		return storedLoc.equals(loc);
 	}
 	
-	
+
+	// store the index in enemyCache, but plus one
+	public static int[][] haveSeenEnemyLoc = new int[100][100];
 	public static FastRobotInfo[] enemyCache = new FastRobotInfo[1000];
 	public static int numCachedEnemies = 0;
 	
-	public static void addEnemyToCache(FastRobotInfo info) {
-		enemyCache[numCachedEnemies++] = info;
+	public static boolean addEnemyToCache(FastRobotInfo info) {
+		MapLocation loc = info.location;
+		int x = (loc.x + 32000) % 100;
+		int y = (loc.y + 32000) % 100;
+		int index = haveSeenEnemyLoc[x][y];
+		if (index == 0) {
+			haveSeenEnemyLoc[x][y] = numCachedEnemies + 1; // Note, we plus one to differ from zero
+			enemyCache[numCachedEnemies++] = info;
+		} else {
+			if (enemyCache[index-1].type == info.type) return false;
+			enemyCache[index-1] = info;
+		}
+		return true;
+	}
+	
+	public static boolean addEnemyToCache(RobotInfo info) {
+		return addEnemyToCache(new FastRobotInfo(info.location, info.type, rc.getRoundNum()));
 	}
 	
 	public static void clearEnemyCache() {
+		haveSeenEnemyLoc = new int[100][100];
 		enemyCache = new FastRobotInfo[1000];
 		numCachedEnemies = 0;
 	}

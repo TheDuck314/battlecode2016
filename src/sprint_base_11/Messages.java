@@ -242,9 +242,12 @@ public class Messages extends Globals {
 		}
 	}
 	
-	public static void sendRadarData(RobotInfo[] infos, int radiusSq) throws GameActionException {
+	public static void sendRadarData(RobotInfo[] infos, int size, int radiusSq) throws GameActionException {
 		long data = 0;
-		for (RobotInfo info : infos) {
+		size = Math.min(size, infos.length);
+		size = Math.min(size, 5);
+		for (int i = 0; i < size; ++i) {
+			RobotInfo info = infos[i];
 			data <<= 12;
 			data |= ((1 + info.type.ordinal()) << 8)
 					| ((info.location.x - here.x + 8) << 4)

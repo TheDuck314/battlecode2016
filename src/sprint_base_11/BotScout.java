@@ -204,11 +204,19 @@ public class BotScout extends Globals {
 			lastGlobalRadarBroadcastRound = rc.getRoundNum();
 		}
 		
-		if (hostiles.length <= 5) {
-			Messages.sendRadarData(hostiles, radarRangeSq);
-		} else {
-			Messages.sendRadarData(Util.truncateArray(hostiles, 5), radarRangeSq);
+		RobotInfo[] hostilesToSend = new RobotInfo[5];
+		int numberHostilesToSend = 0;
+		for (RobotInfo h: hostiles) {
+			if (Radar.addEnemyToCache(h)) {
+				hostilesToSend[numberHostilesToSend] = h;
+				numberHostilesToSend += 1;
+				if (numberHostilesToSend >= 5) {
+					break;
+				}
+			}
 		}
+		
+		Messages.sendRadarData(hostilesToSend, numberHostilesToSend, radarRangeSq);
 		
 		int turretWarningRangeSq = 9*mySensorRadiusSquared;
 		boolean first = true;
@@ -255,6 +263,8 @@ public class BotScout extends Globals {
 	}
 
 	private static void processSignals() {
+		Radar.clearEnemyCache();
+		
 		Signal[] signals = rc.emptySignalQueue();
 		for (Signal sig : signals) {
 			if (sig.getTeam() != us) continue;
@@ -276,6 +286,7 @@ public class BotScout extends Globals {
 					turretOwnershipReceiveRoundById[turretId] = rc.getRoundNum();
 					break;
 					
+<<<<<<< HEAD
 				case Messages.CHANNEL_ZOMBIE_DEN:
 					MapLocation denLoc = Messages.parseZombieDenLocation(data);
 					if (Messages.parseZombieDenWasDestroyed(data)) {
@@ -295,6 +306,10 @@ public class BotScout extends Globals {
 					
 				case Messages.CHANNEL_ZOMBIE_DEN_LIST:
 					receiveZombieDenList(data, sig.getLocation());
+=======
+				case Messages.CHANNEL_RADAR:
+					Messages.addRadarDataToEnemyCache(data, sig.getLocation(), myAttackRadiusSquared);
+>>>>>>> 09cf2ba2bb38fe9f80e9a796ddfdeb107fe27167
 					break;
 					
 				default:

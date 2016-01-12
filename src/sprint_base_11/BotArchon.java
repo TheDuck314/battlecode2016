@@ -179,10 +179,19 @@ public class BotArchon extends Globals {
 		
 		int rangeSq = 9*mySensorRadiusSquared;
 		
-		if (hostiles.length <= 5) {
-			Messages.sendRadarData(hostiles, rangeSq);
-		} else {
-			Messages.sendRadarData(Util.truncateArray(hostiles, 5), rangeSq);
+		RobotInfo[] hostilesToSend = new RobotInfo[5];
+		int numberHostilesToSend = 0;
+		for (RobotInfo h: hostiles) {
+			if (Radar.addEnemyToCache(h)) {
+				hostilesToSend[numberHostilesToSend] = h;
+				numberHostilesToSend += 1;
+				if (numberHostilesToSend == 5) {
+					break;
+				}
+			}
+		}
+		if (numberHostilesToSend != 0) {
+			Messages.sendRadarData(hostilesToSend, numberHostilesToSend, rangeSq);
 		}
 		
 		for (RobotInfo hostile : hostiles) {
