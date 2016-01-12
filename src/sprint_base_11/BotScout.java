@@ -25,6 +25,8 @@ public class BotScout extends Globals {
 	private static int lastTurretOwnershipBroadcastRound = -999999;
 	private static int[] turretOwnershipReceiveRoundById = new int[32001];
 	
+	private static boolean broadCastWithInterval = false;
+	
 	private static MapLocation closestEnemyTurretLocation = null;
 	
 	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
@@ -53,12 +55,17 @@ public class BotScout extends Globals {
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
 
 		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == 0) {
-			if (!rc.canSenseRobot(turretFollowId)) {
-				Messages.sendUnpairedScoutReport(9 * mySensorRadiusSquared);
+			broadCastWithInterval = false;
+		} else if (!rc.canSenseRobot(turretFollowId)) {
+			if (!broadCastWithInterval && visibleHostiles.length == 0) {
+				Messages.sendUnpairedScoutReport(30 * mySensorRadiusSquared);
+				broadCastWithInterval = true;
 				Debug.indicate("unpaired", 0, "sent unpaired message");
 			} else {
-				Debug.indicate("unpaired", 0, "I am paired!");
+				Debug.indicate("unpaired", 0, "sent unpaired message = " + broadCastWithInterval);
 			}
+		} else {
+			Debug.indicate("unpaired", 0, "I am paired!");
 		}
 		
 		sendRadarInfo();

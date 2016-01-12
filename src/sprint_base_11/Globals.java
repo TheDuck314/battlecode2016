@@ -27,7 +27,7 @@ public class Globals {
 		here = rc.getLocation();
 	}
 	
-	public static final int checkUnpairedScoutInterval = 100;
+	public static final int checkUnpairedScoutInterval = 50;
 	
 	public static RobotInfo[] visibleHostiles;
 	public static RobotInfo[] visibleAllies;

@@ -97,7 +97,7 @@ public class BotArchon extends Globals {
 			MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
 		}
 		
-		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == Globals.checkUnpairedScoutInterval / 2) {
+		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == Globals.checkUnpairedScoutInterval - 1) {
 			lastUnpairedScoutCount = nextUnpairedScoutCount;
 			nextUnpairedScoutCount = 0;
 		}
