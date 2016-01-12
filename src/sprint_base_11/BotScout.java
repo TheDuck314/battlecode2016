@@ -29,7 +29,7 @@ public class BotScout extends Globals {
 	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
 	
 	public static void loop() {
-    	Debug.init("parts");
+    	Debug.init("msg");
     	origin = here;
     	exploredGrid[50][50] = true;   
     	Debug.indicate("dens", 2, "dens received at birth: ");

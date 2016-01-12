@@ -29,7 +29,7 @@ public class BotArchon extends Globals {
 	
 	public static void loop() throws GameActionException {
 		rc.setIndicatorString(0, "5f52f26d9a8495f212e647744ab2c39b45f1863c");
-		Debug.init("dens");
+		Debug.init("msg");
 		FastMath.initRand(rc);
 		//initArchons();
 		

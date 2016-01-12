@@ -69,7 +69,6 @@ public class Messages extends Globals {
 	}
 
 	public static void sendZombieDenLocation(MapLocation loc, int radiusSq) throws GameActionException {
-		sendMapLocation(CHANNEL_ZOMBIE_DEN, loc, radiusSq);
 		rc.broadcastMessageSignal(CHANNEL_ZOMBIE_DEN, intFromMapLocation(loc), radiusSq);
 		Debug.indicate("msg", msgDILN(), "sendZombieDenLocation " + radiusSq);
 	}
@@ -77,6 +76,7 @@ public class Messages extends Globals {
 	public static void sendZombieDenDestroyed(MapLocation loc, int radiusSq) throws GameActionException {
 		rc.broadcastMessageSignal(CHANNEL_ZOMBIE_DEN | ZOMBIE_DEN_DESTROYED_FLAG, 
 				intFromMapLocation(loc), radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendZombieDenDestroyed " + radiusSq);
 	}
 	
 	public static boolean parseZombieDenWasDestroyed(int[] data) {
@@ -99,6 +99,7 @@ public class Messages extends Globals {
 		int data0 = (int)(data >> 32);
 		int data1 = (int)(data & 0x00000000ffffffffL);
 		rc.broadcastMessageSignal(CHANNEL_ZOMBIE_DEN_LIST | data0, data1, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendUpToThreeZombieDens " + radiusSq);
 	}
 	
 	// locationsOut should have length at least three.
@@ -124,6 +125,7 @@ public class Messages extends Globals {
 	
 	public static void sendDenAttackCommand(MapLocation loc, int radiusSq) throws GameActionException {
 		sendMapLocation(CHANNEL_DEN_ATTACK_COMMAND, loc, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendUpToThreeZombieDens " + radiusSq);
 	}
 	
 	public static MapLocation parseDenAttackCommand(int[] data) {

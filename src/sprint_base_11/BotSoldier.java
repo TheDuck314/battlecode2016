@@ -4,13 +4,13 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("micro");		
+		Debug.init("msg");		
 		FastMath.initRand(rc);
 		while (true) {
 			try {
 				Globals.update();
 				turn();
-				setIndicator();
+				// setIndicator();
 
 			} catch (Exception e) {
 				e.printStackTrace();

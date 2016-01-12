@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotTurret extends Globals {
 	public static void loop() {
-		Debug.init("spotting");
+		Debug.init("msg");
 		while (true) {
 			try {
 				Globals.update();
