@@ -233,7 +233,7 @@ public class BotArchon extends Globals {
 				spawnType = RobotType.SOLDIER;			
 			}
 		} else {
-			if (lastUnpairedScoutCount < 1) {
+			if (lastUnpairedScoutCount < 2) {
 				switch (spawnCount % 4) {
 				case 0:
 					spawnType = RobotType.SOLDIER;
