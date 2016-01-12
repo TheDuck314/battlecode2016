@@ -441,6 +441,7 @@ public class BotArchon extends Globals {
 		int N = 0;
 		for (RobotInfo ally : allies) {
 			if (ally.type == RobotType.SCOUT) continue;
+			if (ally.type == RobotType.SOLDIER && ally.health < ally.maxHealth / 2) continue;
 			avgX += ally.location.x;
 			avgY += ally.location.y;			
 			N += 1;
