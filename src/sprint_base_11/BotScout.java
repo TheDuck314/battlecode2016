@@ -321,7 +321,6 @@ public class BotScout extends Globals {
 	private static void receiveZombieDenList(int[] data, MapLocation origin) {
 		MapLocation[] denList = new MapLocation[3];
 		int numDens = Messages.parseUpToThreeZombieDens(data, origin, denList);
-		System.out.println("received zombie den list of length " + numDens);
 		for (int i = 0; i < numDens; ++i) {
 			knownZombieDens.add(denList[i]);
 			Debug.indicateAppend("dens", 2, ", " + denList[i]);

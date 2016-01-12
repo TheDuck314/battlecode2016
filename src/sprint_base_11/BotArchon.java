@@ -270,7 +270,6 @@ public class BotArchon extends Globals {
 				denList[j] = knownZombieDens.locations[i+j];				
 				listLen += 1;
 			}
-			System.out.println("sending zombie den list of length " + listLen);
 			Messages.sendUpToThreeZombieDens(denList, listLen, 2);
 		}
 	}
