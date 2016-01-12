@@ -283,6 +283,40 @@ public class Nav extends Globals {
 	}
 	
 	// Always move if possible, but prefer to move toward the destination
+	// Don't move next to an archon, or in range of the given turret
+	public static void swarmToAvoidingArchons(MapLocation dest, MapLocation turretLocation) throws GameActionException {
+		MapLocation[] nearbyArchons = new MapLocation[10];
+		int numArchons = 0;
+		RobotInfo[] allies = rc.senseNearbyRobots(8, us);
+		for (RobotInfo ally : allies) {
+			if (ally.type == RobotType.ARCHON) {
+				nearbyArchons[numArchons++] = ally.location;
+			}
+		}		
+		
+		Direction forward = here.equals(dest) ? Direction.EAST : here.directionTo(dest);
+		Direction[] dirs = { forward, forward.rotateLeft(), forward.rotateRight(),
+				forward.rotateLeft().rotateLeft(), forward.rotateRight().rotateRight(),
+				forward.rotateRight().opposite(), forward.rotateLeft().opposite(),
+				forward.opposite() };
+		dirSearch: for (Direction dir : dirs) {
+			MapLocation dirLoc = here.add(dir);
+			for (int i = 0; i < numArchons; ++i) {
+				if (dirLoc.isAdjacentTo(nearbyArchons[i])) {
+					continue dirSearch;
+				}
+				if (dirLoc.distanceSquaredTo(turretLocation) <= RobotType.TURRET.attackRadiusSquared) {
+					continue dirSearch;
+				}
+			}
+			if (tryMoveClearDir(dir)) {
+				return;
+			}
+		}
+	}
+	
+	
+	// Always move if possible, but prefer to move toward the destination
 	// Don't move next to an archon.
 	// Try to be polite and let robots who are more injure than us get to the
 	// destination first.

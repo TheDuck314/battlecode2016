@@ -46,19 +46,19 @@ public class BotSoldier extends Globals {
 		if (tryToMicro()) {
 			return;
 		}
+				
+		FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
+		if (closestEnemyTurret != null) {
+			closestEnemyTurretLocation = closestEnemyTurret.location;
+		} else {
+			closestEnemyTurretLocation = null;
+		}
 		
 		//Debug.indicate("micro", 2, "inHealingState = " + inHealingState);
 		if (inHealingState) {
 			if (tryToHealAtArchon()) {
 				return;
 			}
-		}
-		
-		FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
-		if (closestEnemyTurret != null) {
-			closestEnemyTurretLocation = closestEnemyTurret.location;
-		} else {
-			closestEnemyTurretLocation = null;
 		}
 		
 		lookForAttackTarget();
@@ -560,7 +560,7 @@ public class BotSoldier extends Globals {
 			return false;
 		}
 		
-		Nav.swarmToAvoidingArchons(lastKnownArchonLocation);
+		Nav.swarmToAvoidingArchonsAndTurret(lastKnownArchonLocation, closestEnemyTurretLocation);
 		return true;
 	}
 	
