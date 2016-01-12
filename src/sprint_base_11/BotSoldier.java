@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("msg");		
+		Debug.init("micro");		
 		FastMath.initRand(rc);
 		while (true) {
 			try {
@@ -618,13 +618,19 @@ public class BotSoldier extends Globals {
 			return;
 		}
 		
-		if (wanderDirection == null || !rc.canMove(wanderDirection)) {
+		if (wanderDirection == null) {
 			wanderDirection = Direction.values()[FastMath.rand256() % 8];
 		}
 		
-		if (rc.canMove(wanderDirection)) {
+		MapLocation fakeTarget = here.add(wanderDirection, 10);
+		
+		rc.setIndicatorDot(here, 0, 100, 0);
+		
+		if (Nav.goToDirectSafelyAvoidingTurret(fakeTarget, closestEnemyTurretLocation)) {
 			Debug.indicate("micro", 0, "wandering");
-			rc.move(wanderDirection);
+			rc.setIndicatorLine(here, fakeTarget, 100, 100, 0);
+		} else {
+			wanderDirection = Direction.values()[FastMath.rand256() % 8];
 		}
 	}
 }
