@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotTurret extends Globals {
 	public static void loop() {
-		Debug.init("msg");
+		Debug.init("memory");
 		while (true) {
 			try {
 				Globals.update();
@@ -143,16 +143,14 @@ public class BotTurret extends Globals {
 			}			
 		}
 		if (bestTarget == null) {
-			if (lastTurretAttackedWithRadar != null) {
-				if (rc.getRoundNum() - lastTurretAttackedWithRadarRound < 40) {
-				    if (rc.canAttackLocation(lastTurretAttackedWithRadar)) {
-				    	System.out.println("attacking remember turret. we are " + here + " they are " + lastTurretAttackedWithRadar);
-				    	rc.setIndicatorDot(here, 0, 255, 0);
-				    	rc.setIndicatorDot(lastTurretAttackedWithRadar, 255, 0, 0);
-				    	bestTarget = lastTurretAttackedWithRadar;
-				    }
-				}
-			}
+			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
+			//Debug.indicate("memory", 0, "closestEnemyTurret = " + (closestEnemyTurret == null ? null : closestEnemyTurret.location));
+			//if (closestEnemyTurret != null) rc.setIndicatorDot(closestEnemyTurret.location, 0, 0, 255);
+			if (closestEnemyTurret != null && rc.canAttackLocation(closestEnemyTurret.location)) {
+				bestTarget = closestEnemyTurret.location;
+				//System.out.println("we are " + here + ", attacking Radar.closestEnemyTurret() = " + closestEnemyTurret.location);
+				//rc.setIndicatorDot(closestEnemyTurret.location, 255, 0, 0);
+		    }
 		}
 		if (bestTarget != null) {
 			rc.attackLocation(bestTarget);
@@ -201,6 +199,10 @@ public class BotTurret extends Globals {
 						lastKnownArchonLocationRound = rc.getRoundNum();
 						Debug.indicateAppend("heal", 2, "; new best");
 					}
+					break;
+					
+				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
+					Messages.processEnemyTurretWarning(data);
 					break;
 					
 				default:
