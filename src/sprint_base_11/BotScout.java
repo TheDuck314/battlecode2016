@@ -31,8 +31,10 @@ public class BotScout extends Globals {
 	
 	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
 	
+	private static int sameDirectionSteps = 0;
+	
 	public static void loop() {
-    	Debug.init("kill");
+    	Debug.init("explore");
     	origin = here;
     	exploredGrid[50][50] = true;   
     	Debug.indicate("dens", 2, "dens received at birth: ");
@@ -476,14 +478,23 @@ public class BotScout extends Globals {
 				scores[i] -= (4-disEdge) * 1000;
 			}
 		}
+		double isDiagonalScore = FastMath.rand256() / 10 - 12;
 		for (int i = 0; i < 8; ++i) {
 			if (dirs[i].isDiagonal()) {
-				scores[i] += FastMath.rand256() / 25 - 12;
+				scores[i] += isDiagonalScore;
 			}
-			if (dirs[i] == lastDir) {
-				scores[i] += 100;
-				scores[(i+1)%8] += 50;
-				scores[(i+7)%8] += 50;
+		}
+		if (sameDirectionSteps > 25) {
+			sameDirectionSteps = 0;
+			lastDir = null;
+			Debug.indicate("explore", 0, "Do not keep sameDirection");
+		} else  {
+			for (int i = 0; i < 8; ++i) {
+				if (dirs[i] == lastDir) {
+					scores[i] += 100;
+					scores[(i+1)%8] += 50;
+					scores[(i+7)%8] += 50;
+				}
 			}
 		}
 		scores[8] -= 128;
@@ -511,6 +522,10 @@ public class BotScout extends Globals {
 			}
 		} else if (rubbles[8] >= GameConstants.RUBBLE_SLOW_THRESH) {
 			rc.clearRubble(Direction.NONE);
+		}
+		
+		if (lastDir == bestDir) {
+			sameDirectionSteps += 1;
 		}
 		
 		lastDir = bestDir;
