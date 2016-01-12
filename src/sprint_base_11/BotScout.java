@@ -286,7 +286,6 @@ public class BotScout extends Globals {
 					turretOwnershipReceiveRoundById[turretId] = rc.getRoundNum();
 					break;
 					
-<<<<<<< HEAD
 				case Messages.CHANNEL_ZOMBIE_DEN:
 					MapLocation denLoc = Messages.parseZombieDenLocation(data);
 					if (Messages.parseZombieDenWasDestroyed(data)) {
@@ -306,10 +305,9 @@ public class BotScout extends Globals {
 					
 				case Messages.CHANNEL_ZOMBIE_DEN_LIST:
 					receiveZombieDenList(data, sig.getLocation());
-=======
+
 				case Messages.CHANNEL_RADAR:
 					Messages.addRadarDataToEnemyCache(data, sig.getLocation(), myAttackRadiusSquared);
->>>>>>> 09cf2ba2bb38fe9f80e9a796ddfdeb107fe27167
 					break;
 					
 				default:
