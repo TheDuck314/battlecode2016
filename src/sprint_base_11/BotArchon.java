@@ -409,20 +409,15 @@ public class BotArchon extends Globals {
 				}
 			}
 		}
-		
-		MapLocation[] nearbyLocs = MapLocation.getAllMapLocationsWithinRadiusSq(here, mySensorRadiusSquared);
-		
-		for (MapLocation loc : nearbyLocs) {
-			double numParts = rc.senseParts(loc);
-			if (numParts >= 1) {
-				considerDestination(loc);
-				continue;
-			}
-			RobotInfo robot = rc.senseRobotAtLocation(loc);
-			if (robot != null && robot.team == Team.NEUTRAL) {
-				considerDestination(loc);
-				continue;
-			}
+	
+		MapLocation[] partLocs = rc.sensePartLocations(mySensorRadiusSquared);
+		for (MapLocation partLoc : partLocs) {
+			considerDestination(partLoc);
+		}
+			
+		RobotInfo[] nearbyNeutrals = rc.senseNearbyRobots(mySensorRadiusSquared, Team.NEUTRAL);
+		for (RobotInfo neutral : nearbyNeutrals) {
+			considerDestination(neutral.location);
 		}	
 	}
 	
