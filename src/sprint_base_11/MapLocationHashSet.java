@@ -3,33 +3,57 @@ package sprint_base_11;
 import battlecode.common.*;
 
 public class MapLocationHashSet {
-	private int size = 97;
-	private MapLocation[][] buckets = new MapLocation[size][100];
-	private int[] bucketSizes = new int[size];
+
+	public void clear() {
+		size = 0;
+		locations = new MapLocation[10000];
+		hasLocation = new boolean[100][100];
+	}
+	
+	public int size = 0;
+	public MapLocation[] locations = new MapLocation[10000];
+	public boolean[][] hasLocation = new boolean[100][100];
 	
 	public boolean contains(MapLocation loc) {
-		int bucketIndex = loc.hashCode() % size;
-		int bucketSize = bucketSizes[bucketIndex];
-		MapLocation[] bucket = buckets[bucketIndex];
-		for (int i = 0; i < bucketSize; ++i) {
-			if (bucket[i].equals(loc)) return true;
-		}
-		return false;
+		int x = loc.x % 100;
+		int y = loc.y % 100;
+		return hasLocation[x][y];
 	}
 	
 	// returns true if the given location was added
 	// (that is, if it wasn't already in the set)
 	public boolean add(MapLocation loc) {
-		int bucketIndex = loc.hashCode() % size;
-		int bucketSize = bucketSizes[bucketIndex];
-		MapLocation[] bucket = buckets[bucketIndex];
-		for (int i = 0; i < bucketSize; ++i) {
-			if (bucket[i].equals(loc)) return false;
+		int x = loc.x % 100;
+		int y = loc.y % 100;
+		if (!hasLocation[x][y]) {
+			hasLocation[x][y] = true;
+			locations[size] = loc;
+			size += 1;
+			return true;
+		} else {
+			return false;
 		}
-		if (bucketSize < 100) {
-			bucket[bucketSize] = loc;
-			++bucketSizes[bucketIndex];
+	}
+	
+	public boolean remove(MapLocation loc) {
+		int x = loc.x % 100;
+		int y = loc.y % 100;
+		if (hasLocation[x][y]) {
+			hasLocation[x][y] = false;
+			MapLocation[] locations_old = locations;
+			int size_old = size;
+			size = 0;
+			locations = new MapLocation[10000];
+			for (int i = 0; i < size_old; ++i) {
+				if (!loc.equals(locations_old[i])) {
+					locations[size] = locations_old[i];
+					size += 1;
+				}
+			}
+			size -= 1;
+			return true;
+ 		} else {
+			return false;
 		}
-		return true;
 	}
 }
