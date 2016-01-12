@@ -40,17 +40,13 @@ public class MapLocationHashSet {
 		int y = (loc.y + 32000) % 100;
 		if (hasLocation[x][y]) {
 			hasLocation[x][y] = false;
-			MapLocation[] locations_old = locations;
-			int size_old = size;
-			size = 0;
-			locations = new MapLocation[10000];
-			for (int i = 0; i < size_old; ++i) {
-				if (!loc.equals(locations_old[i])) {
-					locations[size] = locations_old[i];
-					size += 1;
+			size -= 1;
+			for (int i = 0; i < size; ++i) {
+				if (locations[i].equals(loc)) {
+					locations[i] = locations[size];
+					break;
 				}
 			}
-			size -= 1;
 			return true;
  		} else {
 			return false;
