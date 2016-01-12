@@ -31,6 +31,9 @@ public class BotTurret extends Globals {
 	private static final int PACK_DELAY = 20;
 	private static int packCountdown = PACK_DELAY;
 	
+	private static MapLocation lastTurretAttackedWithRadar = null;
+	private static int lastTurretAttackedWithRadarRound = -99999;
+	
 	private static void turnTurret() throws GameActionException {
 		if (!rc.isWeaponReady() && !rc.isCoreReady()) return;
 		
@@ -114,6 +117,7 @@ public class BotTurret extends Globals {
 				bestTarget = hostile.location;				
 			}
 		}
+		RobotType typeAttackedWithRadar = null;
 		for (int i = 0; i < Radar.numCachedEnemies; ++i) {
 			FastRobotInfo hostile = Radar.enemyCache[i];
 			if (here.distanceSquaredTo(hostile.location) <= mySensorRadiusSquared) continue;
@@ -134,11 +138,28 @@ public class BotTurret extends Globals {
 			double score = enemyScore(hostile.type, hostile.type.maxHealth);
 			if (score > maxScore) {
 				maxScore = score;
-				bestTarget = hostile.location;				
+				bestTarget = hostile.location;	
+				typeAttackedWithRadar = hostile.type;
 			}			
+		}
+		if (bestTarget == null) {
+			if (lastTurretAttackedWithRadar != null) {
+				if (rc.getRoundNum() - lastTurretAttackedWithRadarRound < 40) {
+				    if (rc.canAttackLocation(lastTurretAttackedWithRadar)) {
+				    	System.out.println("attacking remember turret. we are " + here + " they are " + lastTurretAttackedWithRadar);
+				    	rc.setIndicatorDot(here, 0, 255, 0);
+				    	rc.setIndicatorDot(lastTurretAttackedWithRadar, 255, 0, 0);
+				    	bestTarget = lastTurretAttackedWithRadar;
+				    }
+				}
+			}
 		}
 		if (bestTarget != null) {
 			rc.attackLocation(bestTarget);
+			if (typeAttackedWithRadar == RobotType.TURRET) {
+				lastTurretAttackedWithRadar = bestTarget;
+				lastTurretAttackedWithRadarRound = rc.getRoundNum();
+			}
 			return true;
 		}
 		return false;
