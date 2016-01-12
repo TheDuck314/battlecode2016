@@ -97,7 +97,7 @@ public class BotArchon extends Globals {
 			MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
 		}
 		
-		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == Globals.checkUnpairedScoutInterval / 2) {
+		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == Globals.checkUnpairedScoutInterval - 1) {
 			lastUnpairedScoutCount = nextUnpairedScoutCount;
 			nextUnpairedScoutCount = 0;
 		}
@@ -244,10 +244,17 @@ public class BotArchon extends Globals {
 				default:
 					spawnType = RobotType.SCOUT;
 				}
-			} else if (spawnCount % 2 == 0) {
-				spawnType = RobotType.SOLDIER;
 			} else {
-				spawnType = RobotType.TURRET;
+				switch (spawnCount % 3) {
+				case 0:
+					spawnType = RobotType.SOLDIER;
+					break;
+				case 1:
+					spawnType = RobotType.TURRET;
+					break;
+				default:
+					spawnType = RobotType.SCOUT;
+				}
 			}
 		}
 		
