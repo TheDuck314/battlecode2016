@@ -51,6 +51,8 @@ public class BotTurret extends Globals {
 	}
 	
 	private static void turnTTM() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+		
 		RobotInfo[] attackableEnemies = rc.senseHostileRobots(here, RobotType.TURRET.attackRadiusSquared);
 		if (attackableEnemies.length > 0) {
 			rc.unpack();
