@@ -31,7 +31,11 @@ public class BotArchon extends Globals {
 		rc.setIndicatorString(0, "5f52f26d9a8495f212e647744ab2c39b45f1863c");
 		Debug.init("kill");
 		FastMath.initRand(rc);
-		//initArchons();
+//		for (int i = 0; i < 1000000; ++i) {
+//			System.out.println(FastMath.rand256());
+//		}
+		
+//		initArchons();
 		
 		nArchons = rc.getRobotCount();
 		lastGlobalZombieDenBroadcastRound = (int)(FastMath.rand256() * GLOBAL_ZOMBIE_DEN_BROADCAST_INTERVAL / 256.0);

@@ -478,7 +478,7 @@ public class BotScout extends Globals {
 		}
 		for (int i = 0; i < 8; ++i) {
 			if (dirs[i].isDiagonal()) {
-				scores[i] -= 10;
+				scores[i] += FastMath.rand256() / 25 - 12;
 			}
 			if (dirs[i] == lastDir) {
 				scores[i] += 100;
@@ -495,8 +495,7 @@ public class BotScout extends Globals {
 		double bestScore = -100000;
 		Direction bestDir = null;
 		int bestI = 8;
-//		int rdn = FastMath.rand256();
-		int rdn = 0;
+		int rdn = FastMath.rand256();
 		for (int i = 0; i < 9; ++i) {
 			if (bestScore < scores[(rdn + i) % 9]) {
 				bestDir = dirs[(rdn + i) % 9];
