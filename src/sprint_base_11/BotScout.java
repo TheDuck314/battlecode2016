@@ -29,7 +29,7 @@ public class BotScout extends Globals {
 	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
 	
 	public static void loop() {
-    	Debug.init("dens");
+    	Debug.init("parts");
     	origin = here;
     	exploredGrid[50][50] = true;   
     	Debug.indicate("dens", 2, "dens received at birth: ");
@@ -142,22 +142,22 @@ public class BotScout extends Globals {
 	private static void trySendPartsOrNeutralLocation() throws GameActionException {
 		if (lastPartsOrNeutralSignalRound > rc.getRoundNum() - 10) return;
 		
-		MapLocation[] nearbyLocs = MapLocation.getAllMapLocationsWithinRadiusSq(here, RobotType.ARCHON.sensorRadiusSquared);
-		
 		int rangeSq = 9*mySensorRadiusSquared;
-		for (MapLocation loc : nearbyLocs) {
-			double numParts = rc.senseParts(loc);
-			if (numParts >= 1) {
-				Messages.sendPartsLocation(loc, (int)numParts, rangeSq);
-				lastPartsOrNeutralSignalRound = rc.getRoundNum();
-				return;
-			}
-			RobotInfo robot = rc.senseRobotAtLocation(loc);
-			if (robot != null && robot.team == Team.NEUTRAL) {
-				lastPartsOrNeutralSignalRound = rc.getRoundNum();
-				Messages.sendNeutralLocation(loc, rangeSq);
-				return;
-			}
+
+		MapLocation[] partLocs = rc.sensePartLocations(mySensorRadiusSquared);
+		if (partLocs.length > 0) {
+			MapLocation partLoc = partLocs[0];
+			Messages.sendPartsLocation(partLoc, (int)rc.senseParts(partLoc), rangeSq);
+			lastPartsOrNeutralSignalRound = rc.getRoundNum();			
+			return;
+		}
+		
+		RobotInfo[] nearbyNeutrals = rc.senseNearbyRobots(mySensorRadiusSquared, Team.NEUTRAL);
+		if (nearbyNeutrals.length > 0) {
+			MapLocation neutralLoc = nearbyNeutrals[0].location;
+			Messages.sendNeutralLocation(neutralLoc, rangeSq);
+			lastPartsOrNeutralSignalRound = rc.getRoundNum();
+			return;
 		}	
 	}
 	
