@@ -377,6 +377,7 @@ public class Nav extends Globals {
 	private static MapLocation bugLastWall = null;
 	private static int closestDistWhileBugging = Integer.MAX_VALUE;	
 	private static int bugNumTurnsWithNoWall = 0;
+	private static boolean bugWallOnLeft = true; // whether the wall is on our left or our right
 		
 	public static void goToBug(MapLocation theDest) throws GameActionException {
 		if (!theDest.equals(bugDest)) {
@@ -384,9 +385,14 @@ public class Nav extends Globals {
 			bugTracing = false;
 		}
 		
+		if (here.equals(bugDest)) {
+			return;
+		}
+		
 		if (!bugTracing) {
 			// try to go direct; start bugging on failure
-			if (tryMoveInDirection(here.directionTo(bugDest))) {
+			Direction destDir = here.directionTo(bugDest);
+			if (tryMoveInDirection(destDir)) {
 				return;
 			} else {
 				bugStartTracing();
@@ -400,7 +406,7 @@ public class Nav extends Globals {
 				}
 			}
 		}
-		bugTraceMove();
+		bugTraceMove(false);
 	    
 	    if (bugNumTurnsWithNoWall >= 2) {
 	    	bugTracing = false;
@@ -414,12 +420,39 @@ public class Nav extends Globals {
 	
 	static void bugStartTracing() {
 		bugTracing = true;
-		bugLastWall = here.add(here.directionTo(bugDest));
+		
 		closestDistWhileBugging = here.distanceSquaredTo(bugDest);
 		bugNumTurnsWithNoWall = 0;
+		
+		Direction dirToDest = here.directionTo(bugDest);
+		Direction leftDir = dirToDest;
+		int leftDistSq = Integer.MAX_VALUE;
+		for (int i = 0; i < 8; ++i) {
+			leftDir = leftDir.rotateLeft();
+			if (rc.canMove(leftDir)) {
+				leftDistSq = here.add(leftDir).distanceSquaredTo(bugDest);
+				break;
+			}
+		}
+		Direction rightDir = dirToDest;
+		int rightDistSq = Integer.MAX_VALUE;
+		for (int i = 0; i < 8; ++i) {
+			rightDir = rightDir.rotateRight();
+			if (rc.canMove(rightDir)) {
+				rightDistSq = here.add(rightDir).distanceSquaredTo(bugDest);
+				break;
+			}
+		}
+		if (rightDistSq < leftDistSq) {
+			bugWallOnLeft = true;
+			bugLastWall = here.add(rightDir.rotateLeft());
+		} else {
+			bugWallOnLeft = false;
+			bugLastWall = here.add(leftDir.rotateRight());
+		}
 	}
 	
-	static void bugTraceMove() throws GameActionException {
+	static void bugTraceMove(boolean recursed) throws GameActionException {
 		Direction tryDir = here.directionTo(bugLastWall);
 		if (rc.canMove(tryDir)) {
 			bugNumTurnsWithNoWall += 1;
@@ -427,7 +460,18 @@ public class Nav extends Globals {
 			bugNumTurnsWithNoWall = 0;
 		}
 		for (int i = 0; i < 8; ++i) {
-			tryDir = tryDir.rotateRight();
+			if (bugWallOnLeft) {
+				tryDir = tryDir.rotateRight();
+			} else {
+				tryDir = tryDir.rotateLeft();
+			}
+			MapLocation dirLoc = here.add(tryDir);
+			if (!rc.onTheMap(dirLoc) && !recursed) {
+				// if we hit the edge of the map, reverse direction and recurse
+				bugWallOnLeft = !bugWallOnLeft;
+				bugTraceMove(true);
+				return;
+			}
 			if (rc.canMove(tryDir)) {
 				rc.move(tryDir);
 				return;
