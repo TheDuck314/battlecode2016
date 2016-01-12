@@ -145,11 +145,11 @@ public class BotTurret extends Globals {
 		if (bestTarget == null) {
 			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
 			//Debug.indicate("memory", 0, "closestEnemyTurret = " + (closestEnemyTurret == null ? null : closestEnemyTurret.location));
-			//if (closestEnemyTurret != null) rc.setIndicatorDot(closestEnemyTurret.location, 0, 0, 255);
+			//if (closestEnemyTurret != null) Debug.indicateDot("memory", closestEnemyTurret.location, 0, 0, 255);
 			if (closestEnemyTurret != null && rc.canAttackLocation(closestEnemyTurret.location)) {
 				bestTarget = closestEnemyTurret.location;
 				//System.out.println("we are " + here + ", attacking Radar.closestEnemyTurret() = " + closestEnemyTurret.location);
-				//rc.setIndicatorDot(closestEnemyTurret.location, 255, 0, 0);
+				//Debug.indicateDot("memory", closestEnemyTurret.location, 255, 0, 0);
 		    }
 		}
 		if (bestTarget != null) {
