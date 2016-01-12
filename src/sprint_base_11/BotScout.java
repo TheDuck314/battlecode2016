@@ -16,7 +16,7 @@ public class BotScout extends Globals {
 
 	private static int lastPartsOrNeutralSignalRound = -999999;
 	
-	private static int lastGlobalRadarBroadcastRound = 0;
+	private static int lastLongRangeRadarBroadcastRound = 0;
 	private static int lastRadarBroadcastRound = 0;
 	
 	private static int turretFollowId = -1;
@@ -206,9 +206,9 @@ public class BotScout extends Globals {
 				return;
 			}
 		}
-		if (rc.getRoundNum() - lastGlobalRadarBroadcastRound > 50) {
-			radarRangeSq = MapEdges.maxBroadcastDistSq();
-			lastGlobalRadarBroadcastRound = rc.getRoundNum();
+		if (rc.getRoundNum() - lastLongRangeRadarBroadcastRound > 50) {
+			radarRangeSq = 30 * mySensorRadiusSquared;
+			lastLongRangeRadarBroadcastRound = rc.getRoundNum();
 		}
 		
 		RobotInfo[] hostilesToSend = new RobotInfo[5];
