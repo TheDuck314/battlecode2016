@@ -221,7 +221,7 @@ public class BotSoldier extends Globals {
 				if (tryToBackUpToMaintainMaxRange(attackableHostiles)) {
 					return true;
 				}
-				if (tryMoveToAttackHelplessTarget(visibleHostiles)) {
+				if (tryMoveToAttackHelplessNonDenTarget(visibleHostiles)) {
 					return true;
 				}
 				return true; // we are fighting, don't move
@@ -514,6 +514,19 @@ public class BotSoldier extends Globals {
 	private static boolean tryMoveToAttackHelplessTarget(RobotInfo[] visibleHostiles) throws GameActionException {
 		RobotInfo closestHostile = Util.closest(visibleHostiles);
 		if (closestHostile.type.canAttack()) {
+			return false;
+		}
+		
+		if (Nav.tryMoveInDirection(here.directionTo(closestHostile.location))) {
+//			Debug.indicate("micro", 0, "moving to attack helpless " + closestHostile.type + " at " + closestHostile.location);
+			return true;
+		}
+		return false;
+	}
+	
+	private static boolean tryMoveToAttackHelplessNonDenTarget(RobotInfo[] visibleHostiles) throws GameActionException {
+		RobotInfo closestHostile = Util.closest(visibleHostiles);
+		if (closestHostile.type.canAttack() || closestHostile.type == RobotType.ZOMBIEDEN) {
 			return false;
 		}
 		
