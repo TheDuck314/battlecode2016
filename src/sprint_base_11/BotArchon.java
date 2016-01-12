@@ -13,6 +13,8 @@ public class BotArchon extends Globals {
 	private static int archonOrder = 0;
 	private static MapLocation rallyPoint = null;
 	
+	private static MapLocation startingLocation = null;
+	
 	private static MapLocation currentDestination = null;
 	
 	private static MapLocation closestEnemyTurretLocation = null;
@@ -20,13 +22,20 @@ public class BotArchon extends Globals {
 	private static int lastUnpairedScoutCount = 0;
 	private static int nextUnpairedScoutCount = 0;
 	
+	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
+	private static int lastGlobalZombieDenBroadcastRound = 0;
+	private static int GLOBAL_ZOMBIE_DEN_BROADCAST_INTERVAL = 100;
+	private static MapLocation lastDenTarget = null;
+	
 	public static void loop() throws GameActionException {
 		rc.setIndicatorString(0, "5f52f26d9a8495f212e647744ab2c39b45f1863c");
-		Debug.init("msg");
+		Debug.init("dens");
 		FastMath.initRand(rc);
 		//initArchons();
 		
 		nArchons = rc.getRobotCount();
+		lastGlobalZombieDenBroadcastRound = (int)(FastMath.rand256() * GLOBAL_ZOMBIE_DEN_BROADCAST_INTERVAL / 256.0);
+		startingLocation = here;
 		Debug.indicate("unpaired", 2, "nArchons = " + nArchons);
 		Clock.yield();
 
@@ -101,17 +110,17 @@ public class BotArchon extends Globals {
 		
 		trySendArchonLocationMessage();
 
+		trySendGlobalZombieDenBroadcast();
+
 		tryRepairAlly();
 
 		if (rc.isCoreReady()) {
-			Debug.indicate("turret", 0, "numEnemyTurrets = " + Radar.numEnemyTurrets);
 			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
 			if (closestEnemyTurret != null) {
 				closestEnemyTurretLocation = closestEnemyTurret.location;
 			} else {
 				closestEnemyTurretLocation = null;
 			}
-			Debug.indicate("turret", 1, "closest enemy turret = " + (closestEnemyTurret == null ? null : closestEnemyTurret.location));
 			
 			if (retreatIfNecessary()) {
 				return;
@@ -130,6 +139,36 @@ public class BotArchon extends Globals {
 			} else {
 				goToCenterOfMass();
 			}
+		}
+	}
+	
+	private static void trySendGlobalZombieDenBroadcast() throws GameActionException {		
+		//Debug.indicate("dens", 2, "");
+		for (int i = 0; i < knownZombieDens.size; ++i) {
+			//Debug.indicateAppend("dens", 2, ", " + knownZombieDens.locations[i]);
+			rc.setIndicatorLine(here, knownZombieDens.locations[i], 0, 0, 255);
+		}
+		if (lastDenTarget != null) {
+			rc.setIndicatorLine(here, lastDenTarget, 255, 0, 0);
+		}
+		
+		// send global broadcasts at a certain interval
+		if (lastDenTarget != null && 
+				rc.getRoundNum() - lastGlobalZombieDenBroadcastRound < GLOBAL_ZOMBIE_DEN_BROADCAST_INTERVAL) {
+			return;
+		}
+		
+		// don't send global broadcasts when in danger
+		if (rc.senseHostileRobots(here, myAttackRadiusSquared).length > 0) {
+			return;
+		}
+		
+		MapLocation closestDen = findClosestDenToStart();
+		if (closestDen != null) {
+			Debug.indicate("dens", 0, "sending command to attack den at " + closestDen);
+			Messages.sendDenAttackCommand(closestDen, MapEdges.maxBroadcastDistSq());
+			lastGlobalZombieDenBroadcastRound = rc.getRoundNum();
+			lastDenTarget = closestDen;
 		}
 	}
 	
@@ -203,10 +242,27 @@ public class BotArchon extends Globals {
 				rc.build(dir, spawnType);
 				++spawnCount;
 				if (spawnType == RobotType.SCOUT) {
-					Messages.sendKnownMapEdges(2); // tell scout known map edges
+					sendInfoToBabyScout();
 					lastUnpairedScoutCount += nArchons;
 				}
 			}
+		}
+	}
+	
+	private static void sendInfoToBabyScout() throws GameActionException {
+		// tell scout known map edges
+		Messages.sendKnownMapEdges(2); 
+		
+		// tell scout known zombie dens
+		for (int i = 0; i < knownZombieDens.size; i += 3) {
+			MapLocation[] denList = new MapLocation[3];
+			int listLen = 0;
+			for (int j = 0; j < 3 && i+j < knownZombieDens.size; j += 1) {
+				denList[j] = knownZombieDens.locations[i+j];				
+				listLen += 1;
+			}
+			System.out.println("sending zombie den list of length " + listLen);
+			Messages.sendUpToThreeZombieDens(denList, listLen, 2);
 		}
 	}
 	
@@ -241,7 +297,7 @@ public class BotArchon extends Globals {
 		}
 	}
 	
-	private static void processSignals() {
+	private static void processSignals() throws GameActionException {
 		Signal[] signals = rc.emptySignalQueue();
 		for (Signal sig : signals) {
 			if (sig.getTeam() != us) continue;
@@ -268,6 +324,27 @@ public class BotArchon extends Globals {
 					
 				case Messages.CHANNEL_UNPAIRED_SCOUT_REPORT:
 					nextUnpairedScoutCount += 1;
+					break;
+					
+				case Messages.CHANNEL_ZOMBIE_DEN:
+					MapLocation denLoc = Messages.parseZombieDenLocation(data);
+					if (Messages.parseZombieDenWasDestroyed(data)) {
+						if (knownZombieDens.remove(denLoc)) {
+						    Debug.indicate("dens", 1, "heard that the den at " + denLoc + " was destroyed");
+						    if (denLoc.equals(lastDenTarget)) {
+							    //Debug.indicate("dens", 2, "that was our lastDenTarget!");
+						    	lastDenTarget = null;
+						    }
+						} else {
+						    Debug.indicate("dens", 1, "heard that den at " + denLoc + " was destroyed, but it wasn't in my list");							
+						}
+					} else {
+						if (knownZombieDens.add(denLoc)) {
+						    Debug.indicate("dens", 1, "heard about a new den at " + denLoc);
+						} else {
+							Debug.indicate("dense", 1, "heard about a new den at " + denLoc + ", but I already knew about it");
+						}
+					}
 					break;
 					
 				default:
@@ -359,5 +436,19 @@ public class BotArchon extends Globals {
 			}
 		}
 		return false;
+	}
+	
+	private static MapLocation findClosestDenToStart() {
+		MapLocation ret = null;
+		int bestDistSq = Integer.MAX_VALUE;
+		for (int i = 0; i < knownZombieDens.size; ++i) {
+			MapLocation denLoc = knownZombieDens.locations[i];
+			int distSq = startingLocation.distanceSquaredTo(denLoc);
+			if (distSq < bestDistSq) {
+				bestDistSq = distSq;
+				ret = denLoc;
+			}
+		}
+		return ret;
 	}
 }

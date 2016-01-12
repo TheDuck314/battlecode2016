@@ -26,10 +26,13 @@ public class BotScout extends Globals {
 	
 	private static MapLocation closestEnemyTurretLocation = null;
 	
+	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
+	
 	public static void loop() {
-    	Debug.init("msg");
+    	Debug.init("dens");
     	origin = here;
-    	exploredGrid[50][50] = true;    	
+    	exploredGrid[50][50] = true;   
+    	Debug.indicate("dens", 2, "dens received at birth: ");
 		while (true) {
 			try {
 				Globals.update();
@@ -67,6 +70,7 @@ public class BotScout extends Globals {
 
 		
 		trySendPartsOrNeutralLocation();
+		trySendZombieDenLocations();
 		
 		if (tryFollowTurret()) {
 			return;
@@ -157,6 +161,38 @@ public class BotScout extends Globals {
 		}	
 	}
 	
+	private static void trySendZombieDenLocations() throws GameActionException {
+		// check nearby zombie dens to see if they were destroyed
+		for (int i = 0; i < knownZombieDens.size; ++i) {
+			MapLocation denLoc = knownZombieDens.locations[i];
+			if (rc.canSenseLocation(denLoc)) {
+				RobotInfo robot = rc.senseRobotAtLocation(denLoc);
+				if (robot == null || robot.type != RobotType.ZOMBIEDEN) {
+					Debug.indicate("dens", 0, "sending message that den at " + denLoc + " was destroyed!");
+					knownZombieDens.remove(denLoc);
+					Messages.sendZombieDenDestroyed(denLoc, MapEdges.maxBroadcastDistSq());
+				}
+			}
+		}
+		
+		// broadcast new zombie dens
+		RobotInfo[] zombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+		for (RobotInfo zombie : zombies) {
+			if (zombie.type == RobotType.ZOMBIEDEN) {
+				if (!knownZombieDens.contains(zombie.location)) {
+					MapLocation denLoc = zombie.location;
+					Debug.indicate("dens", 0, "sending message about new den at " + denLoc);
+					knownZombieDens.add(denLoc);
+					Messages.sendZombieDenLocation(denLoc, MapEdges.maxBroadcastDistSq());
+				}
+			}
+		}		
+		
+		for (int i = 0; i < knownZombieDens.size; ++i) {
+			rc.setIndicatorLine(here, knownZombieDens.locations[i], 0, 0, 255);
+		}
+	}
+	
 	private static void sendRadarInfo() throws GameActionException {
 		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		Debug.indicate("radar", 0, "sendRaderInfo: hostiles.length = " + hostiles.length);
@@ -240,11 +276,42 @@ public class BotScout extends Globals {
 					turretOwnershipReceiveRoundById[turretId] = rc.getRoundNum();
 					break;
 					
+				case Messages.CHANNEL_ZOMBIE_DEN:
+					MapLocation denLoc = Messages.parseZombieDenLocation(data);
+					if (Messages.parseZombieDenWasDestroyed(data)) {
+						if (knownZombieDens.remove(denLoc)) {
+						    Debug.indicate("dens", 1, "heard that the den at " + denLoc + " was destroyed");
+						} else {
+						    Debug.indicate("dens", 1, "heard that den at " + denLoc + " was destroyed, but it wasn't in my list");							
+						}
+					} else {
+						if (knownZombieDens.add(denLoc)) {
+						    Debug.indicate("dens", 1, "heard about a new den at " + denLoc);
+						} else {
+							Debug.indicate("dense", 1, "heard about a new den at " + denLoc + ", but I already knew about it");
+						}
+					}
+					break;
+					
+				case Messages.CHANNEL_ZOMBIE_DEN_LIST:
+					receiveZombieDenList(data, sig.getLocation());
+					break;
+					
 				default:
 				}
 			}
 		}
 		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
+	}
+	
+	private static void receiveZombieDenList(int[] data, MapLocation origin) {
+		MapLocation[] denList = new MapLocation[3];
+		int numDens = Messages.parseUpToThreeZombieDens(data, origin, denList);
+		System.out.println("received zombie den list of length " + numDens);
+		for (int i = 0; i < numDens; ++i) {
+			knownZombieDens.add(denList[i]);
+			Debug.indicateAppend("dens", 2, ", " + denList[i]);
+		}
 	}
 	
 	private static int nFriend = 0;

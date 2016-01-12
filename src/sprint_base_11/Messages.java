@@ -18,6 +18,8 @@ public class Messages extends Globals {
 	public static final int CHANNEL_FOUND_PARTS = 0x30000000;
 	public static final int CHANNEL_ENEMY_TURRET_WARNING = 0x40000000;
 	public static final int CHANNEL_UNPAIRED_SCOUT_REPORT = 0x50000000;
+	public static final int CHANNEL_DEN_ATTACK_COMMAND = 0x60000000;
+	public static final int CHANNEL_ZOMBIE_DEN_LIST = 0x70000000;
 	
 	public static final int CHANNEL_ARCHON_LOCATION = 0xa0000000;
 	public static final int CHANNEL_RADAR = 0xb0000000;
@@ -25,8 +27,11 @@ public class Messages extends Globals {
 	public static final int CHANNEL_TURRET_OWNERSHIP = 0xd0000000;
 	public static final int CHANNEL_MAP_EDGES = 0xe0000000;
 	
+	// used by CHANNEL_ENEMY_TURRET_WARNING
 	public static final int ENEMY_TURRET_MISSING_VALUE = 0xffffffff;
-	
+
+	// used by CHANNEL_ZOMBIE_DEN
+	public static final int ZOMBIE_DEN_DESTROYED_FLAG = 0x00000001;
 	
 	public static int intFromMapLocation(MapLocation loc) {
 		return ((loc.x + 16000) << 16) | (loc.y + 16000);
@@ -65,10 +70,63 @@ public class Messages extends Globals {
 
 	public static void sendZombieDenLocation(MapLocation loc, int radiusSq) throws GameActionException {
 		sendMapLocation(CHANNEL_ZOMBIE_DEN, loc, radiusSq);
+		rc.broadcastMessageSignal(CHANNEL_ZOMBIE_DEN, intFromMapLocation(loc), radiusSq);
 		Debug.indicate("msg", msgDILN(), "sendZombieDenLocation " + radiusSq);
 	}
 	
+	public static void sendZombieDenDestroyed(MapLocation loc, int radiusSq) throws GameActionException {
+		rc.broadcastMessageSignal(CHANNEL_ZOMBIE_DEN | ZOMBIE_DEN_DESTROYED_FLAG, 
+				intFromMapLocation(loc), radiusSq);
+	}
+	
+	public static boolean parseZombieDenWasDestroyed(int[] data) {
+		return (data[0] & ZOMBIE_DEN_DESTROYED_FLAG) != 0;
+	}
+	
 	public static MapLocation parseZombieDenLocation(int[] data) {
+		return mapLocationFromInt(data[1]);
+	}
+	
+	public static void sendUpToThreeZombieDens(MapLocation[] locations, int numLocations, int radiusSq) throws GameActionException {
+		if (numLocations > 3) numLocations = 3;
+		long data = 0;
+		for (int i = 0; i < numLocations; ++i) {
+			data *= 200;
+			data += 100 + locations[i].x - here.x;
+			data *= 200;
+			data += 100 + locations[i].y - here.y;
+		}
+		int data0 = (int)(data >> 32);
+		int data1 = (int)(data & 0x00000000ffffffffL);
+		rc.broadcastMessageSignal(CHANNEL_ZOMBIE_DEN_LIST | data0, data1, radiusSq);
+	}
+	
+	// locationsOut should have length at least three.
+	// It will be filled with the parsed locations.
+	// The return value is the number of locations parsed.
+	public static int parseUpToThreeZombieDens(int[] intData, MapLocation origin, MapLocation[] locationsOut) {
+		long data = (((long)(CHANNEL_ZOMBIE_DEN_LIST ^ intData[0])) << 32) 
+				| (((long)intData[1]) & 0x00000000ffffffffL);
+
+		int numLocations = 0;
+		while (data != 0) {
+			int y = (int)(data % 200) + origin.y - 100;
+			data /= 200;
+			int x = (int)(data % 200) + origin.x - 100;
+			data /= 200;
+			locationsOut[numLocations] = new MapLocation(x, y);
+			numLocations += 1;
+		}
+		return numLocations;
+	}
+	
+
+	
+	public static void sendDenAttackCommand(MapLocation loc, int radiusSq) throws GameActionException {
+		sendMapLocation(CHANNEL_DEN_ATTACK_COMMAND, loc, radiusSq);
+	}
+	
+	public static MapLocation parseDenAttackCommand(int[] data) {
 		return parseMapLocation(data);
 	}
 	
