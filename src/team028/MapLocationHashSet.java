@@ -3,33 +3,68 @@ package team028;
 import battlecode.common.*;
 
 public class MapLocationHashSet {
-	private int size = 97;
-	private MapLocation[][] buckets = new MapLocation[size][100];
-	private int[] bucketSizes = new int[size];
+
+	public void clear() {
+		size = 0;
+		locations = new MapLocation[10000];
+		hasLocation = new boolean[100][100];
+	}
+	
+	public int size = 0;
+	public MapLocation[] locations = new MapLocation[10000];
+	public boolean[][] hasLocation = new boolean[100][100];
 	
 	public boolean contains(MapLocation loc) {
-		int bucketIndex = loc.hashCode() % size;
-		int bucketSize = bucketSizes[bucketIndex];
-		MapLocation[] bucket = buckets[bucketIndex];
-		for (int i = 0; i < bucketSize; ++i) {
-			if (bucket[i].equals(loc)) return true;
-		}
-		return false;
+		int x = (loc.x + 32000) % 100;
+		int y = (loc.y + 32000) % 100;
+		return hasLocation[x][y];
 	}
 	
 	// returns true if the given location was added
 	// (that is, if it wasn't already in the set)
 	public boolean add(MapLocation loc) {
-		int bucketIndex = loc.hashCode() % size;
-		int bucketSize = bucketSizes[bucketIndex];
-		MapLocation[] bucket = buckets[bucketIndex];
-		for (int i = 0; i < bucketSize; ++i) {
-			if (bucket[i].equals(loc)) return false;
+		int x = (loc.x + 32000) % 100;
+		int y = (loc.y + 32000) % 100;
+		if (!hasLocation[x][y]) {
+			hasLocation[x][y] = true;
+			locations[size] = loc;
+			size += 1;
+			return true;
+		} else {
+			return false;
 		}
-		if (bucketSize < 100) {
-			bucket[bucketSize] = loc;
-			++bucketSizes[bucketIndex];
-		}
-		return true;
 	}
+	
+	public boolean remove(MapLocation loc) {
+		int x = (loc.x + 32000) % 100;
+		int y = (loc.y + 32000) % 100;
+		if (hasLocation[x][y]) {
+			hasLocation[x][y] = false;
+			size -= 1;
+			for (int i = 0; i < size; ++i) {
+				if (locations[i].equals(loc)) {
+					locations[i] = locations[size];
+					break;
+				}
+			}
+			return true;
+ 		} else {
+			return false;
+		}
+	}
+	
+	public MapLocation findClosestMemberToLocation(MapLocation loc) {
+		MapLocation ret = null;
+		int bestDistSq = Integer.MAX_VALUE;
+		for (int i = 0; i < size; ++i) {
+			MapLocation denLoc = locations[i];
+			int distSq = loc.distanceSquaredTo(denLoc);
+			if (distSq < bestDistSq) {
+				bestDistSq = distSq;
+				ret = denLoc;
+			}
+		}
+		return ret;
+	}
+
 }

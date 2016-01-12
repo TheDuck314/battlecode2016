@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotTurret extends Globals {
 	public static void loop() {
-		Debug.init("spotting");
+//		Debug.init("memory");
 		while (true) {
 			try {
 				Globals.update();
@@ -31,8 +31,12 @@ public class BotTurret extends Globals {
 	private static final int PACK_DELAY = 20;
 	private static int packCountdown = PACK_DELAY;
 	
+	private static MapLocation lastTurretAttackedWithRadar = null;
+	private static int lastTurretAttackedWithRadarRound = -99999;
+	
 	private static void turnTurret() throws GameActionException {
 		if (!rc.isWeaponReady() && !rc.isCoreReady()) return;
+		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
 		
 		RobotInfo[] attackableEnemies = rc.senseHostileRobots(here, myAttackRadiusSquared);
 		if (rc.isWeaponReady()) {
@@ -51,6 +55,9 @@ public class BotTurret extends Globals {
 	}
 	
 	private static void turnTTM() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+		
 		RobotInfo[] attackableEnemies = rc.senseHostileRobots(here, RobotType.TURRET.attackRadiusSquared);
 		if (attackableEnemies.length > 0) {
 			rc.unpack();
@@ -112,6 +119,7 @@ public class BotTurret extends Globals {
 				bestTarget = hostile.location;				
 			}
 		}
+		RobotType typeAttackedWithRadar = null;
 		for (int i = 0; i < Radar.numCachedEnemies; ++i) {
 			FastRobotInfo hostile = Radar.enemyCache[i];
 			if (here.distanceSquaredTo(hostile.location) <= mySensorRadiusSquared) continue;
@@ -132,11 +140,26 @@ public class BotTurret extends Globals {
 			double score = enemyScore(hostile.type, hostile.type.maxHealth);
 			if (score > maxScore) {
 				maxScore = score;
-				bestTarget = hostile.location;				
+				bestTarget = hostile.location;	
+				typeAttackedWithRadar = hostile.type;
 			}			
+		}
+		if (bestTarget == null) {
+			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
+//			Debug.indicate("memory", 0, "closestEnemyTurret = " + (closestEnemyTurret == null ? null : closestEnemyTurret.location));
+//			if (closestEnemyTurret != null) Debug.indicateDot("memory", closestEnemyTurret.location, 0, 0, 255);
+			if (closestEnemyTurret != null && rc.canAttackLocation(closestEnemyTurret.location)) {
+				bestTarget = closestEnemyTurret.location;
+				//System.out.println("we are " + here + ", attacking Radar.closestEnemyTurret() = " + closestEnemyTurret.location);
+//				Debug.indicateDot("memory", closestEnemyTurret.location, 255, 0, 0);
+		    }
 		}
 		if (bestTarget != null) {
 			rc.attackLocation(bestTarget);
+			if (typeAttackedWithRadar == RobotType.TURRET) {
+				lastTurretAttackedWithRadar = bestTarget;
+				lastTurretAttackedWithRadarRound = rc.getRoundNum();
+			}
 			return true;
 		}
 		return false;
@@ -170,14 +193,18 @@ public class BotTurret extends Globals {
 					
 				case Messages.CHANNEL_ARCHON_LOCATION:
 					MapLocation archonLoc = Messages.parseArchonLocation(data);
-					Debug.indicate("heal", 2, "got archonLoc = " + archonLoc);
+//					Debug.indicate("heal", 2, "got archonLoc = " + archonLoc);
 					if (lastKnownArchonLocation == null 
 							|| (lastKnownArchonLocationRound < rc.getRoundNum() - 50)
 							|| here.distanceSquaredTo(lastKnownArchonLocation) > here.distanceSquaredTo(archonLoc)) {
 						lastKnownArchonLocation = archonLoc;
 						lastKnownArchonLocationRound = rc.getRoundNum();
-						Debug.indicateAppend("heal", 2, "; new best");
+//						Debug.indicateAppend("heal", 2, "; new best");
 					}
+					break;
+					
+				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
+					Messages.processEnemyTurretWarning(data);
 					break;
 					
 				default:

@@ -26,7 +26,7 @@ public class MapEdges extends Globals {
 		}
 		
 		int maxHeight;
-		if (minY == UNKNOWN || maxY == UNKNOWN) {
+		if (minY == UNKNOWN && maxY == UNKNOWN) {
 			maxHeight = GameConstants.MAP_MAX_WIDTH;
 		} else if (minY != UNKNOWN && maxY != UNKNOWN) {
 			maxHeight = Math.max(maxY - here.y, here.y - minY);
