@@ -36,6 +36,7 @@ public class BotTurret extends Globals {
 	
 	private static void turnTurret() throws GameActionException {
 		if (!rc.isWeaponReady() && !rc.isCoreReady()) return;
+		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
 		
 		RobotInfo[] attackableEnemies = rc.senseHostileRobots(here, myAttackRadiusSquared);
 		if (rc.isWeaponReady()) {
@@ -55,6 +56,7 @@ public class BotTurret extends Globals {
 	
 	private static void turnTTM() throws GameActionException {
 		if (!rc.isCoreReady()) return;
+		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
 		
 		RobotInfo[] attackableEnemies = rc.senseHostileRobots(here, RobotType.TURRET.attackRadiusSquared);
 		if (attackableEnemies.length > 0) {

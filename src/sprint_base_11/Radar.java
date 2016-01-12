@@ -37,6 +37,19 @@ public class Radar extends Globals {
 		return ret;
 	}
 	
+	public static void removeDistantEnemyTurrets(int radiusSq) {
+		for (int i = 0; i < numEnemyTurrets; ++i) {
+			int turretId = enemyTurretIds[i];
+			MapLocation turretLoc = enemyTurretLocationById[turretId];
+			if (turretLoc != null) {
+				int distSq = here.distanceSquaredTo(turretLoc);
+				if (distSq > radiusSq) {
+					removeEnemyTurret(turretId);
+				}
+			}
+		}
+	}
+	
 	public static boolean turretIsKnown(int id, MapLocation loc) {
 		MapLocation storedLoc = enemyTurretLocationById[id];
 		if (storedLoc == null) return false;

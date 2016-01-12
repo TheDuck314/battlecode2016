@@ -46,7 +46,9 @@ public class BotSoldier extends Globals {
 		if (tryToMicro()) {
 			return;
 		}
-				
+		
+		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+		
 		FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
 		if (closestEnemyTurret != null) {
 			closestEnemyTurretLocation = closestEnemyTurret.location;

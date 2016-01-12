@@ -119,6 +119,8 @@ public class BotArchon extends Globals {
 		tryRepairAlly();
 
 		if (rc.isCoreReady()) {
+			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+			
 			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
 			if (closestEnemyTurret != null) {
 				closestEnemyTurretLocation = closestEnemyTurret.location;

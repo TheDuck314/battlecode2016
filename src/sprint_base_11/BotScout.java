@@ -74,6 +74,8 @@ public class BotScout extends Globals {
 		sendTurretWarning();
 		
 		if (rc.isCoreReady()) {
+			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+			
 			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
 			if (closestEnemyTurret != null) {
 				closestEnemyTurretLocation = closestEnemyTurret.location;
