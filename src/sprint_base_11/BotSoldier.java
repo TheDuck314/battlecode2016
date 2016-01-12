@@ -349,10 +349,15 @@ public class BotSoldier extends Globals {
 	}
 	
 	private static boolean tryToBackUpToMaintainMaxRange(RobotInfo[] attackableHostiles) throws GameActionException {
-		RobotInfo closestHostile = Util.closest(attackableHostiles);
-		//Debug.indicate("micro", 1, "hello from tryToBackUpToMaintainMaxRange; numWithin5 = " + numWithin5 + ", numWithin2 = " + numWithin2);
+		int closestHostileDistSq = Integer.MAX_VALUE;
+		for (RobotInfo hostile : attackableHostiles) {
+			if (!hostile.type.canAttack()) continue;
+			int distSq = here.distanceSquaredTo(hostile.location);
+			if (distSq < closestHostileDistSq) {
+				closestHostileDistSq = distSq;
+			}
+		}
 		
-		int closestHostileDistSq = here.distanceSquaredTo(closestHostile.location);
 		if (closestHostileDistSq > 5) return false;
 		
 		Direction bestRetreatDir = null;
@@ -364,6 +369,7 @@ public class BotSoldier extends Globals {
 			MapLocation dirLoc = here.add(dir);			
 			int smallestDistSq = Integer.MAX_VALUE;
 			for (RobotInfo hostile : attackableHostiles) {
+				if (!hostile.type.canAttack()) continue;
 				int distSq = hostile.location.distanceSquaredTo(dirLoc);
 				if (distSq < smallestDistSq) {
 					smallestDistSq = distSq;
