@@ -305,7 +305,8 @@ public class Nav extends Globals {
 				if (dirLoc.isAdjacentTo(nearbyArchons[i])) {
 					continue dirSearch;
 				}
-				if (dirLoc.distanceSquaredTo(turretLocation) <= RobotType.TURRET.attackRadiusSquared) {
+				if (turretLocation != null &&
+						dirLoc.distanceSquaredTo(turretLocation) <= RobotType.TURRET.attackRadiusSquared) {
 					continue dirSearch;
 				}
 			}
