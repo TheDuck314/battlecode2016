@@ -219,6 +219,8 @@ public class BotScout extends Globals {
 	}
 
 	private static void processSignals() {
+		Radar.clearEnemyCache();
+		
 		Signal[] signals = rc.emptySignalQueue();
 		for (Signal sig : signals) {
 			if (sig.getTeam() != us) continue;
@@ -238,6 +240,10 @@ public class BotScout extends Globals {
 						archonFollowId = -1;
 					}
 					turretOwnershipReceiveRoundById[turretId] = rc.getRoundNum();
+					break;
+					
+				case Messages.CHANNEL_RADAR:
+					Messages.addRadarDataToEnemyCache(data, sig.getLocation(), myAttackRadiusSquared);
 					break;
 					
 				default:
