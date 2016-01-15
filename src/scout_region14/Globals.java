@@ -31,4 +31,11 @@ public class Globals {
 	
 	public static RobotInfo[] visibleHostiles;
 	public static RobotInfo[] visibleAllies;
+	public static RobotInfo[] attackableHostiles;
+	
+	public static void updateRobotInfos() {
+		visibleAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
+	}
 }

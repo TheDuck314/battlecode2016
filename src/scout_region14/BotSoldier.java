@@ -344,7 +344,6 @@ public class BotSoldier extends Globals {
 			}
 		}
 		
-		
 		if (mustRetreat) {
 //			Debug.indicate("micro", 2, "");
 			//for (int i = 0; i < 8; ++i) {
