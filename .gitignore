@@ -17,3 +17,13 @@ bin/
 
 # match files
 *rms
+
+# others
+test/
+.ivy/
+bc.conf
+README.md
+build.xml
+ide
+ivy.xml
+
