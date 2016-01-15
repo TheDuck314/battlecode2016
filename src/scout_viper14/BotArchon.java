@@ -97,7 +97,7 @@ public class BotArchon extends Globals {
 		
 		processSignals();
 		
-		if (rc.getRoundNum() >= 20) {
+		if (rc.getRoundNum() >= 40) {
 			MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
 		}
 		
@@ -114,7 +114,9 @@ public class BotArchon extends Globals {
 		
 		trySendArchonLocationMessage();
 
-		trySendGlobalZombieDenBroadcast();
+		if (rc.getRoundNum() >= 40) {
+			trySendGlobalZombieDenBroadcast();
+		}
 
 		tryRepairAlly();
 
@@ -272,6 +274,9 @@ public class BotArchon extends Globals {
 				default:
 					spawnType = RobotType.SCOUT;
 				}
+			}
+			if (spawnCount % 15 == 0) {
+				spawnType = RobotType.VIPER;
 			}
 		}
 		
@@ -486,8 +491,7 @@ public class BotArchon extends Globals {
 		if (mustRetreat) {
 			if (!here.equals(retreatTarget)) {
 				Direction retreatDir = here.directionTo(retreatTarget);
-				Nav.tryHardMoveInDirection(retreatDir);
-				return true;
+				return Nav.tryHardMoveInDirection(retreatDir);
 			}
 		}
 		return false;
