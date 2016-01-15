@@ -29,9 +29,9 @@ public class Globals {
 	
 	public static final int checkUnpairedScoutInterval = 50;
 	
-	public static RobotInfo[] visibleHostiles;
-	public static RobotInfo[] visibleAllies;
-	public static RobotInfo[] attackableHostiles;
+	public static RobotInfo[] visibleHostiles = null;
+	public static RobotInfo[] visibleAllies = null;
+	public static RobotInfo[] attackableHostiles = null;
 	
 	public static void updateRobotInfos() {
 		visibleAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
