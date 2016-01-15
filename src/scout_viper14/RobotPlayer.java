@@ -1,4 +1,4 @@
-package scout_region14;
+package scout_viper14;
 
 import battlecode.common.*;
 
