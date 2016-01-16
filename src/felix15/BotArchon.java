@@ -219,6 +219,9 @@ public class BotArchon extends Globals {
 		if (spawnCount % 20 == 0) {
 			spawnType = RobotType.SCOUT;
 		}
+		if (spawnCount % 13 == 0 && spawnCount > 0) {
+			spawnType = RobotType.VIPER;
+		}
 		
 		if (!rc.hasBuildRequirements(spawnType)) {
 			Debug.indicateAppend("turn", 1, "don't have build requirements");
