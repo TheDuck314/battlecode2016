@@ -136,6 +136,10 @@ public class Nav extends Globals {
 	// or 45 degrees left or right. Clear rubble if necessary.
 	// Avoids going in range of any hostile robot that we can see.
 	public static void goToDirectSafely(MapLocation dest) throws GameActionException {
+		if (dest == null) {
+			System.out.println("goToDirectSafely dest = null");
+			return;
+		}
 		if (here.equals(dest)) return;
 
 		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
