@@ -16,7 +16,7 @@ public class BotArchon extends Globals {
 	
 	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
 	private static int lastGlobalZombieDenBroadcastRound = 0;
-	private static int GLOBAL_ZOMBIE_DEN_BROADCAST_INTERVAL = 100;
+	private static int GLOBAL_ZOMBIE_DEN_BROADCAST_INTERVAL = 40;
 	private static MapLocation lastDenTarget = null;
 	
 	private static MapLocation[] initialArchonLocations;
@@ -59,7 +59,7 @@ public class BotArchon extends Globals {
 		}
 		archonCenterX /= nArchons;
 		archonCenterY /= nArchons;
-		MapLocation archonCenter = new MapLocation(archonCenterX, archonCenterY);
+	    /*MapLocation archonCenter = new MapLocation(archonCenterX, archonCenterY);
 		startingLocation = initialArchonLocations[0];
 		int bestDistSq = startingLocation.distanceSquaredTo(archonCenter);
 		for (int i = 1; i < nArchons; ++i) {
@@ -68,7 +68,8 @@ public class BotArchon extends Globals {
 				bestDistSq = distSq;
 				startingLocation = initialArchonLocations[i];
 			}
-		}
+		}*/
+		startingLocation = new MapLocation(archonCenterX, archonCenterY);
 	}
 	
 	private static void turn() throws GameActionException {
@@ -141,9 +142,9 @@ public class BotArchon extends Globals {
 	}
 	
 	private static void trySendGlobalZombieDenBroadcast() throws GameActionException {		
-//		Debug.indicate("dens", 2, "");
+		Debug.indicate("dens", 2, "known dens: ");
 		for (int i = 0; i < knownZombieDens.size; ++i) {
-			//Debug.indicateAppend("dens", 2, ", " + knownZombieDens.locations[i]);
+			Debug.indicateAppend("dens", 2, knownZombieDens.locations[i].toString() + "; ");
 			Debug.indicateLine("dens", here, knownZombieDens.locations[i], 0, 0, 255);
 		}
 		if (lastDenTarget != null) {
@@ -163,7 +164,7 @@ public class BotArchon extends Globals {
 		
 		MapLocation closestDen = knownZombieDens.findClosestMemberToLocation(startingLocation);
 		if (closestDen != null) {
-//			Debug.indicate("dens", 0, "sending command to attack den at " + closestDen);
+			Debug.indicate("dens", 0, "sending command to attack den at " + closestDen);
 			Messages.sendDenAttackCommand(closestDen, MapEdges.maxBroadcastDistSq());
 			lastGlobalZombieDenBroadcastRound = rc.getRoundNum();
 			lastDenTarget = closestDen;
@@ -215,7 +216,7 @@ public class BotArchon extends Globals {
 		if (!rc.isCoreReady()) return;
 
 		RobotType spawnType = RobotType.SOLDIER;
-		if (spawnCount % 10 == 0) {
+		if (spawnCount % 20 == 0) {
 			spawnType = RobotType.SCOUT;
 		}
 		
@@ -361,6 +362,23 @@ public class BotArchon extends Globals {
 //		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
 	
+	private static MapLocation chooseBestPartsLocation(MapLocation[] partLocations) {
+		MapLocation bestLoc = null;
+		double bestScore = Double.NEGATIVE_INFINITY;
+		for (MapLocation loc : partLocations) {
+			double score = 0.25 * rc.senseParts(loc) 
+					- 20 * FastMath.floorSqrt(here.distanceSquaredTo(loc))
+					- 10 * Util.estimateRubbleClearTurns(rc.senseRubble(loc));
+			//System.out.println("loc = " + loc + ", score = " + (int)score);
+			if (score > bestScore) {
+				bestScore = score;
+				bestLoc = loc;
+			}
+		}
+		//System.out.println("best = " + bestLoc + ", score = " + bestScore);
+		return bestLoc;
+	}
+	
 	private static void pickDestination() throws GameActionException {
 		if (currentDestination != null) {
 			if (here.equals(currentDestination)) {
@@ -376,10 +394,8 @@ public class BotArchon extends Globals {
 		}
 	
 		MapLocation[] partLocs = rc.sensePartLocations(mySensorRadiusSquared);
-		for (MapLocation partLoc : partLocs) {
-			if (!partLoc.equals(here)) {
-				considerDestination(partLoc);
-			}
+		if (partLocs.length > 0) {
+			considerDestination(chooseBestPartsLocation(partLocs));
 		}
 			
 		RobotInfo[] nearbyNeutrals = rc.senseNearbyRobots(mySensorRadiusSquared, Team.NEUTRAL);
