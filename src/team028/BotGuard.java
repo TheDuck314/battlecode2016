@@ -99,7 +99,7 @@ public class BotGuard extends Globals {
 		}
 		if (rc.isCoreReady()) {
 			if (tryChargeEnemies()) return;
-			Nav.goToDirect(motherLocation);
+			Nav.swarmToAvoidingArchons(motherLocation);
 		}
 	}
 }

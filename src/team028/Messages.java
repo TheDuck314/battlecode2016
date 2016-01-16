@@ -20,6 +20,7 @@ public class Messages extends Globals {
 	public static final int CHANNEL_UNPAIRED_SCOUT_REPORT = 0x50000000;
 	public static final int CHANNEL_DEN_ATTACK_COMMAND = 0x60000000;
 	public static final int CHANNEL_ZOMBIE_DEN_LIST = 0x70000000;
+	public static final int CHANNEL_ATTACK_TARGET = 0x80000000;
 	
 	public static final int CHANNEL_ARCHON_LOCATION = 0xa0000000;
 	public static final int CHANNEL_RADAR = 0xb0000000;
@@ -57,6 +58,14 @@ public class Messages extends Globals {
 	
 	private static int parseInt(int[] data) {
 		return data[1];
+	}
+	
+	public static void sendAttackTarget(MapLocation loc, int radiusSq) throws GameActionException {
+		sendMapLocation(CHANNEL_ATTACK_TARGET, loc, radiusSq);
+	}
+	
+	public static MapLocation parseAttackTarget(int[] data) {
+		return parseMapLocation(data);
 	}
 	
 	public static void sendTurretTarget(MapLocation loc, int radiusSq) throws GameActionException {

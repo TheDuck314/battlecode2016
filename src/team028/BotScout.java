@@ -56,23 +56,8 @@ public class BotScout extends Globals {
 		
 		processSignals();		
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
-
-		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == 0) {
-			broadCastWithInterval = false;
-		} else if (!rc.canSenseRobot(turretFollowId)) {
-			if (!broadCastWithInterval && visibleHostiles.length == 0) {
-				Messages.sendUnpairedScoutReport(30 * mySensorRadiusSquared);
-				broadCastWithInterval = true;
-//				Debug.indicate("unpaired", 0, "sent unpaired message");
-			} else {
-//				Debug.indicate("unpaired", 0, "sent unpaired message = " + broadCastWithInterval);
-			}
-		} else {
-//			Debug.indicate("unpaired", 0, "I am paired!");
-		}
 		
 		sendRadarInfo();
-		sendTurretWarning();
 		
 		if (rc.isCoreReady()) {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
@@ -87,11 +72,7 @@ public class BotScout extends Globals {
 
 		trySendPartsOrNeutralLocation();
 		trySendZombieDenLocations();
-		
-		if (tryFollowTurret()) {
-			return;
-		}
-		
+
 		moveAround();
 	}
 	
@@ -211,8 +192,9 @@ public class BotScout extends Globals {
 	private static void sendRadarInfo() throws GameActionException {
 //		Debug.indicate("radar", 0, "sendRaderInfo: hostiles.length = " + visibleHostiles.length);
 		if (visibleHostiles.length == 0) return;
+		if (rc.getRoundNum() - lastRadarBroadcastRound < 4) return;
 		
-		int radarRangeSq = 4*mySensorRadiusSquared;
+		/*int radarRangeSq = 4*mySensorRadiusSquared;
 		if (visibleAllies.length == 0) {
 			if (rc.getRoundNum()-lastRadarBroadcastRound < 10) {
 				return;
@@ -240,8 +222,17 @@ public class BotScout extends Globals {
 				}
 			}
 		}
-		Messages.sendRadarData(hostilesToSend, numberHostilesToSend, radarRangeSq);
+		Messages.sendRadarData(hostilesToSend, numberHostilesToSend, radarRangeSq);*/
 		lastRadarBroadcastRound = rc.getRoundNum();
+		
+		//Messages.sendAttackTarget(visibleHostiles[0].location, 16*mySensorRadiusSquared);
+		
+		for (RobotInfo hostile : visibleHostiles) {
+			if (hostile.team != Team.ZOMBIE /*&& hostile.type != RobotType.SCOUT*/) {
+				Messages.sendAttackTarget(hostile.location, 16*mySensorRadiusSquared);
+				return;
+			}
+		}
 	}
 	
 	private static void sendTurretWarning() throws GameActionException {		
@@ -420,7 +411,10 @@ public class BotScout extends Globals {
 				if (distSq <= e.type.attackRadiusSquared) {
 					attacks[i] += e.attackPower;
 				} else {
-					attacks[i] += e.attackPower / (5 * distSq / (e.type.attackRadiusSquared+1));
+					//attacks[i] += e.attackPower / (5 * distSq / (e.type.attackRadiusSquared+1));
+					if (e.team == them) {
+						attacks[i] -= 3;
+					}
 				}
 			}
 		}
@@ -439,7 +433,7 @@ public class BotScout extends Globals {
 //					archonVec = archonVec.add(here.directionTo(f.location));
 //				}
 				break;
-			// case SOLDIER:
+			case SOLDIER:
 			case TURRET:
 				for (int i = 0; i < 9; ++i) {
 					if (f.location.distanceSquaredTo(locs[i]) < 9) {
@@ -463,7 +457,7 @@ public class BotScout extends Globals {
 		double[] scores = new double[9];
 		for (int i = 0; i < 9; ++i) {
 			scores[i] = -attacks[i] * 1000;
-			if (locs[i] == dangerousLoc) {
+			if (locs[i].equals(dangerousLoc)) {
 				scores[i] -= 2000;
 			}
 //			if (rubbles[i] >= GameConstants.RUBBLE_SLOW_THRESH) {
@@ -474,7 +468,7 @@ public class BotScout extends Globals {
 //				scores[i] += 100;
 //			}
 //			scores[i] += nfriends[i] * 50;
-			scores[i] += friends[i] - scouts[i] * 50;
+			scores[i] += 2 * friends[i] - scouts[i] * 50;
 			scores[i] += archons[i] * 10;
 			int disEdge = 100;
 			disEdge = Math.min(disEdge, Math.abs(locs[i].x - MapEdges.minX));
@@ -491,7 +485,7 @@ public class BotScout extends Globals {
 				scores[i] += isDiagonalScore;
 			}
 		}
-		if (sameDirectionSteps > 25) {
+		if (sameDirectionSteps > 10 /*25*/) {
 			sameDirectionSteps = 0;
 			lastDir = null;
 //			Debug.indicate("explore", 0, "Do not keep sameDirection");

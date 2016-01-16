@@ -50,6 +50,59 @@ public class Nav extends Globals {
 		return false;
 	}
 	
+	private static boolean preferLeft(MapLocation dest) {
+		Direction toDest = here.directionTo(dest);
+		MapLocation leftLoc = here.add(toDest.rotateLeft());
+		MapLocation rightLoc = here.add(toDest.rotateRight());
+		return (dest.distanceSquaredTo(leftLoc) < dest.distanceSquaredTo(rightLoc));
+	}
+	
+	public static boolean goToDirectNew(MapLocation dest) throws GameActionException {
+		if (here.equals(dest)) return false;
+
+        Direction forward = here.directionTo(dest);
+	    MapLocation forwardLoc = here.add(forward);
+		if (here.isAdjacentTo(dest)) {
+			if (rc.canMove(forward)) {
+				rc.move(forward);
+				return true;
+			} else if (rc.senseRubble(forwardLoc) > GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
+				rc.clearRubble(forward);
+				return true;
+			}
+		}	
+		
+		Direction[] dirs;
+		if (preferLeft(dest)) {
+			dirs = new Direction[] { forward, forward.rotateLeft(), forward.rotateRight(),
+					forward.rotateLeft().rotateLeft(), forward.rotateRight().rotateRight() };			
+		} else {
+			dirs = new Direction[] { forward, forward.rotateRight(), forward.rotateLeft(), 
+					forward.rotateRight().rotateRight(), forward.rotateLeft().rotateLeft() };
+		}
+		
+		Direction bestDir = null;
+	    double bestRubble = Double.MAX_VALUE;
+	    int currentDistSq = here.distanceSquaredTo(dest);
+	    for (Direction dir : dirs) {
+	    	if (here.add(dir).distanceSquaredTo(dest) > currentDistSq) continue;
+	    	double rubble = rc.senseRubble(here.add(dir));
+	    	if (rc.canMove(dir) && rubble < GameConstants.RUBBLE_SLOW_THRESH) {
+	    		rc.move(dir);
+	    		return true;
+	    	} else if (rubble >= GameConstants.RUBBLE_SLOW_THRESH && rubble < bestRubble) {
+	    		bestRubble = rubble;
+	    		bestDir = dir;
+	    	}
+	    }
+	    
+	    if (bestDir != null) {
+	    	rc.clearRubble(bestDir);
+	    	return true;
+	    }
+	    return false;
+	}
+	
 	// Go to the destination. At each step, move either forward
 	// or 45 degrees left or right. Clear rubble if necessary.
 	// Returns true if it either moved or cleared rubble
