@@ -26,10 +26,7 @@ public class BotScout extends Globals {
 	private static int lastTurretOwnershipBroadcastRound = -999999;
 	private static int[] turretOwnershipReceiveRoundById = new int[32001];
 	
-	private static final int GRID_NUBMER = 7;
-	private static final int GRID_SPACING = 12;
-	private static boolean[] recentlyExploredRegions = new boolean[7*7];
-	private static int[] exploredRegions = new int[7*7]; // store the number of rounds we visit the region
+	private static int birthRoundNum = 0;
 	private static MapLocation[] trajectories = new MapLocation[3001]; // store the history of locations
 	
 	private static boolean broadCastedWithinInterval = false;
@@ -44,6 +41,7 @@ public class BotScout extends Globals {
 //    	Debug.init("explore");
     	origin = here;
     	exploredGrid[50][50] = true;   
+    	birthRoundNum = rc.getRoundNum();
 //    	Debug.indicate("dens", 2, "dens received at birth: ");
 		while (true) {
 			try {
@@ -58,8 +56,7 @@ public class BotScout extends Globals {
 	
 	private static void turn() throws GameActionException {
 		
-		Globals.visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
-		Globals.visibleAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		Globals.updateRobotInfos();
 		
 		trajectories[rc.getRoundNum()] = here;
 		
@@ -78,8 +75,9 @@ public class BotScout extends Globals {
 		if (tryFollowTurret()) {
 			return;
 		}
-		
-		exploreTheMap();
+		if (rc.isCoreReady()) {
+			exploreTheMap();
+		}
 	}
 	
 	private static void updateClosestEnemyTurretLocation() {
@@ -384,26 +382,44 @@ public class BotScout extends Globals {
 		if (tryMicro()) {
 			return;
 		}
-		MapLocation dest = findNextExplorationRegion();
-		if (dest != null) {
-			Nav.goToDirectSafely(dest);
-			return;
-		}
 		moveAround();
 	}
 	
-	private static boolean tryMicro() {
+	private static boolean tryMicro() throws GameActionException {
+		if (visibleHostiles.length == 0) {
+			return false;
+		} else {
+			if (visibleAllies.length != 0) {
+				return false;
+			}
+			if (visibleZombies.length == 0) {
+				// Fighting enemy
+			} else if (visibleEnemies.length == 0){
+				// Fighting zombies
+				MapLocation target = theirInitialArchonLocations[0];
+				Direction targetDir = here.directionTo(target);
+				boolean tooFar = true; // zombie maybe far behind us.
+				double score = 0;
+				for (RobotInfo r : visibleZombies) {
+					score += r.attackPower;
+					if (FastMath.dotVec(targetDir, here.directionTo(r.location)) > 0
+							|| r.location.distanceSquaredTo(here) < r.type.attackRadiusSquared * 1.3) {
+						// zombie is not far behind
+						tooFar = false;
+					}
+				}
+				if (score >= 25 && !tooFar) {
+//					System.out.println("Fighting Zombies");
+					if (!tooFar) {
+						return Nav.goToDirectSafely(target);
+					} else {
+						// Wait for zombie, maybe need to broadcast a message.
+						return true;
+					}
+				}
+			}
+		}
 		return false;
-	}
-	
-	private static int regionNumberFromMapLocation(MapLocation loc) {
-		int x = loc.x;
-		int y = loc.y;
-		return 0;
-	}
-	
-	private static MapLocation findNextExplorationRegion() {
-		return null;
 	}
 	
 	private static int nFriend = 0;
@@ -461,7 +477,7 @@ public class BotScout extends Globals {
 				int distSq = e.location.distanceSquaredTo(locs[i]);
 				if (distSq <= e.type.attackRadiusSquared) {
 					attacks[i] += e.attackPower;
-				} else {
+				} else if (distSq <= e.type.attackRadiusSquared * 2){
 					attacks[i] += e.attackPower / (5 * distSq / (e.type.attackRadiusSquared+1));
 				}
 			}
@@ -604,19 +620,20 @@ public class BotScout extends Globals {
     }
     
     private static MapLocation moveOntoMap(MapLocation loc) {
+    	final int edgeDistance = 4;
     	int retX = loc.x;
     	int retY = loc.y;
     	if (MapEdges.minX != MapEdges.UNKNOWN && retX < MapEdges.minX) {
-    		retX = MapEdges.minX;
+    		retX = MapEdges.minX + edgeDistance;
     	}
     	if (MapEdges.maxX != MapEdges.UNKNOWN && retX > MapEdges.maxX) {
-    		retX = MapEdges.maxX;
+    		retX = MapEdges.maxX - edgeDistance;
     	}
     	if (MapEdges.minY != MapEdges.UNKNOWN && retY < MapEdges.minY) {
-    		retY = MapEdges.minY;
+    		retY = MapEdges.minY + edgeDistance;
     	}
     	if (MapEdges.maxY != MapEdges.UNKNOWN && retY > MapEdges.maxY) {
-    		retY = MapEdges.maxY;
+    		retY = MapEdges.maxY - edgeDistance;
     	}
     	return new MapLocation(retX, retY);
     }

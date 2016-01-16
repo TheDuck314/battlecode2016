@@ -100,4 +100,8 @@ public class MapEdges extends Globals {
 			Messages.sendKnownMapEdges(maxBroadcastDistSq());
 		};
 	}
+
+	public static boolean isMapEdgeKnown() {
+		return minX != UNKNOWN && maxX != UNKNOWN && minY != UNKNOWN && maxY != UNKNOWN;
+	}
 }

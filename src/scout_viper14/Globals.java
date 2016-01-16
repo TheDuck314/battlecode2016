@@ -25,6 +25,8 @@ public class Globals {
 	public static MapLocation centerOfAllInitialArchons;
 	
 	public static RobotInfo[] visibleHostiles = null;
+	public static RobotInfo[] visibleEnemies = null;
+	public static RobotInfo[] visibleZombies = null;
 	public static RobotInfo[] visibleAllies = null;
 	public static RobotInfo[] attackableHostiles = null;
 	
@@ -61,6 +63,8 @@ public class Globals {
 	
 	public static void updateRobotInfos() {
 		visibleAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		visibleEnemies =  rc.senseNearbyRobots(mySensorRadiusSquared, them);
+		visibleZombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
 		visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 	}

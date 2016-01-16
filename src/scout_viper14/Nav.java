@@ -135,12 +135,12 @@ public class Nav extends Globals {
 	// Go to the destination. At each step, move either forward
 	// or 45 degrees left or right. Clear rubble if necessary.
 	// Avoids going in range of any hostile robot that we can see.
-	public static void goToDirectSafely(MapLocation dest) throws GameActionException {
+	public static boolean goToDirectSafely(MapLocation dest) throws GameActionException {
 		if (dest == null) {
 			System.out.println("goToDirectSafely dest = null");
-			return;
+			return false;
 		}
-		if (here.equals(dest)) return;
+		if (here.equals(dest)) return false;
 
 		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 
@@ -149,10 +149,10 @@ public class Nav extends Globals {
 		if (here.isAdjacentTo(dest)) {
 			if (rc.canMove(forward) && !enemyAttacksLocation(dest, hostiles)) {
 				rc.move(forward);
-				return;
+				return true;
 			} else if (rc.senseRubble(forwardLoc) > GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
 				rc.clearRubble(forward);
-				return;
+				return true;
 			}
 		}
 		
@@ -181,7 +181,7 @@ public class Nav extends Globals {
 	    	if (rc.canMove(dirs[i]) && rubbles[i] < GameConstants.RUBBLE_SLOW_THRESH) {
 	    		if (!enemyAttacksLocation(here.add(dirs[i]), hostiles)) {
 	    			rc.move(dirs[i]);
-	    			return;
+	    			return true;
 	    		}
 	    	} else if (rubbles[i] >= GameConstants.RUBBLE_SLOW_THRESH && rubbles[i] < bestRubble) {
 	    		bestRubble = rubbles[i];
@@ -191,7 +191,9 @@ public class Nav extends Globals {
 	    
 	    if (bestDir != null) {
 	    	rc.clearRubble(bestDir);
+	    	return true;
 	    }
+	    return false;
 	}
 	
 	
@@ -320,7 +322,6 @@ public class Nav extends Globals {
 		}
 	}
 	
-	
 	// Always move if possible, but prefer to move toward the destination
 	// Don't move next to an archon.
 	// Try to be polite and let robots who are more injure than us get to the
@@ -406,10 +407,6 @@ public class Nav extends Globals {
 	    }
 	}
 	
-	
-	
-	
-	
 	private static MapLocation bugDest = null;
 	
 	private static boolean bugTracing = false;
@@ -456,7 +453,6 @@ public class Nav extends Globals {
 		bugTracing = false;
 	}
 
-	
 	static void bugStartTracing() {
 		bugTracing = true;
 		
