@@ -292,6 +292,7 @@ public class BotArchon extends Globals {
 					lastUnpairedScoutCount += nArchons;
 				}
 			}
+			dir.rotateRight();
 		}
 	}
 	

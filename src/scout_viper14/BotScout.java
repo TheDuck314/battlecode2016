@@ -386,6 +386,11 @@ public class BotScout extends Globals {
 	}
 	
 	private static boolean tryMicro() throws GameActionException {
+		if (tryLuringZombie()) return true;
+		return false;
+	}
+	
+	private static boolean tryLuringZombie() throws GameActionException {
 		if (visibleHostiles.length == 0) {
 			return false;
 		} else {
@@ -421,7 +426,7 @@ public class BotScout extends Globals {
 		}
 		return false;
 	}
-	
+
 	private static int nFriend = 0;
 	
 	public static MapLocation dangerousLoc = null;
