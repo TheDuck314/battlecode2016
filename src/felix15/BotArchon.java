@@ -6,14 +6,6 @@ public class BotArchon extends Globals {
 	private static int spawnCount = 0;
 
 	private static int lastArchonLocationMessageRound = 0;
-
-	private static int nArchons = 0;
-	private static MapLocation[] archonsLoc = new MapLocation[10];
-	private static int[] archonsId = new int[10];
-	private static int archonOrder = 0;
-	private static MapLocation rallyPoint = null;
-	
-	private static MapLocation startingLocation = null;
 	
 	private static MapLocation currentDestination = null;
 	
@@ -27,21 +19,18 @@ public class BotArchon extends Globals {
 	private static int GLOBAL_ZOMBIE_DEN_BROADCAST_INTERVAL = 100;
 	private static MapLocation lastDenTarget = null;
 	
+	private static MapLocation[] initialArchonLocations;
+	private static int nArchons;
+	private static MapLocation startingLocation;
+	
 	public static void loop() throws GameActionException {
-		rc.setIndicatorString(0, "41bd9daf1997dbe55d320f76267c8be1064eab87");
-//		Debug.init("kill");
+//		rc.setIndicatorString(0, "41bd9daf1997dbe55d320f76267c8be1064eab87");
+		Debug.init("dens");
 		FastMath.initRand(rc);
-//		for (int i = 0; i < 1000000; ++i) {
-//			System.out.println(FastMath.rand256());
-//		}
 		
-//		initArchons();
+		initArchons();
 		
-		nArchons = rc.getRobotCount();
 		lastGlobalZombieDenBroadcastRound = (int)(FastMath.rand256() * GLOBAL_ZOMBIE_DEN_BROADCAST_INTERVAL / 256.0);
-		startingLocation = here;
-//		Debug.indicate("unpaired", 2, "nArchons = " + nArchons);
-		Clock.yield();
 
 		while (true) {
 			try {
@@ -55,70 +44,67 @@ public class BotArchon extends Globals {
 	}
 	
 	private static void initArchons() throws GameActionException {
-		Globals.update();
-		archonsLoc[nArchons] = here;
-		archonsId[nArchons] = myID;
-		nArchons += 1;
-		Messages.sendArchonLocation(here, MapEdges.maxBroadcastDistSq());
-		Clock.yield();
-		Signal[] signals = rc.emptySignalQueue();
-		for (Signal sig : signals) {
-			if (sig.getTeam() != us) continue;
-			int[] data = sig.getMessage();
-			if (data != null) {
-				if ((data[0] & Messages.CHANNEL_MASK) == Messages.CHANNEL_ARCHON_LOCATION) {
-					archonsLoc[nArchons] = sig.getLocation();
-					archonsId[nArchons] = sig.getID();
-					nArchons += 1;
-				}
-			}
+		initialArchonLocations = rc.getInitialArchonLocations(us);
+		nArchons = initialArchonLocations.length;
+		
+		// choose the "starting location" to be the initial archon
+		// location which is closest to the overall center of mass 
+		// of the archons. Maybe we should also give a bonus for 
+		// being far away from the enemy archons?
+		int archonCenterX = 0;
+		int archonCenterY = 0;
+		for (MapLocation archonLocation : initialArchonLocations) {
+			archonCenterX += archonLocation.x;
+			archonCenterY += archonLocation.y;
 		}
-		rallyPoint = here;
+		archonCenterX /= nArchons;
+		archonCenterY /= nArchons;
+		MapLocation archonCenter = new MapLocation(archonCenterX, archonCenterY);
+		startingLocation = initialArchonLocations[0];
+		int bestDistSq = startingLocation.distanceSquaredTo(archonCenter);
 		for (int i = 1; i < nArchons; ++i) {
-			rallyPoint = FastMath.addVec(rallyPoint, archonsLoc[i]);
-		}
-		rallyPoint = FastMath.multiplyVec(1.0/(double)nArchons, rallyPoint);
-		rallyPoint = rallyPoint.add(rallyPoint.directionTo(here), 0);
-//		Debug.indicateDot("rally", rallyPoint, 255, 0, 0);
-		for (int i = 0; i < nArchons; ++i) {
-			if (archonsId[i] < myID) {
-				archonOrder += 1;
+			int distSq = initialArchonLocations[i].distanceSquaredTo(archonCenter);
+			if (distSq < bestDistSq) {
+				bestDistSq = distSq;
+				startingLocation = initialArchonLocations[i];
 			}
 		}
 	}
 	
 	private static void turn() throws GameActionException {
-		/*if (rc.getRoundNum() <= 100 && rallyPoint != null && here.distanceSquaredTo(rallyPoint) > 2) {
-			if (rc.isCoreReady()) {
-			    Nav.goToDirectSafely(rallyPoint);
-			}
-			return;
-		}*/
+		Debug.indicate("turn", 0, "turn start; ");
 		
 		processSignals();
-		
+
+		Debug.indicateAppend("turn", 0, "after processSignals; ");
+
 		if (rc.getRoundNum() >= 40) {
 			MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
 		}
-		
+
+		Debug.indicateAppend("turn", 0, "after MapEdges; ");
+
 		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == Globals.checkUnpairedScoutInterval - 1) {
 			lastUnpairedScoutCount = nextUnpairedScoutCount;
 			nextUnpairedScoutCount = 0;
 		}
 		
-//		Debug.indicate("unpaired", 0, "lastUnpairedScoutCount = " + lastUnpairedScoutCount);
-//		Debug.indicate("unpaired", 1, "nextUnpairedScoutCount = " + nextUnpairedScoutCount);
-		
-		//trySendAttackTarget();
 		sendRadarInfo();
+		Debug.indicateAppend("turn", 0, "after sendRadarInfo; ");
 		
 		trySendArchonLocationMessage();
+
+		Debug.indicateAppend("turn", 0, "after trySALM; ");
 
 		if (rc.getRoundNum() >= 40) {
 			trySendGlobalZombieDenBroadcast();
 		}
 
+		Debug.indicateAppend("turn", 0, "after trySGZDB; ");
+
 		tryRepairAlly();
+
+		Debug.indicateAppend("turn", 0, "after tryRA; ");
 
 		if (rc.isCoreReady()) {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
@@ -130,12 +116,16 @@ public class BotArchon extends Globals {
 				closestEnemyTurretLocation = null;
 			}
 			
+			Debug.indicateAppend("turn", 0, "before retreat; ");
 			if (retreatIfNecessary()) {
 				return;
 			}
+			Debug.indicateAppend("turn", 0, "after retreat; ");
 		}
 		
+		Debug.indicateAppend("turn", 0, "before trySpawn; ");
 		trySpawn();
+		Debug.indicateAppend("turn", 0, "after trySpawn; ");
 		
 		tryConvertNeutrals();
 		
@@ -154,10 +144,10 @@ public class BotArchon extends Globals {
 //		Debug.indicate("dens", 2, "");
 		for (int i = 0; i < knownZombieDens.size; ++i) {
 			//Debug.indicateAppend("dens", 2, ", " + knownZombieDens.locations[i]);
-//			Debug.indicateLine("dens", here, knownZombieDens.locations[i], 0, 0, 255);
+			Debug.indicateLine("dens", here, knownZombieDens.locations[i], 0, 0, 255);
 		}
 		if (lastDenTarget != null) {
-//			Debug.indicateLine("dens", here, lastDenTarget, 255, 0, 0);
+			Debug.indicateLine("dens", here, lastDenTarget, 255, 0, 0);
 		}
 		
 		// send global broadcasts at a certain interval
@@ -214,74 +204,27 @@ public class BotArchon extends Globals {
 	
 	private static void trySendArchonLocationMessage() throws GameActionException {
 		if (lastArchonLocationMessageRound < rc.getRoundNum() - 60) {
-			Messages.sendArchonLocation(here, 900);
+			Messages.sendArchonLocation(here, 30*mySensorRadiusSquared);
 			lastArchonLocationMessageRound = rc.getRoundNum();
 //			Debug.indicate("heal", 0, "sent archon location");
 		}
 	}
 	
 	private static void trySpawn() throws GameActionException {
+		Debug.indicate("turn", 1, "trySpawn start; ");
 		if (!rc.isCoreReady()) return;
 
-		/*RobotType spawnType = RobotType.SOLDIER;
-		if (rc.getRoundNum() > 400) {
-			if (spawnCount % 4 == 0) {
-				spawnType = RobotType.TURRET;
-			}
-		}
+		RobotType spawnType = RobotType.SOLDIER;
 		if (spawnCount % 10 == 0) {
 			spawnType = RobotType.SCOUT;
-		}*/
-		
-		RobotType spawnType = RobotType.SOLDIER;
-		if (rc.getRoundNum() < 250) {
-			if (spawnCount % 8 == 0) {
-				spawnType = RobotType.SCOUT;
-			} else {
-				spawnType = RobotType.SOLDIER;			
-			}
-		} else {
-			if (lastUnpairedScoutCount < 2) {
-				switch (spawnCount % 4) {
-				case 0:
-					spawnType = RobotType.SOLDIER;
-					break;
-				case 2:
-					spawnType = RobotType.TURRET;
-					break;
-				default:
-					spawnType = RobotType.SCOUT;
-				}
-			} else if (lastUnpairedScoutCount < 5) {
-				switch (spawnCount % 3) {
-				case 0:
-					spawnType = RobotType.SOLDIER;
-					break;
-				case 1:
-					spawnType = RobotType.TURRET;
-					break;
-				default:
-					spawnType = RobotType.SCOUT;
-				}
-			} else {
-				switch (spawnCount % 2) {
-				case 0:
-					spawnType = RobotType.SOLDIER;
-					break;
-				case 1:
-					spawnType = RobotType.TURRET;
-					break;
-				default:
-					spawnType = RobotType.SCOUT;
-				}
-			}
-			if (spawnCount % 15 == 0) {
-				spawnType = RobotType.VIPER;
-			}
 		}
 		
-		if (!rc.hasBuildRequirements(spawnType)) return;
+		if (!rc.hasBuildRequirements(spawnType)) {
+			Debug.indicateAppend("turn", 1, "don't have build requirements");
+			return;
+		}
 
+		Debug.indicateAppend("turn", 1, "going to try to build");
 		Direction dir = Direction.values()[FastMath.rand256() % 8];
 		for (int i = 0; i < 8; ++i) {
 			if (rc.canBuild(dir, spawnType)) {
@@ -291,7 +234,9 @@ public class BotArchon extends Globals {
 					sendInfoToBabyScout();
 					lastUnpairedScoutCount += nArchons;
 				}
+				return;
 			}
+			dir = dir.rotateRight();
 		}
 	}
 	
