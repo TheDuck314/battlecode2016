@@ -83,7 +83,9 @@ public class Nav extends Globals {
 		
 		Direction bestDir = null;
 	    double bestRubble = Double.MAX_VALUE;
+	    int currentDistSq = here.distanceSquaredTo(dest);
 	    for (Direction dir : dirs) {
+	    	if (here.add(dir).distanceSquaredTo(dest) > currentDistSq) continue;
 	    	double rubble = rc.senseRubble(here.add(dir));
 	    	if (rc.canMove(dir) && rubble < GameConstants.RUBBLE_SLOW_THRESH) {
 	    		rc.move(dir);

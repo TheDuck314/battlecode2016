@@ -79,8 +79,8 @@ public class BotSoldier extends Globals {
 					break;
 					
 				case Messages.CHANNEL_DEN_ATTACK_COMMAND:
-					//attackTarget = Messages.parseDenAttackCommand(data);
-					//targetIsZombieDen = true;
+					attackTarget = Messages.parseDenAttackCommand(data);
+					targetIsZombieDen = true;
 					break;
 					
 				case Messages.CHANNEL_ARCHON_LOCATION:
@@ -129,6 +129,10 @@ public class BotSoldier extends Globals {
 		RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 		
 		if (rc.isCoreReady()) {
+			if (chargeEnemyTurret(visibleHostiles)) {
+				Debug.indicate("micro", 0, "charging enemy turret");
+				return true;
+			}
 			if (retreatIfOutnumbered(visibleHostiles)) {
 				Debug.indicate("micro", 0, "retreating because outnumbered");
 				return true;
@@ -216,6 +220,40 @@ public class BotSoldier extends Globals {
 				}
 			}
 		}
+	}
+	
+	private static boolean chargeEnemyTurret(RobotInfo[] visibleHostiles) throws GameActionException {
+		RobotInfo closestHostileThatAttacksUs = null;
+		int closestDistSq = Integer.MAX_VALUE;
+		int numHostilesThatAttackUs = 0;
+		for (RobotInfo hostile : visibleHostiles) {
+			if (hostile.type.canAttack()) {
+				int distSq = hostile.location.distanceSquaredTo(here);
+				if (distSq <= hostile.type.attackRadiusSquared) {
+					if (distSq < closestDistSq) {
+						closestDistSq = distSq;
+						closestHostileThatAttacksUs = hostile;
+					}
+					numHostilesThatAttackUs += 1;
+				}
+			}
+		}
+		if (closestHostileThatAttacksUs == null) return false;
+
+		if (closestHostileThatAttacksUs.type == RobotType.TURRET 
+				&& here.distanceSquaredTo(closestHostileThatAttacksUs.location) > myAttackRadiusSquared) {
+			int numNearbyAllies = 1;
+			RobotInfo[] nearbyAllies = rc.senseNearbyRobots(closestHostileThatAttacksUs.location, 24, us);
+			for (RobotInfo ally : nearbyAllies) {
+				if (ally.type.canAttack()) {
+					numNearbyAllies += 1;
+				}
+			}
+			if (numNearbyAllies >= 3) {
+				return Nav.tryMoveInDirection(here.directionTo(closestHostileThatAttacksUs.location));
+			}
+		}
+		return false;
 	}
 	
 	private static boolean retreatIfOutnumbered(RobotInfo[] visibleHostiles) throws GameActionException {

@@ -228,7 +228,7 @@ public class BotScout extends Globals {
 		//Messages.sendAttackTarget(visibleHostiles[0].location, 16*mySensorRadiusSquared);
 		
 		for (RobotInfo hostile : visibleHostiles) {
-			if (hostile.team != Team.ZOMBIE && hostile.type != RobotType.SCOUT) {
+			if (hostile.team != Team.ZOMBIE /*&& hostile.type != RobotType.SCOUT*/) {
 				Messages.sendAttackTarget(hostile.location, 16*mySensorRadiusSquared);
 				return;
 			}
@@ -468,7 +468,7 @@ public class BotScout extends Globals {
 //				scores[i] += 100;
 //			}
 //			scores[i] += nfriends[i] * 50;
-			scores[i] += 10 * friends[i] - scouts[i] * 50;
+			scores[i] += 2 * friends[i] - scouts[i] * 50;
 			scores[i] += archons[i] * 10;
 			int disEdge = 100;
 			disEdge = Math.min(disEdge, Math.abs(locs[i].x - MapEdges.minX));

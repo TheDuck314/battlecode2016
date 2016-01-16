@@ -16,7 +16,7 @@ public class BotArchon extends Globals {
 	
 	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
 	private static int lastGlobalZombieDenBroadcastRound = 0;
-	private static int GLOBAL_ZOMBIE_DEN_BROADCAST_INTERVAL = 40;
+	private static int GLOBAL_ZOMBIE_DEN_BROADCAST_INTERVAL = 100;
 	private static MapLocation lastDenTarget = null;
 	
 	private static MapLocation[] initialArchonLocations;
