@@ -22,6 +22,7 @@ public class BotTurret extends Globals {
 	}
 	
 	private static MapLocation attackTarget = null;
+	private static boolean targetIsZombieDen = false;
 	private static int attackTargetReceivedRound = -9999;	
 
 	private static int lastKnownArchonId = -1;
@@ -175,20 +176,24 @@ public class BotTurret extends Globals {
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
-				/*case Messages.CHANNEL_ATTACK_TARGET:
-					MapLocation suggestedTarget = Messages.parseAttackTarget(data);
-					if (attackTarget == null || here.distanceSquaredTo(suggestedTarget) < here.distanceSquaredTo(attackTarget)) {
-						attackTarget = suggestedTarget;
-						attackTargetReceivedRound = rc.getRoundNum();
+				case Messages.CHANNEL_ATTACK_TARGET:
+					if (attackTarget == null || !targetIsZombieDen) {
+						attackTarget = Messages.parseAttackTarget(data);
 					}
-					break;*/
+					break;
+					
+				case Messages.CHANNEL_DEN_ATTACK_COMMAND:
+					attackTarget = Messages.parseDenAttackCommand(data);
+					targetIsZombieDen = true;
+					break;
+
 				case Messages.CHANNEL_RADAR:
 					Messages.addRadarDataToEnemyCache(data, sig.getLocation(), myAttackRadiusSquared);
-					MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
-					if (attackTarget == null
-							|| here.distanceSquaredTo(closest) < here.distanceSquaredTo(attackTarget)) {
-						attackTarget = closest;
-					}
+					//MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
+					//if (attackTarget == null
+					//		|| here.distanceSquaredTo(closest) < here.distanceSquaredTo(attackTarget)) {
+					//	attackTarget = closest;
+					//}
 					break;
 					
 				case Messages.CHANNEL_ARCHON_LOCATION:
@@ -241,19 +246,22 @@ public class BotTurret extends Globals {
 				RobotInfo targetInfo = rc.senseRobotAtLocation(attackTarget);
 				if (targetInfo == null || targetInfo.team == us) {
 					attackTarget = null;
+					targetIsZombieDen = false;
+					Debug.indicate("target", 1, "clearing attackTarget");
+					return;
 				}
 			}
-		}
-		
-		if (attackTarget != null) {
+
+			Debug.indicateLine("target", here, attackTarget, 255, 0, 0);
+			Debug.indicate("target", 0, "attackTarget = " + attackTarget + ", targetIsZombieDen = " + targetIsZombieDen);
 			Nav.goToBug(attackTarget);
 			return;
 		}
-		
+
 		if (tryGoToCenterOfMass()) {
 			return;
 		}
-		
+
 		if (lastKnownArchonLocation != null) {
 			Nav.goToBug(lastKnownArchonLocation);
 		}

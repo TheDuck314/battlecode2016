@@ -95,6 +95,16 @@ public class BotSoldier extends Globals {
 					
 				default:
 				}
+			}else {
+				// simple signal with no message
+				// for now these are only sent by soldiers who have just killed
+				// a zombie den. Check to see if we know of a zombie den within
+				// the soldier attack radius of the message origin.
+				MapLocation signalOrigin = sig.getLocation();
+				if (attackTarget != null && signalOrigin.distanceSquaredTo(attackTarget) <= 24) {
+					attackTarget = null;
+					targetIsZombieDen = false;
+				}
 			}
 		}
 	}
