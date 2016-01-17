@@ -29,7 +29,7 @@ public class BotArchon extends Globals {
 	
 	public static void loop() throws GameActionException {
 		rc.setIndicatorString(0, "41bd9daf1997dbe55d320f76267c8be1064eab87");
-		Debug.init("spawn");
+		Debug.init("regions");
 		FastMath.initRand(rc);
 //		for (int i = 0; i < 1000000; ++i) {
 //			System.out.println(FastMath.rand256());
@@ -97,6 +97,13 @@ public class BotArchon extends Globals {
 		
 		processSignals();
 		
+		for (int i = 0; i < PartMemory.MEMORY_LENGTH; ++i) {
+			if (PartMemory.regions[i] != null) {
+				Debug.indicateLine("regions", here, PartMemory.regions[i].centralLocation, 0, 0, 255);
+				Debug.indicateDot("regions", PartMemory.regions[i].centralLocation, 0, 0, 255);
+			}
+		}
+		
 		if (rc.getRoundNum() >= 40) {
 			MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
 		}
@@ -135,9 +142,8 @@ public class BotArchon extends Globals {
 			}
 		}
 		
-		trySpawn();
-		
 		tryConvertNeutrals();
+		trySpawn();	
 		
 		if (rc.isCoreReady()) {
 			pickDestination();
@@ -365,6 +371,12 @@ public class BotArchon extends Globals {
 //					Debug.indicate("parts", 0, "parts at " + partsLoc.location);
 					considerDestination(partsLoc.location);
 					break;
+				case Messages.CHANNEL_PART_REGIONS:
+					PartRegion region = Messages.parsePartRegion(data);
+					Debug.indicate("regions", 0, "got region: parts=" + region.totalParts + ", loc=" + region.centralLocation + ", avgTurnsToUncover=" + region.avgTurnsToUncover);;
+					PartMemory.add(region);
+					break;
+					
 				case Messages.CHANNEL_FOUND_NEUTRAL:
 					MapLocation neutralLoc = Messages.parseNeutralLocation(data);
 					considerDestination(neutralLoc);
@@ -421,6 +433,7 @@ public class BotArchon extends Globals {
 //		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
 	
+	
 	private static void pickDestination() throws GameActionException {
 		if (currentDestination != null) {
 			if (here.equals(currentDestination)) {
@@ -436,9 +449,36 @@ public class BotArchon extends Globals {
 		}
 	
 		MapLocation[] partLocs = rc.sensePartLocations(mySensorRadiusSquared);
-		for (MapLocation partLoc : partLocs) {
-			if (!partLoc.equals(here)) {
-				considerDestination(partLoc);
+		double totalVisibleParts = 0;
+		if (partLocs.length > 0) {
+			MapLocation bestPartLoc = null;
+			double bestScore = Double.NEGATIVE_INFINITY;
+			for (MapLocation partLoc : partLocs) {
+				double numParts = rc.senseParts(partLoc);
+				totalVisibleParts += numParts;
+				double score = numParts
+						- 20 * FastMath.floorSqrt(here.distanceSquaredTo(partLoc))
+						- 10 * Util.estimateRubbleClearTurns(rc.senseRubble(partLoc));
+				if (rc.senseRobotAtLocation(partLoc) != null) {
+					score -= 100;
+				}
+				if (score > bestScore) {
+					bestScore = score;
+					bestPartLoc = partLoc;
+				}
+			}			
+			considerDestination(bestPartLoc);
+		}
+		
+		for (int i = 0; i < PartMemory.MEMORY_LENGTH; ++i) {
+			PartRegion region = PartMemory.regions[i];
+			if (region != null) {
+				if (totalVisibleParts < 100 && here.distanceSquaredTo(region.centralLocation) <= 13) {
+					PartMemory.remove(i);
+				} else {
+					Debug.indicate("regions", 1, "considering " + region.centralLocation);
+					considerDestination(region.centralLocation);
+				}
 			}
 		}
 			
@@ -448,6 +488,11 @@ public class BotArchon extends Globals {
 				considerDestination(neutral.location);
 			}
 		}	
+		
+		Debug.indicate("regions", 2, "destination = " + currentDestination);
+		if (currentDestination != null) {
+			Debug.indicateLine("regions", here, currentDestination, 255, 0, 0);
+		}
 	}
 	
 	private static void goToDestination() throws GameActionException {

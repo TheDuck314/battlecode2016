@@ -37,4 +37,10 @@ public class Util extends Globals {
 			return true;
 		}
 	}
+	
+	// fit by eye
+	public static int estimateRubbleClearTurns(double rubbleAmount) {
+		if (rubbleAmount < 50) return 0;
+		return (int)(19.0 * (Math.log(rubbleAmount + 150.0) - 5.3));
+	}
 }

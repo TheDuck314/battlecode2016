@@ -118,7 +118,6 @@ public class BotTurret extends Globals {
 				bestTarget = hostile.location;				
 			}
 		}
-		RobotType typeAttackedWithRadar = null;
 		for (int i = 0; i < Radar.numCachedEnemies; ++i) {
 			FastRobotInfo hostile = Radar.enemyCache[i];
 			if (here.distanceSquaredTo(hostile.location) <= mySensorRadiusSquared) continue;
@@ -140,7 +139,6 @@ public class BotTurret extends Globals {
 			if (score > maxScore) {
 				maxScore = score;
 				bestTarget = hostile.location;	
-				typeAttackedWithRadar = hostile.type;
 			}			
 		}
 		if (bestTarget == null) {

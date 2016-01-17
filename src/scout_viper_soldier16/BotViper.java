@@ -5,7 +5,7 @@ import battlecode.common.*;
 public class BotViper extends Globals {
 	public static void loop() {
 		FastMath.initRand(rc);
-		Debug.init("target");
+		//Debug.init("target");
 		while (true) {
 			try {
 				Globals.update();
@@ -181,6 +181,9 @@ public class BotViper extends Globals {
 	
 	// returns whether a is better to attack than b
 	private static boolean hostileIsBetterToAttack(RobotInfo a, RobotInfo b) {
+		if (a.type == RobotType.ARCHON && a.health < 500) {
+			return false;
+		}
 		if (b == null) {
 			return true;
 		}
@@ -202,6 +205,7 @@ public class BotViper extends Globals {
 		// a and b are infected for the same number of turns (likely zero)
 		return a.health < b.health;
 	}
+
 	
 	private static void chooseTargetAndAttack(RobotInfo[] targets) throws GameActionException {
 		RobotInfo bestTarget = null;

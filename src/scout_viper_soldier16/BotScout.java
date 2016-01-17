@@ -38,7 +38,7 @@ public class BotScout extends Globals {
 	private static int sameDirectionSteps = 0;
 	
 	public static void loop() {
-    	Debug.init("lure");
+    	Debug.init("regions");
     	origin = here;
     	exploredGrid[50][50] = true;   
     	birthRoundNum = rc.getRoundNum();
@@ -175,9 +175,38 @@ public class BotScout extends Globals {
 
 		MapLocation[] partLocs = rc.sensePartLocations(mySensorRadiusSquared);
 		if (partLocs.length > 0) {
-			MapLocation partLoc = partLocs[0];
-			Messages.sendPartsLocation(partLoc, (int)rc.senseParts(partLoc), rangeSq);
+			MapLocation sentPartLoc = partLocs[0];
+			Messages.sendPartsLocation(sentPartLoc, (int)rc.senseParts(sentPartLoc), rangeSq);
 			lastPartsOrNeutralSignalRound = rc.getRoundNum();			
+
+			double totalParts = 0;
+			double partsCenterX = 0;
+			double partsCenterY = 0;
+			double avgTurnsToUncover = 0;
+			for (MapLocation partLoc : partLocs) {
+				double parts = rc.senseParts(partLoc);
+				totalParts += parts;
+				partsCenterX += parts * partLoc.x;
+				partsCenterY += parts * partLoc.y;		
+				avgTurnsToUncover += parts * Util.estimateRubbleClearTurns(rc.senseRubble(partLoc));
+			}
+			partsCenterX /= totalParts;
+			partsCenterY /= totalParts;
+			MapLocation partsCenter = new MapLocation((int)partsCenterX, (int)partsCenterY);
+			avgTurnsToUncover /= totalParts;
+			
+			Debug.indicate("regions", 0, "totalParts = " + totalParts + ", partsCenter = " + partsCenter + ", avgTurnsToUncover = " + avgTurnsToUncover);
+			
+			if (totalParts >= 180) {
+				PartRegion region = new PartRegion((int)totalParts, (int)avgTurnsToUncover, partsCenter);			
+				if (PartMemory.add(region)) {
+					// TODO: REMEMBER ARCHON LOCATION AND REDUCE RANGE
+					Debug.indicate("regions", 1, "sending region!!");
+					Messages.sendPartRegion(partsCenter, (int)totalParts, (int)avgTurnsToUncover,
+							30*mySensorRadiusSquared);
+				}
+			}
+			
 			return;
 		}
 		
