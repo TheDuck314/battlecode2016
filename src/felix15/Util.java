@@ -16,7 +16,6 @@ public class Util extends Globals {
 		return ret;
 	}
 	
-	
 	public static RobotInfo[] truncateArray(RobotInfo[] arr, int maxLength) {
 		RobotInfo[] ret = new RobotInfo[maxLength];
 		for (int i = 0; i < maxLength; ++i) {
@@ -29,5 +28,19 @@ public class Util extends Globals {
 	public static int estimateRubbleClearTurns(double rubbleAmount) {
 		if (rubbleAmount < 50) return 0;
 		return (int)(19.0 * (Math.log(rubbleAmount + 150.0) - 5.3));
+	}
+
+	public static boolean isGoodDirection(Direction dir) {
+		if (dir == null) {
+			return false;
+		}
+		switch (dir) {
+		case NONE:
+			return false;
+		case OMNI:
+			return false;
+		default:
+			return true;
+		}
 	}
 }

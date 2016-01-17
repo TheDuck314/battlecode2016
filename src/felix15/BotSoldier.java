@@ -113,6 +113,25 @@ public class BotSoldier extends Globals {
 		RobotInfo[] visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		if (visibleHostiles.length == 0) return false;
 
+		if (rc.isCoreReady()) {
+			double leftHealth = rc.getHealth() - rc.getViperInfectedTurns() * 2.0;
+			for (RobotInfo h: visibleHostiles) {
+				if (h.type.canAttack() && h.location.distanceSquaredTo(here) <= h.type.attackRadiusSquared) {
+					leftHealth -= h.attackPower;
+				}
+			}
+			if (leftHealth <= 0) {
+				Debug.indicate("micro", 0, "Doomed by infection");
+				if (tryChargeToEnemy()) {
+					Debug.indicate("micro", 1, "Going for enemies");
+					return true;
+				}
+				if (tryGoAwayFromAlly()) {
+					Debug.indicate("micro", 1, "Cannot find enemy, keep distance from allies.");
+					return true;
+				}
+			}
+		}
 		
 		if (inHealingState) {
 			// if we are in the healing state, then if we are under attack we should retreat.
@@ -210,6 +229,33 @@ public class BotSoldier extends Globals {
 			}
 		}
 		
+		return false;
+	}
+	
+	
+	private static boolean tryChargeToEnemy() throws GameActionException {
+		RobotInfo[] enemies = rc.senseNearbyRobots(mySensorRadiusSquared, them);
+		MapLocation target = here;
+		for (RobotInfo enemy : enemies) {
+			target = target.add(here.directionTo(enemy.location));
+		}
+		Direction dir = here.directionTo(target);
+		if (Util.isGoodDirection(dir)) {
+			return Nav.tryMoveInDirection(dir);
+		}
+		return false;
+	}
+	
+	private static boolean tryGoAwayFromAlly() throws GameActionException {
+		RobotInfo[] allies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		MapLocation target = here;
+		for (RobotInfo ally : allies) {
+			target = target.add(here.directionTo(ally.location));
+		}
+		Direction dir = target.directionTo(here);
+		if (Util.isGoodDirection(dir)) {
+			return Nav.tryMoveInDirection(dir);
+		}
 		return false;
 	}
 	
