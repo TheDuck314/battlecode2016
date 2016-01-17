@@ -472,7 +472,7 @@ public class BotArchon extends Globals {
 		for (int i = 0; i < PartMemory.MEMORY_LENGTH; ++i) {
 			PartRegion region = PartMemory.regions[i];
 			if (region != null) {
-				if (totalVisibleParts < 100 && here.distanceSquaredTo(region.centralLocation) <= 13) {
+				if (here.distanceSquaredTo(region.centralLocation) <= 13) {
 					PartMemory.remove(i);
 				} else {
 					Debug.indicate("regions", 1, "considering " + region.centralLocation);
