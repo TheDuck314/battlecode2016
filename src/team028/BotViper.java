@@ -4,8 +4,8 @@ import battlecode.common.*;
 
 public class BotViper extends Globals {
 	public static void loop() {
-		Debug.init("micro");		
 		FastMath.initRand(rc);
+		Debug.init("target");
 		while (true) {
 			try {
 				Globals.update();
@@ -19,15 +19,23 @@ public class BotViper extends Globals {
 	}
 	
 	private static MapLocation attackTarget = null;
-	private static boolean targetIsZombieDen = false;
 	
+	private static Direction wanderDirection = null;
+
 	private static boolean inHealingState = false;
 
 	private static int lastKnownArchonId = -1;
 	private static MapLocation lastKnownArchonLocation = null;
 	private static int lastKnownArchonLocationRound = -999999;
 	
+	private static int numTurnsBlocked = 0;
+	
 	private static MapLocation closestEnemyTurretLocation = null;
+	
+	private static MapLocationHashSet destroyedZombieDens = new MapLocationHashSet();
+	private static boolean isAttackingZombieDen = false;
+	
+
 	
 	private static void turn() throws GameActionException {
 		processSignals();
@@ -37,28 +45,31 @@ public class BotViper extends Globals {
 		if (tryToMicro()) {
 			return;
 		}
-
 		
-		if (rc.isCoreReady()) {
-			if (attackTarget != null && !inHealingState) {
-				if (attackTarget != null) {
-					if (rc.canSenseLocation(attackTarget)) {
-						RobotInfo targetInfo = rc.senseRobotAtLocation(attackTarget);
-						if (targetInfo == null || targetInfo.team == us) {
-							attackTarget = null;
-							targetIsZombieDen = false;
-							Debug.indicate("target", 1, "clearing attackTarget");
-							return;
-						}
-					}
-				}
-				
-				Debug.indicateLine("target", here, attackTarget, 255, 0, 0);
-				Debug.indicate("target", 0, "attackTarget = " + attackTarget + ", targetIsZombieDen = " + targetIsZombieDen);
-				Nav.goToDirectNew(attackTarget);
-			} else {
-				tryToHealAtArchon();
+		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+		
+		FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
+		if (closestEnemyTurret != null) {
+			closestEnemyTurretLocation = closestEnemyTurret.location;
+		} else {
+			closestEnemyTurretLocation = null;
+		}
+		
+		if (inHealingState) {
+			if (tryToHealAtArchon()) {
+				return;
 			}
+		}
+		
+		if (attackTarget != null) Debug.indicateLine("target", here, attackTarget, 100, 0, 0);
+		lookForAttackTarget();
+	}
+	
+
+	private static void addAttackTarget(MapLocation targetNew, boolean isZombieDen) {
+		if (attackTarget == null 
+				|| here.distanceSquaredTo(targetNew) < here.distanceSquaredTo(attackTarget)) {
+			attackTarget = targetNew;
 		}
 	}
 
@@ -72,15 +83,9 @@ public class BotViper extends Globals {
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
-				case Messages.CHANNEL_ATTACK_TARGET:
-					if (attackTarget == null || !targetIsZombieDen) {
-						attackTarget = Messages.parseAttackTarget(data);
-					}
-					break;
-					
-				case Messages.CHANNEL_DEN_ATTACK_COMMAND:
-					attackTarget = Messages.parseDenAttackCommand(data);
-					targetIsZombieDen = true;
+				case Messages.CHANNEL_RADAR:
+					MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
+					addAttackTarget(closest, false);
 					break;
 					
 				case Messages.CHANNEL_ARCHON_LOCATION:
@@ -93,12 +98,15 @@ public class BotViper extends Globals {
 					}
 					break;
 					
+				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
+					Messages.processEnemyTurretWarning(data);
+					break;
+					
 				default:
 				}
 			}
 		}
 	}
-
 
 	private static boolean tryToMicro() throws GameActionException {		
 		RobotInfo[] visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
@@ -173,9 +181,6 @@ public class BotViper extends Globals {
 	
 	// returns whether a is better to attack than b
 	private static boolean hostileIsBetterToAttack(RobotInfo a, RobotInfo b) {
-		if (a.type == RobotType.ARCHON && a.health < 500) {
-			return false;
-		}
 		if (b == null) {
 			return true;
 		}
@@ -213,140 +218,6 @@ public class BotViper extends Globals {
 				}
 			}
 		}
-	}
-	
-	private static boolean chargeEnemyTurret(RobotInfo[] visibleHostiles) throws GameActionException {
-		RobotInfo closestHostileThatAttacksUs = null;
-		int closestDistSq = Integer.MAX_VALUE;
-		int numHostilesThatAttackUs = 0;
-		for (RobotInfo hostile : visibleHostiles) {
-			if (hostile.type.canAttack()) {
-				int distSq = hostile.location.distanceSquaredTo(here);
-				if (distSq <= hostile.type.attackRadiusSquared) {
-					if (distSq < closestDistSq) {
-						closestDistSq = distSq;
-						closestHostileThatAttacksUs = hostile;
-					}
-					numHostilesThatAttackUs += 1;
-				}
-			}
-		}
-		if (closestHostileThatAttacksUs == null) return false;
-
-		if (closestHostileThatAttacksUs.type == RobotType.TURRET 
-				&& here.distanceSquaredTo(closestHostileThatAttacksUs.location) > myAttackRadiusSquared) {
-			int numNearbyAllies = 1;
-			RobotInfo[] nearbyAllies = rc.senseNearbyRobots(closestHostileThatAttacksUs.location, 24, us);
-			for (RobotInfo ally : nearbyAllies) {
-				if (ally.type.canAttack()) {
-					numNearbyAllies += 1;
-				}
-			}
-			if (numNearbyAllies >= 3) {
-				return Nav.tryMoveInDirection(here.directionTo(closestHostileThatAttacksUs.location));
-			}
-		}
-		return false;
-	}
-	
-	private static boolean retreatIfOutnumbered(RobotInfo[] visibleHostiles) throws GameActionException {
-		RobotInfo closestHostileThatAttacksUs = null;
-		int closestDistSq = Integer.MAX_VALUE;
-		int numHostilesThatAttackUs = 0;
-		for (RobotInfo hostile : visibleHostiles) {
-			if (hostile.type.canAttack()) {
-				int distSq = hostile.location.distanceSquaredTo(here);
-				if (distSq <= hostile.type.attackRadiusSquared) {
-					if (distSq < closestDistSq) {
-						closestDistSq = distSq;
-						closestHostileThatAttacksUs = hostile;
-					}
-					numHostilesThatAttackUs += 1;
-				}
-			}
-		}
-		
-		if (numHostilesThatAttackUs == 0) {
-			return false;
-		}
-		
-		int numAlliesAttackingClosestHostile = 0;
-		if (here.distanceSquaredTo(closestHostileThatAttacksUs.location) <= myAttackRadiusSquared) {
-			numAlliesAttackingClosestHostile += 1;
-		}
-		RobotInfo[] nearbyAllies = rc.senseNearbyRobots(closestHostileThatAttacksUs.location, 13, us);
-		for (RobotInfo ally : nearbyAllies) {
-			if (ally.type.canAttack()) {
-				if (ally.location.distanceSquaredTo(closestHostileThatAttacksUs.location)
-						<= ally.type.attackRadiusSquared) {
-					numAlliesAttackingClosestHostile += 1;
-				}
-			}
-		}
-		
-		if (numAlliesAttackingClosestHostile > numHostilesThatAttackUs) {
-			return false;
-		} 
-		if (numAlliesAttackingClosestHostile == numHostilesThatAttackUs) {
-			if (numHostilesThatAttackUs == 1) {
-				if (rc.getHealth() >= closestHostileThatAttacksUs.health) {
-					return false;
-				}
-			} else {
-				return false;
-			}
-		}
-		
-		// we have to retreat
-		MapLocation retreatTarget = here;
-		for (RobotInfo hostile : visibleHostiles) {
-			if (!hostile.type.canAttack()) continue;			
-			retreatTarget = retreatTarget.add(hostile.location.directionTo(here));
-		}
-		if (!here.equals(retreatTarget)) {
-			Direction retreatDir = here.directionTo(retreatTarget);
-			return Nav.tryHardMoveInDirection(retreatDir);
-		}
-		return false;
-	}
-	
-	private static boolean tryMoveToEngageOutnumberedEnemy(RobotInfo[] visibleHostiles) throws GameActionException {
-		RobotInfo closestHostile = Util.closest(visibleHostiles);
-		if (closestHostile == null) return false;
-		
-		int numNearbyHostiles = 0;
-		for (RobotInfo hostile : visibleHostiles) {
-			if (hostile.type.canAttack()) {
-				if (hostile.location.distanceSquaredTo(closestHostile.location) <= 24) {
-					numNearbyHostiles += 1;
-				}
-			}
-		}
-		
-		int numNearbyAllies = 1;
-		RobotInfo[] nearbyAllies = rc.senseNearbyRobots(closestHostile.location, 24, us);
-		for (RobotInfo ally : nearbyAllies) {
-			if (ally.type.canAttack()) {
-				numNearbyAllies += 1;
-			}
-		}
-		
-		if (numNearbyAllies > numNearbyHostiles 
-				|| (numNearbyHostiles == 1 && rc.getHealth() > closestHostile.health)) {
-			return Nav.tryMoveInDirection(here.directionTo(closestHostile.location));
-		}
-		return false;
-	}
-	
-	private static boolean tryGetCloserToZombieDen(RobotInfo[] attackableHostiles) throws GameActionException {
-		RobotInfo closestHostile = Util.closest(attackableHostiles);
-		if (closestHostile.type == RobotType.ZOMBIEDEN) {
-			int distSq = here.distanceSquaredTo(closestHostile.location);
-			if (distSq > 8) {
-				return Nav.tryMoveInDirection(here.directionTo(closestHostile.location));
-			}
-		}
-		return false;
 	}
 
 	// prefer to retreat along orthogonal directions since these give smaller delays
@@ -647,10 +518,69 @@ public class BotViper extends Globals {
 	private static void lookForAttackTarget() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 		
+		if (attackTarget == null) {
+//			Debug.indicate("radar", 0, "lookForAttackTarget: attackTarget == null, numCachedEnemies = " + Radar.numCachedEnemies);
+			MapLocation closest = null;
+			int bestDistSq = Integer.MAX_VALUE;
+			for (int i = 0; i < Radar.numCachedEnemies; ++i) {
+				FastRobotInfo hostile = Radar.enemyCache[i];
+				int distSq = here.distanceSquaredTo(hostile.location);
+				if (distSq < bestDistSq) {
+					bestDistSq = distSq;
+					closest = hostile.location;
+					isAttackingZombieDen = hostile.type == RobotType.ZOMBIEDEN;
+				}
+			}
+			attackTarget = closest;
+//			Debug.indicate("radar", 1, "now attackTarget = " + attackTarget);
+		}
+
 		if (attackTarget != null) {
-			Nav.goToDirectNew(attackTarget);
+			if (rc.canSenseLocation(attackTarget)) {
+				RobotInfo targetInfo = rc.senseRobotAtLocation(attackTarget);
+				if (targetInfo == null || targetInfo.team == us) {
+					if (isAttackingZombieDen) {
+						destroyedZombieDens.add(attackTarget);
+					}
+					attackTarget = null;
+					isAttackingZombieDen = false;
+				} else if (targetInfo.type != RobotType.ZOMBIEDEN) {
+					isAttackingZombieDen = false;
+				}
+			}
+		}
+		
+		if (attackTarget != null) {
+			//if (Nav.goToDirect(attackTarget)) {
+			if (Nav.goToDirectSafelyAvoidingTurret(attackTarget, closestEnemyTurretLocation)) {
+				numTurnsBlocked = 0;
+//				Debug.indicate("block", 0, "not blocked!");
+			} else {
+				numTurnsBlocked += 1;
+//				Debug.indicate("block", 0, "blocked! numTurnsBlocked = " + numTurnsBlocked);
+				if (numTurnsBlocked >= 40) {
+//					Debug.indicate("block", 1, "waited too long. setting attackTarget = null");
+					attackTarget = null;
+					isAttackingZombieDen = false;
+					numTurnsBlocked = 0;
+				}
+			}
 			return;
+		}
+		
+		if (wanderDirection == null) {
+			wanderDirection = Direction.values()[FastMath.rand256() % 8];
+		}
+		
+		MapLocation fakeTarget = here.add(wanderDirection, 10);
+		
+//		Debug.indicateDot("micro", here, 0, 100, 0);
+		
+		if (Nav.goToDirectSafelyAvoidingTurret(fakeTarget, closestEnemyTurretLocation)) {
+//			Debug.indicate("micro", 0, "wandering");
+//			Debug.indicateLine("micro", here, fakeTarget, 100, 100, 0);
+		} else {
+			wanderDirection = Direction.values()[FastMath.rand256() % 8];
 		}
 	}
 }
-

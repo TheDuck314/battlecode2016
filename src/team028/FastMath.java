@@ -68,10 +68,15 @@ public class FastMath {
 		return d.dx * a.x + d.dy * a.y;
 	}
 	
+	public static int dotVec(Direction a, Direction b) {
+		return a.dx * b.dx + a.dy * b.dy;
+	}
+	
 	public static Direction dirFromVec(MapLocation a) {
 		MapLocation origin = new MapLocation(0,0);
 		return origin.directionTo(a);
 	}
+
 	
 	// Generate and test the lookup strings
 	/*public static void main(String[] args) {

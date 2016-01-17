@@ -26,7 +26,10 @@ public class BotScout extends Globals {
 	private static int lastTurretOwnershipBroadcastRound = -999999;
 	private static int[] turretOwnershipReceiveRoundById = new int[32001];
 	
-	private static boolean broadCastWithInterval = false;
+	private static int birthRoundNum = 0;
+	private static MapLocation[] trajectories = new MapLocation[3001]; // store the history of locations
+	
+	private static boolean broadCastedWithinInterval = false;
 	
 	private static MapLocation closestEnemyTurretLocation = null;
 	
@@ -38,6 +41,7 @@ public class BotScout extends Globals {
 //    	Debug.init("explore");
     	origin = here;
     	exploredGrid[50][50] = true;   
+    	birthRoundNum = rc.getRoundNum();
 //    	Debug.indicate("dens", 2, "dens received at birth: ");
 		while (true) {
 			try {
@@ -51,14 +55,32 @@ public class BotScout extends Globals {
 	}
 	
 	private static void turn() throws GameActionException {
-		Globals.visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
-		Globals.visibleAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		
+		Globals.updateRobotInfos();
+		
+		trajectories[rc.getRoundNum()] = here;
 		
 		processSignals();		
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
+
+		tryBroadcastUnpairedScoutSignal();
 		
 		sendRadarInfo();
+		sendTurretWarning();
+		updateClosestEnemyTurretLocation();
+
+		trySendPartsOrNeutralLocation();
+		trySendZombieDenLocations();
 		
+		if (tryFollowTurret()) {
+			return;
+		}
+		if (rc.isCoreReady()) {
+			exploreTheMap();
+		}
+	}
+	
+	private static void updateClosestEnemyTurretLocation() {
 		if (rc.isCoreReady()) {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
 			
@@ -69,11 +91,22 @@ public class BotScout extends Globals {
 				closestEnemyTurretLocation = null;
 			}
 		}
+	}
 
-		trySendPartsOrNeutralLocation();
-		trySendZombieDenLocations();
-
-		moveAround();
+	private static void tryBroadcastUnpairedScoutSignal() throws GameActionException {
+		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == 0) {
+			broadCastedWithinInterval = false;
+		} else if (!rc.canSenseRobot(turretFollowId)) {
+			if (!broadCastedWithinInterval && visibleHostiles.length == 0) {
+				Messages.sendUnpairedScoutReport(30 * mySensorRadiusSquared);
+				broadCastedWithinInterval = true;
+//				Debug.indicate("unpaired", 0, "sent unpaired message");
+			} else {
+//				Debug.indicate("unpaired", 0, "sent unpaired message = " + broadCastWithInterval);
+			}
+		} else {
+//			Debug.indicate("unpaired", 0, "I am paired!");
+		}
 	}
 	
 	private static boolean tryFollowTurret() throws GameActionException {
@@ -192,9 +225,8 @@ public class BotScout extends Globals {
 	private static void sendRadarInfo() throws GameActionException {
 //		Debug.indicate("radar", 0, "sendRaderInfo: hostiles.length = " + visibleHostiles.length);
 		if (visibleHostiles.length == 0) return;
-		if (rc.getRoundNum() - lastRadarBroadcastRound < 4) return;
 		
-		/*int radarRangeSq = 4*mySensorRadiusSquared;
+		int radarRangeSq = 4*mySensorRadiusSquared;
 		if (visibleAllies.length == 0) {
 			if (rc.getRoundNum()-lastRadarBroadcastRound < 10) {
 				return;
@@ -222,20 +254,11 @@ public class BotScout extends Globals {
 				}
 			}
 		}
-		Messages.sendRadarData(hostilesToSend, numberHostilesToSend, radarRangeSq);*/
+		Messages.sendRadarData(hostilesToSend, numberHostilesToSend, radarRangeSq);
 		lastRadarBroadcastRound = rc.getRoundNum();
-		
-		//Messages.sendAttackTarget(visibleHostiles[0].location, 16*mySensorRadiusSquared);
-		
-		for (RobotInfo hostile : visibleHostiles) {
-			if (hostile.team != Team.ZOMBIE /*&& hostile.type != RobotType.SCOUT*/) {
-				Messages.sendAttackTarget(hostile.location, 16*mySensorRadiusSquared);
-				return;
-			}
-		}
 	}
 	
-	private static void sendTurretWarning() throws GameActionException {		
+	private static void sendTurretWarning() throws GameActionException {
 		int turretWarningRangeSq = 9*mySensorRadiusSquared;
 		boolean first = true;
 		for (RobotInfo hostile : visibleHostiles) {
@@ -355,6 +378,55 @@ public class BotScout extends Globals {
 		}
 	}
 	
+	private static void exploreTheMap() throws GameActionException {
+		if (tryMicro()) {
+			return;
+		}
+		moveAround();
+	}
+	
+	private static boolean tryMicro() throws GameActionException {
+		if (tryLuringZombie()) return true;
+		return false;
+	}
+	
+	private static boolean tryLuringZombie() throws GameActionException {
+		if (visibleHostiles.length == 0) {
+			return false;
+		} else {
+			if (visibleAllies.length != 0) {
+				return false;
+			}
+			if (visibleZombies.length == 0) {
+				// Fighting enemy
+			} else if (visibleEnemies.length == 0){
+				// Fighting zombies
+				MapLocation target = theirInitialArchonLocations[0];
+				Direction targetDir = here.directionTo(target);
+				boolean tooFar = true; // zombie maybe far behind us.
+				double score = 0;
+				for (RobotInfo r : visibleZombies) {
+					score += r.attackPower;
+					if (FastMath.dotVec(targetDir, here.directionTo(r.location)) > 0
+							|| r.location.distanceSquaredTo(here) < r.type.attackRadiusSquared * 1.3) {
+						// zombie is not far behind
+						tooFar = false;
+					}
+				}
+				if (score >= 25 && !tooFar) {
+//					System.out.println("Fighting Zombies");
+					if (!tooFar) {
+						return Nav.goToDirectSafely(target);
+					} else {
+						// Wait for zombie, maybe need to broadcast a message.
+						return true;
+					}
+				}
+			}
+		}
+		return false;
+	}
+
 	private static int nFriend = 0;
 	
 	public static MapLocation dangerousLoc = null;
@@ -410,11 +482,8 @@ public class BotScout extends Globals {
 				int distSq = e.location.distanceSquaredTo(locs[i]);
 				if (distSq <= e.type.attackRadiusSquared) {
 					attacks[i] += e.attackPower;
-				} else {
-					//attacks[i] += e.attackPower / (5 * distSq / (e.type.attackRadiusSquared+1));
-					if (e.team == them) {
-						attacks[i] -= 3;
-					}
+				} else if (distSq <= e.type.attackRadiusSquared * 2){
+					attacks[i] += e.attackPower / (5 * distSq / (e.type.attackRadiusSquared+1));
 				}
 			}
 		}
@@ -433,7 +502,7 @@ public class BotScout extends Globals {
 //					archonVec = archonVec.add(here.directionTo(f.location));
 //				}
 				break;
-			case SOLDIER:
+			// case SOLDIER:
 			case TURRET:
 				for (int i = 0; i < 9; ++i) {
 					if (f.location.distanceSquaredTo(locs[i]) < 9) {
@@ -468,7 +537,7 @@ public class BotScout extends Globals {
 //				scores[i] += 100;
 //			}
 //			scores[i] += nfriends[i] * 50;
-			scores[i] += 2 * friends[i] - scouts[i] * 50;
+			scores[i] += friends[i] - scouts[i] * 50;
 			scores[i] += archons[i] * 10;
 			int disEdge = 100;
 			disEdge = Math.min(disEdge, Math.abs(locs[i].x - MapEdges.minX));
@@ -485,7 +554,7 @@ public class BotScout extends Globals {
 				scores[i] += isDiagonalScore;
 			}
 		}
-		if (sameDirectionSteps > 10 /*25*/) {
+		if (sameDirectionSteps > 25) {
 			sameDirectionSteps = 0;
 			lastDir = null;
 //			Debug.indicate("explore", 0, "Do not keep sameDirection");
@@ -533,7 +602,6 @@ public class BotScout extends Globals {
 		return;
 	}
 	
-	
 	private static MapLocation gridLocation(int gridX, int gridY) {
 		return new MapLocation(origin.x + gridSpacing*(gridX-50), origin.y + gridSpacing*(gridY-50));
 	}
@@ -557,19 +625,20 @@ public class BotScout extends Globals {
     }
     
     private static MapLocation moveOntoMap(MapLocation loc) {
+    	final int edgeDistance = 4;
     	int retX = loc.x;
     	int retY = loc.y;
     	if (MapEdges.minX != MapEdges.UNKNOWN && retX < MapEdges.minX) {
-    		retX = MapEdges.minX;
+    		retX = MapEdges.minX + edgeDistance;
     	}
     	if (MapEdges.maxX != MapEdges.UNKNOWN && retX > MapEdges.maxX) {
-    		retX = MapEdges.maxX;
+    		retX = MapEdges.maxX - edgeDistance;
     	}
     	if (MapEdges.minY != MapEdges.UNKNOWN && retY < MapEdges.minY) {
-    		retY = MapEdges.minY;
+    		retY = MapEdges.minY + edgeDistance;
     	}
     	if (MapEdges.maxY != MapEdges.UNKNOWN && retY > MapEdges.maxY) {
-    		retY = MapEdges.maxY;
+    		retY = MapEdges.maxY - edgeDistance;
     	}
     	return new MapLocation(retX, retY);
     }
@@ -636,9 +705,7 @@ public class BotScout extends Globals {
 		exploreDest = null;
 		finishedExploring = true;
 	}
-	
-	
-	
+
 	private static boolean[] checkWhichSquaresAreSafe() {
 		boolean[] isSquareSafe = new boolean[8];
 		

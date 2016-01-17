@@ -10,6 +10,7 @@ public class BotSoldier extends Globals {
 			try {
 				Globals.update();
 				turn();
+				setIndicator();
 
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -19,15 +20,23 @@ public class BotSoldier extends Globals {
 	}
 	
 	private static MapLocation attackTarget = null;
-	private static boolean targetIsZombieDen = false;
 	
+	private static Direction wanderDirection = null;
+
 	private static boolean inHealingState = false;
 
 	private static int lastKnownArchonId = -1;
 	private static MapLocation lastKnownArchonLocation = null;
 	private static int lastKnownArchonLocationRound = -999999;
 	
+	private static int numTurnsBlocked = 0;
+	
 	private static MapLocation closestEnemyTurretLocation = null;
+	
+	private static MapLocationHashSet destroyedZombieDens = new MapLocationHashSet();
+	private static boolean isAttackingZombieDen = false;
+	
+
 	
 	private static void turn() throws GameActionException {
 		processSignals();
@@ -37,27 +46,62 @@ public class BotSoldier extends Globals {
 		if (tryToMicro()) {
 			return;
 		}
-
 		
-		if (rc.isCoreReady()) {
-			if (attackTarget != null && !inHealingState) {
-				if (attackTarget != null) {
-					if (rc.canSenseLocation(attackTarget)) {
-						RobotInfo targetInfo = rc.senseRobotAtLocation(attackTarget);
-						if (targetInfo == null || targetInfo.team == us) {
-							attackTarget = null;
-							targetIsZombieDen = false;
-							Debug.indicate("target", 1, "clearing attackTarget");
-							return;
-						}
-					}
-				}
-				
-				Debug.indicateLine("target", here, attackTarget, 255, 0, 0);
-				Debug.indicate("target", 0, "attackTarget = " + attackTarget + ", targetIsZombieDen = " + targetIsZombieDen);
-				Nav.goToDirectNew(attackTarget);
-			} else {
-				tryToHealAtArchon();
+		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+		
+		FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
+		if (closestEnemyTurret != null) {
+			closestEnemyTurretLocation = closestEnemyTurret.location;
+		} else {
+			closestEnemyTurretLocation = null;
+		}
+		
+//		Debug.indicate("micro", 2, "inHealingState = " + inHealingState);
+		if (inHealingState) {
+			if (tryToHealAtArchon()) {
+				return;
+			}
+		}
+		
+		lookForAttackTarget();
+	}
+	
+	private static void setIndicator() {
+		if (myID % 2 != 0) {
+//			Debug.indicateDot("dens", here, 100, 0, 0);
+			if (attackTarget != null) {
+//				Debug.indicateLine("dens", here, attackTarget, 100, 0, 0);
+			}
+		} else {
+//			Debug.indicateDot("dens", here, 0, 100, 0);
+			if (attackTarget != null) {
+//				Debug.indicateLine("dens", here, attackTarget, 0, 100, 0);
+			}
+		}
+	}
+	
+	private static void addAttackTarget(MapLocation targetNew, boolean isZombieDen) {
+		if (isZombieDen && destroyedZombieDens.contains(targetNew)) {
+			return;
+		}
+		if (attackTarget == null) {
+			attackTarget = targetNew;
+			isAttackingZombieDen = isZombieDen;
+		}
+		if (myID % 2 == 0) {
+			if (here.distanceSquaredTo(targetNew) < here.distanceSquaredTo(attackTarget)) {
+				isAttackingZombieDen = isZombieDen;
+				attackTarget = targetNew;
+			}
+		} else {
+			if (!isAttackingZombieDen && isZombieDen) {
+				isAttackingZombieDen = true;
+				attackTarget = targetNew;
+			} else if (isAttackingZombieDen && !isZombieDen) {
+				return;
+			} else if (here.distanceSquaredTo(targetNew) < here.distanceSquaredTo(attackTarget)) {
+				isAttackingZombieDen = isZombieDen;
+				attackTarget = targetNew;
 			}
 		}
 	}
@@ -72,15 +116,32 @@ public class BotSoldier extends Globals {
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
-				case Messages.CHANNEL_ATTACK_TARGET:
-					if (attackTarget == null || !targetIsZombieDen) {
-						attackTarget = Messages.parseAttackTarget(data);
+				/*case Messages.CHANNEL_ATTACK_TARGET:
+					MapLocation suggestedTarget = Messages.parseAttackTarget(data);
+					if (attackTarget == null || here.distanceSquaredTo(suggestedTarget) < here.distanceSquaredTo(attackTarget)) {
+						attackTarget = suggestedTarget;
+						attackTargetReceivedRound = rc.getRoundNum();
 					}
+					break;*/
+				case Messages.CHANNEL_RADAR:
+					MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
+					addAttackTarget(closest, false);
 					break;
 					
 				case Messages.CHANNEL_DEN_ATTACK_COMMAND:
-					attackTarget = Messages.parseDenAttackCommand(data);
-					targetIsZombieDen = true;
+					MapLocation denTarget = Messages.parseDenAttackCommand(data);
+					addAttackTarget(denTarget, true);
+					break;
+					
+				case Messages.CHANNEL_ZOMBIE_DEN:
+					MapLocation denLoc = Messages.parseZombieDenLocation(data);
+					if (Messages.parseZombieDenWasDestroyed(data)) {
+						destroyedZombieDens.add(denLoc);
+						if (denLoc.equals(attackTarget) && isAttackingZombieDen) {
+							isAttackingZombieDen = false;
+							attackTarget = null;
+						}
+					}
 					break;
 					
 				case Messages.CHANNEL_ARCHON_LOCATION:
@@ -91,6 +152,10 @@ public class BotSoldier extends Globals {
 						lastKnownArchonLocation = archonLoc;
 						lastKnownArchonLocationRound = rc.getRoundNum();
 					}
+					break;
+					
+				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
+					Messages.processEnemyTurretWarning(data);
 					break;
 					
 				default:
@@ -129,10 +194,6 @@ public class BotSoldier extends Globals {
 		RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 		
 		if (rc.isCoreReady()) {
-			if (chargeEnemyTurret(visibleHostiles)) {
-				Debug.indicate("micro", 0, "charging enemy turret");
-				return true;
-			}
 			if (retreatIfOutnumbered(visibleHostiles)) {
 				Debug.indicate("micro", 0, "retreating because outnumbered");
 				return true;
@@ -213,6 +274,7 @@ public class BotSoldier extends Globals {
 			}
 		}
 		if (bestTarget != null) {
+//			Debug.indicate("micro", 0, "attacking " + bestTarget.type + " at " + bestTarget.location);
 			rc.attackLocation(bestTarget.location);
 			if (bestTarget.type == RobotType.ZOMBIEDEN) {
 				if (rc.senseRobotAtLocation(bestTarget.location) == null) {
@@ -220,40 +282,6 @@ public class BotSoldier extends Globals {
 				}
 			}
 		}
-	}
-	
-	private static boolean chargeEnemyTurret(RobotInfo[] visibleHostiles) throws GameActionException {
-		RobotInfo closestHostileThatAttacksUs = null;
-		int closestDistSq = Integer.MAX_VALUE;
-		int numHostilesThatAttackUs = 0;
-		for (RobotInfo hostile : visibleHostiles) {
-			if (hostile.type.canAttack()) {
-				int distSq = hostile.location.distanceSquaredTo(here);
-				if (distSq <= hostile.type.attackRadiusSquared) {
-					if (distSq < closestDistSq) {
-						closestDistSq = distSq;
-						closestHostileThatAttacksUs = hostile;
-					}
-					numHostilesThatAttackUs += 1;
-				}
-			}
-		}
-		if (closestHostileThatAttacksUs == null) return false;
-
-		if (closestHostileThatAttacksUs.type == RobotType.TURRET 
-				&& here.distanceSquaredTo(closestHostileThatAttacksUs.location) > myAttackRadiusSquared) {
-			int numNearbyAllies = 1;
-			RobotInfo[] nearbyAllies = rc.senseNearbyRobots(closestHostileThatAttacksUs.location, 24, us);
-			for (RobotInfo ally : nearbyAllies) {
-				if (ally.type.canAttack()) {
-					numNearbyAllies += 1;
-				}
-			}
-			if (numNearbyAllies >= 3) {
-				return Nav.tryMoveInDirection(here.directionTo(closestHostileThatAttacksUs.location));
-			}
-		}
-		return false;
 	}
 	
 	private static boolean retreatIfOutnumbered(RobotInfo[] visibleHostiles) throws GameActionException {
@@ -654,9 +682,69 @@ public class BotSoldier extends Globals {
 	private static void lookForAttackTarget() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 		
+		if (attackTarget == null) {
+//			Debug.indicate("radar", 0, "lookForAttackTarget: attackTarget == null, numCachedEnemies = " + Radar.numCachedEnemies);
+			MapLocation closest = null;
+			int bestDistSq = Integer.MAX_VALUE;
+			for (int i = 0; i < Radar.numCachedEnemies; ++i) {
+				FastRobotInfo hostile = Radar.enemyCache[i];
+				int distSq = here.distanceSquaredTo(hostile.location);
+				if (distSq < bestDistSq) {
+					bestDistSq = distSq;
+					closest = hostile.location;
+					isAttackingZombieDen = hostile.type == RobotType.ZOMBIEDEN;
+				}
+			}
+			attackTarget = closest;
+//			Debug.indicate("radar", 1, "now attackTarget = " + attackTarget);
+		}
+
 		if (attackTarget != null) {
-			Nav.goToDirectNew(attackTarget);
+			if (rc.canSenseLocation(attackTarget)) {
+				RobotInfo targetInfo = rc.senseRobotAtLocation(attackTarget);
+				if (targetInfo == null || targetInfo.team == us) {
+					if (isAttackingZombieDen) {
+						destroyedZombieDens.add(attackTarget);
+					}
+					attackTarget = null;
+					isAttackingZombieDen = false;
+				} else if (targetInfo.type != RobotType.ZOMBIEDEN) {
+					isAttackingZombieDen = false;
+				}
+			}
+		}
+		
+		if (attackTarget != null) {
+			//if (Nav.goToDirect(attackTarget)) {
+			if (Nav.goToDirectSafelyAvoidingTurret(attackTarget, closestEnemyTurretLocation)) {
+				numTurnsBlocked = 0;
+//				Debug.indicate("block", 0, "not blocked!");
+			} else {
+				numTurnsBlocked += 1;
+//				Debug.indicate("block", 0, "blocked! numTurnsBlocked = " + numTurnsBlocked);
+				if (numTurnsBlocked >= 40) {
+//					Debug.indicate("block", 1, "waited too long. setting attackTarget = null");
+					attackTarget = null;
+					isAttackingZombieDen = false;
+					numTurnsBlocked = 0;
+				}
+			}
 			return;
+		}
+		
+		if (wanderDirection == null) {
+			wanderDirection = Direction.values()[FastMath.rand256() % 8];
+		}
+		
+		MapLocation fakeTarget = here.add(wanderDirection, 10);
+		
+//		Debug.indicateDot("micro", here, 0, 100, 0);
+		
+		if (Nav.goToDirectSafelyAvoidingTurret(fakeTarget, closestEnemyTurretLocation)) {
+//			Debug.indicate("micro", 0, "wandering");
+//			Debug.indicateLine("micro", here, fakeTarget, 100, 100, 0);
+		} else {
+			wanderDirection = Direction.values()[FastMath.rand256() % 8];
 		}
 	}
 }
