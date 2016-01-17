@@ -20,6 +20,7 @@ public class Messages extends Globals {
 	public static final int CHANNEL_UNPAIRED_SCOUT_REPORT = 0x50000000;
 	public static final int CHANNEL_DEN_ATTACK_COMMAND = 0x60000000;
 	public static final int CHANNEL_ZOMBIE_DEN_LIST = 0x70000000;
+	public static final int CHANNEL_PART_REGIONS = 0x80000000;
 	
 	public static final int CHANNEL_ARCHON_LOCATION = 0xa0000000;
 	public static final int CHANNEL_RADAR = 0xb0000000;
@@ -34,12 +35,12 @@ public class Messages extends Globals {
 	public static final int ZOMBIE_DEN_DESTROYED_FLAG = 0x00000001;
 	
 	public static int intFromMapLocation(MapLocation loc) {
-		return ((loc.x + 16000) << 16) | (loc.y + 16000);
+		return (loc.x << 10) | (loc.y);
 	}
 	
 	public static MapLocation mapLocationFromInt(int data) {
-		int x = ((data & 0xffff0000) >>> 16) - 16000;
-		int y = (data & 0x0000ffff) - 16000;
+		int x = ((data & 0xffc00) >>> 10);
+		int y = (data & 0x003ff);
 		return new MapLocation(x, y);
 	}
 
@@ -316,4 +317,20 @@ public class Messages extends Globals {
 		rc.broadcastMessageSignal(CHANNEL_UNPAIRED_SCOUT_REPORT, 0, radiusSq);
 //		Debug.indicate("msg", msgDILN(), "sendUnpairedScoutReport " + radiusSq);
 	}	
+	
+	public static void sendPartRegion(MapLocation partsCenter, int totalParts, int avgTurnsToUncover,
+			int radiusSq) throws GameActionException {
+		int locInt = intFromMapLocation(partsCenter);
+		if (avgTurnsToUncover > 2047) avgTurnsToUncover = 2047;
+		int data1 = (avgTurnsToUncover << 20) | locInt;
+		int data0 = totalParts;
+		rc.broadcastMessageSignal(CHANNEL_PART_REGIONS | data0, data1, radiusSq);
+	}
+	
+	public static PartRegion parsePartRegion(int[] data) {
+		int totalParts = data[0] & CHANNEL_MASK_INVERSE;
+		int locInt = data[1] & 0x000fffff;
+		int avgTurnsToUncover = (data[1] & 0xfff00000) >>> 20;
+		return new PartRegion(totalParts, avgTurnsToUncover, mapLocationFromInt(locInt));
+	}
 }
