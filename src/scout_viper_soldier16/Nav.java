@@ -134,8 +134,9 @@ public class Nav extends Globals {
 	    double bestRubble = Double.MAX_VALUE;
 	    int currentDistSq = here.distanceSquaredTo(dest);
 	    for (Direction dir : dirs) {
-	    	if (here.add(dir).distanceSquaredTo(dest) > currentDistSq) continue;
-	    	double rubble = rc.senseRubble(here.add(dir));
+	    	MapLocation dirLoc = here.add(dir);
+	    	if (dirLoc.distanceSquaredTo(dest) > currentDistSq) continue;
+	    	double rubble = rc.senseRubble(dirLoc);
 	    	if (rc.canMove(dir) && rubble < GameConstants.RUBBLE_SLOW_THRESH) {
 	    		rc.move(dir);
 	    		return true;
@@ -317,8 +318,6 @@ public class Nav extends Globals {
 		if (here.equals(dest)) return false;
 
 		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
-
-		Debug.indicate("nav", 0, "hostiles.length = " + hostiles.length + "; turretLocation = " + turretLocation);
 		
         Direction forward = here.directionTo(dest);
 	    MapLocation forwardLoc = here.add(forward);
@@ -342,8 +341,6 @@ public class Nav extends Globals {
 		}
 		
 		
-		Debug.indicate("nav", 1, "thoughts: ");
-		
 		Direction bestDir = null;
 	    double bestRubble = Double.MAX_VALUE;
 	    int currentDistSq = here.distanceSquaredTo(dest);
@@ -351,24 +348,17 @@ public class Nav extends Globals {
 	    	MapLocation dirLoc = here.add(dir);
 	    	if (dirLoc.distanceSquaredTo(dest) >= currentDistSq) continue;
 			double rubble = rc.senseRubble(dirLoc);
-			Debug.indicateAppend("nav", 1, dir.toString() + " rubble=" + (int)rubble + ", ");
 			if (rc.canMove(dir) && rubble < GameConstants.RUBBLE_SLOW_THRESH) {
 	    		if (!enemyOrTurretAttacksLocation(dirLoc, hostiles, turretLocation)) {
-	    			Debug.indicateAppend("nav", 1, "moving!");
 	    			rc.move(dir);
 	    			return true;
 	    		} 
-	    		Debug.indicateAppend("nav", 1, "attacked; ");
 	    	} else if (rubble >= GameConstants.RUBBLE_SLOW_THRESH && rubble < bestRubble) {
-	    		Debug.indicateAppend("nav", 1, "has some rubble; ");
 	    		bestRubble = rubble;
 	    		bestDir = dir;
-	    	} else {
-	    		Debug.indicateAppend("nav", 1, "unacceptable; ");
 	    	}
 	    }
 	    
-		Debug.indicate("nav", 2, "bestDir = " + bestDir);
 	    if (bestDir != null) {
 	    	rc.clearRubble(bestDir);
 	    	return true;

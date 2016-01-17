@@ -716,7 +716,7 @@ public class BotSoldier extends Globals {
 		
 		if (attackTarget != null) {
 			//if (Nav.goToDirect(attackTarget)) {
-			if (Nav.goToDirectSafelyAvoidingTurretNew(attackTarget, closestEnemyTurretLocation)) {
+			if (Nav.goToDirectSafelyAvoidingTurret(attackTarget, closestEnemyTurretLocation)) {
 				numTurnsBlocked = 0;
 //				Debug.indicate("block", 0, "not blocked!");
 			} else {
@@ -740,7 +740,7 @@ public class BotSoldier extends Globals {
 		
 //		Debug.indicateDot("micro", here, 0, 100, 0);
 		
-		if (Nav.goToDirectSafelyAvoidingTurretNew(fakeTarget, closestEnemyTurretLocation)) {
+		if (Nav.goToDirectSafelyAvoidingTurret(fakeTarget, closestEnemyTurretLocation)) {
 //			Debug.indicate("micro", 0, "wandering");
 //			Debug.indicateLine("micro", here, fakeTarget, 100, 100, 0);
 		} else {
