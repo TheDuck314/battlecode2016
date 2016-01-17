@@ -2,7 +2,7 @@
 
 teams=""
 teams+="scout_viper_soldier16 "
-teams+="forcusd16 "
+teams+="focused16 "
 teams+="felix15 "
 teams+="scout_viper14 "
 teams+="postsprint_13 "
