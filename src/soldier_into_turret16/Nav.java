@@ -367,16 +367,14 @@ public class Nav extends Globals {
 	    return false;
 	}
 	
-	public static boolean scoutGoToDirectSafelyAvoidingTurret(MapLocation dest,
-			MapLocation turretLocation) throws GameActionException {
+	public static boolean scoutGoToDirectSafelyAvoidingZombies(MapLocation dest) throws GameActionException {
 		if (here.equals(dest)) return false;
 
-		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		RobotInfo[] hostiles = rc.senseNearbyRobots(here, mySensorRadiusSquared, Team.ZOMBIE);
 		
         Direction forward = here.directionTo(dest);
-	    MapLocation forwardLoc = here.add(forward);
 		if (here.isAdjacentTo(dest)) {
-			if (rc.canMove(forward) && !enemyOrTurretAttacksLocation(dest, hostiles, turretLocation)) {
+			if (rc.canMove(forward) && !enemyAttacksLocation(dest, hostiles)) {
 				rc.move(forward);
 				return true;
 			}
@@ -398,7 +396,7 @@ public class Nav extends Globals {
 	    	if (dirLoc.distanceSquaredTo(dest) >= currentDistSq) continue;
 			double rubble = rc.senseRubble(dirLoc);
 			if (rc.canMove(dir) && rubble < GameConstants.RUBBLE_SLOW_THRESH) {
-	    		if (!enemyOrTurretAttacksLocation(dirLoc, hostiles, turretLocation)) {
+	    		if (!enemyAttacksLocation(dirLoc, hostiles)) {
 	    			rc.move(dir);
 	    			return true;
 	    		} 
@@ -575,7 +573,8 @@ public class Nav extends Globals {
 	private static int closestDistWhileBugging = Integer.MAX_VALUE;	
 	private static int bugNumTurnsWithNoWall = 0;
 	private static boolean bugWallOnLeft = true; // whether the wall is on our left or our right
-		
+	private static boolean[][] bugVisitedLocations = new boolean[100][100];	
+	
 	public static void goToBug(MapLocation theDest) throws GameActionException {
 		if (!theDest.equals(bugDest)) {
 			bugDest = theDest;
@@ -616,6 +615,7 @@ public class Nav extends Globals {
 
 	static void bugStartTracing() {
 		bugTracing = true;
+		bugVisitedLocations = new boolean[100][100];
 		
 		closestDistWhileBugging = here.distanceSquaredTo(bugDest);
 		bugNumTurnsWithNoWall = 0;
@@ -650,6 +650,7 @@ public class Nav extends Globals {
 	
 	static void bugTraceMove(boolean recursed) throws GameActionException {
 		Direction tryDir = here.directionTo(bugLastWall);
+		bugVisitedLocations[here.x % 100][here.y % 100] = true;
 		if (rc.canMove(tryDir)) {
 			bugNumTurnsWithNoWall += 1;
 		} else {
@@ -670,6 +671,10 @@ public class Nav extends Globals {
 			}
 			if (rc.canMove(tryDir)) {
 				rc.move(tryDir);
+				here = rc.getLocation(); // we just moved
+				if (bugVisitedLocations[here.x % 100][here.y % 100]) {
+					bugTracing = false;
+				}
 				return;
 			} else {
 				bugLastWall = here.add(tryDir);
