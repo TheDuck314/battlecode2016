@@ -29,18 +29,12 @@ public class BotArchon extends Globals {
 	
 	public static void loop() throws GameActionException {
 		rc.setIndicatorString(0, "41bd9daf1997dbe55d320f76267c8be1064eab87");
-		Debug.init("regions");
+		Debug.init("retreat");
 		FastMath.initRand(rc);
-//		for (int i = 0; i < 1000000; ++i) {
-//			System.out.println(FastMath.rand256());
-//		}
-		
-//		initArchons();
 		
 		nArchons = rc.getRobotCount();
 		lastGlobalZombieDenBroadcastRound = (int)(FastMath.rand256() * GLOBAL_ZOMBIE_DEN_BROADCAST_INTERVAL / 256.0);
 		startingLocation = here;
-//		Debug.indicate("unpaired", 2, "nArchons = " + nArchons);
 		Clock.yield();
 
 		while (true) {
@@ -88,44 +82,32 @@ public class BotArchon extends Globals {
 	}
 	
 	private static void turn() throws GameActionException {
-		/*if (rc.getRoundNum() <= 100 && rallyPoint != null && here.distanceSquaredTo(rallyPoint) > 2) {
-			if (rc.isCoreReady()) {
-			    Nav.goToDirectSafely(rallyPoint);
-			}
-			return;
-		}*/
-		
 		processSignals();
 		
-		for (int i = 0; i < PartMemory.MEMORY_LENGTH; ++i) {
+		/*for (int i = 0; i < PartMemory.MEMORY_LENGTH; ++i) {
 			if (PartMemory.regions[i] != null) {
 				Debug.indicateLine("regions", here, PartMemory.regions[i].centralLocation, 0, 0, 255);
 				Debug.indicateDot("regions", PartMemory.regions[i].centralLocation, 0, 0, 255);
 			}
-		}
+		}*/
 		
 		if (rc.getRoundNum() >= 40) {
 			MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
 		}
-		
+
 		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == Globals.checkUnpairedScoutInterval - 1) {
 			lastUnpairedScoutCount = nextUnpairedScoutCount;
 			nextUnpairedScoutCount = 0;
 		}
-		
-//		Debug.indicate("unpaired", 0, "lastUnpairedScoutCount = " + lastUnpairedScoutCount);
-//		Debug.indicate("unpaired", 1, "nextUnpairedScoutCount = " + nextUnpairedScoutCount);
-		
-		//trySendAttackTarget();
-		sendRadarInfo();
-		
-		trySendArchonLocationMessage();
 
-		if (rc.getRoundNum() >= 40) {
-			trySendGlobalZombieDenBroadcast();
-		}
+		visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		visibleAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
 
 		tryRepairAlly();
+		tryConvertNeutrals();		
+		
+		
+		sendRadarInfo();		
 
 		if (rc.isCoreReady()) {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
@@ -137,12 +119,21 @@ public class BotArchon extends Globals {
 				closestEnemyTurretLocation = null;
 			}
 			
+			if (fleeOverwhelmingEnemies()) {
+				return;
+			}
+			
 			if (retreatIfNecessary()) {
 				return;
 			}
 		}
 		
-		tryConvertNeutrals();
+		trySendArchonLocationMessage();
+
+		if (rc.getRoundNum() >= 40) {
+			trySendGlobalZombieDenBroadcast();
+		}
+		
 		trySpawn();	
 		
 		if (rc.isCoreReady()) {
@@ -173,7 +164,7 @@ public class BotArchon extends Globals {
 		}
 		
 		// don't send global broadcasts when in danger
-		if (rc.senseHostileRobots(here, myAttackRadiusSquared).length > 0) {
+		if (visibleHostiles.length > 0) {
 			return;
 		}
 		
@@ -187,15 +178,14 @@ public class BotArchon extends Globals {
 	}
 	
 	private static void sendRadarInfo() throws GameActionException {
-		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 //		Debug.indicate("radar", 0, "sendRaderInfo: hostiles.length = " + hostiles.length);
-		if (hostiles.length == 0) return;
+		if (visibleHostiles.length == 0) return;
 		
 		int rangeSq = 4*mySensorRadiusSquared;
 		
 		RobotInfo[] hostilesToSend = new RobotInfo[5];
 		int numberHostilesToSend = 0;
-		for (RobotInfo h: hostiles) {
+		for (RobotInfo h: visibleHostiles) {
 			if (Radar.addEnemyToCache(h)) {
 				hostilesToSend[numberHostilesToSend] = h;
 				numberHostilesToSend += 1;
@@ -208,7 +198,7 @@ public class BotArchon extends Globals {
 			Messages.sendRadarData(hostilesToSend, numberHostilesToSend, rangeSq);
 		}
 		
-		for (RobotInfo hostile : hostiles) {
+		for (RobotInfo hostile : visibleHostiles) {
 			if (hostile.type == RobotType.TURRET) {
 				if (!Radar.turretIsKnown(hostile.ID, hostile.location)) {
 					Radar.addEnemyTurret(hostile.ID, hostile.location);
@@ -522,10 +512,9 @@ public class BotArchon extends Globals {
 	}
 	
 	private static boolean retreatIfNecessary() throws GameActionException {
-		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		boolean mustRetreat = false;
 		MapLocation retreatTarget = here;
-		for (RobotInfo hostile : hostiles) {
+		for (RobotInfo hostile : visibleHostiles) {
 			RobotType hostileType = hostile.type;
 			if (!hostileType.canAttack()) continue;			
 			mustRetreat = true;
@@ -544,5 +533,110 @@ public class BotArchon extends Globals {
 			}
 		}
 		return false;
+	}
+	
+	private static boolean fleeOverwhelmingEnemies() throws GameActionException {
+		int numDangerousHostiles = 0;
+		int hostileCenterX = 0;
+		int hostileCenterY = 0;
+		int minHostileDistSq = 999999;
+		boolean fastZombieIsAdjacent = false;
+		for (RobotInfo hostile : visibleHostiles) {
+			if (hostile.type.canAttack()) {
+				numDangerousHostiles += 1;
+				hostileCenterX += hostile.location.x;
+				hostileCenterY += hostile.location.y;
+				int distSq = here.distanceSquaredTo(hostile.location);
+				if (distSq < minHostileDistSq) {
+					minHostileDistSq = distSq;
+				}
+				if (hostile.type == RobotType.FASTZOMBIE && distSq <= 2) {
+					fastZombieIsAdjacent = true;
+				}
+			}
+		}
+		if (numDangerousHostiles == 0) {
+			return false;
+		}
+		hostileCenterX /= numDangerousHostiles;
+		hostileCenterY /= numDangerousHostiles;
+		MapLocation hostileCenter = new MapLocation(hostileCenterX, hostileCenterY);
+
+		int numHelpfulAllies = 0;
+		int minAllyDistSq = 999999;
+		for (RobotInfo ally : visibleAllies) {
+			if (ally.type.canAttack()) {
+				numHelpfulAllies += 1;
+				int distSq = here.distanceSquaredTo(ally.location);
+				if (distSq < minAllyDistSq) {
+					minAllyDistSq = distSq;
+				}
+			}
+		}
+		
+		Debug.indicate("retreat", 0, "numDangerousHostiles = " + numDangerousHostiles + ", numHelpfulAllies = " + numHelpfulAllies);
+		Debug.indicateAppend("retreat", 0, "; minY = " + MapEdges.minY + ", maxY = " + MapEdges.maxY);
+		
+		if (numHelpfulAllies >= numDangerousHostiles && !fastZombieIsAdjacent) {
+			return false; // we are hopefully safe
+		}			
+		
+		Debug.indicate("retreat", 1, "must flee overwhelming enemies!!!!! ");
+		
+		MapLocation closestCorner = MapEdges.getClosestKnownMapCorner();
+		Debug.indicateAppend("retreat", 1, "; closestCorner = " + closestCorner);
+		boolean[] directionIsDiscouraged = new boolean[8];
+		if ((closestCorner != null) && (here.distanceSquaredTo(closestCorner) <= 100)) {
+			// if near a corner, forbid retreating in directions toward that corner
+			int toCornerOrdinal = here.directionTo(closestCorner).ordinal();
+			Debug.indicateAppend("retreat", 1, "; toCorner = " + here.directionTo(closestCorner)); 
+			directionIsDiscouraged[toCornerOrdinal] = true;
+			directionIsDiscouraged[(toCornerOrdinal+1)%8] = true;
+			directionIsDiscouraged[(toCornerOrdinal+7)%8] = true;
+		}
+		
+		
+		Direction bestRetreatDir = null;
+		int bestDistSq = Integer.MIN_VALUE;
+		Direction[] allDirs = Direction.values();
+		for (int i = 0; i < 8; ++i) {
+			Direction dir = allDirs[i];				
+			if (!rc.canMove(dir)) continue;			
+			int distSq = here.add(dir).distanceSquaredTo(hostileCenter);
+			if (directionIsDiscouraged[i]) distSq -= 10000; // punish discouraged directions
+			if (distSq > bestDistSq) {
+				bestDistSq = distSq;
+				bestRetreatDir = dir;
+			}
+		}
+		Debug.indicateAppend("retreat", 1, "; bestRetreatDir = " + bestRetreatDir); 
+		
+		if (bestRetreatDir == null) {
+			return false;
+		}
+		
+		// consider building a guard to protect us
+		if (rc.getTeamParts() >= RobotType.GUARD.partCost) {
+			if (numHelpfulAllies == 0 || minHostileDistSq < minAllyDistSq || fastZombieIsAdjacent) {
+				// try to build a guard to defend us.
+				// but we are not allow to build a guard that blocks the
+				// best retreat direction		
+				Direction oppositeDir = bestRetreatDir.opposite();			
+				Direction[] buildDirs = { oppositeDir, oppositeDir.rotateLeft(), oppositeDir.rotateRight(),
+						oppositeDir.rotateLeft().rotateLeft(), oppositeDir.rotateRight().rotateRight(), 
+						bestRetreatDir.rotateRight(), bestRetreatDir.rotateLeft() };
+				for (Direction buildDir : buildDirs) {
+					if (rc.canBuild(buildDir, RobotType.GUARD)) {
+						rc.build(buildDir, RobotType.GUARD);
+						Debug.indicate("retreat", 2, "building guard!"); 
+						return true;
+					}
+				}
+			}
+		}
+
+		rc.move(bestRetreatDir);
+		Debug.indicate("retreat", 2, "moving!"); 
+		return true;
 	}
 }

@@ -3,7 +3,7 @@ package team028;
 import battlecode.common.*;
 
 public class MapEdges extends Globals {
-	public static int UNKNOWN = -999999999;
+	public static int UNKNOWN = -9999;
 	
 	public static int minX = UNKNOWN;
 	public static int maxX = UNKNOWN;
@@ -103,5 +103,28 @@ public class MapEdges extends Globals {
 
 	public static boolean isMapEdgeKnown() {
 		return minX != UNKNOWN && maxX != UNKNOWN && minY != UNKNOWN && maxY != UNKNOWN;
+	}
+	
+	
+	public static MapLocation getClosestKnownMapCorner() {
+	    // if one of the coordinates is unknown then the corresponding
+		// "corner" will be very far away
+		MapLocation[] corners = {
+	    		new MapLocation(minX, minY),
+	    		new MapLocation(minX, maxY),
+	    		new MapLocation(maxX, minY),
+	    		new MapLocation(maxX, maxY)
+	    };
+	    
+	    MapLocation closestCorner = null;	    
+	    int smallestDistSq = 20000;
+	    for (MapLocation corner : corners) {
+	    	int distSq = here.distanceSquaredTo(corner);
+	    	if (distSq < smallestDistSq) {
+	    		smallestDistSq = distSq;
+	    		closestCorner = corner;
+	    	}
+	    }
+	    return closestCorner;
 	}
 }
