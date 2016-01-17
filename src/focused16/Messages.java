@@ -13,13 +13,15 @@ public class Messages extends Globals {
 	
 	public static final int CHANNEL_MASK = 0xf0000000;
 	public static final int CHANNEL_MASK_INVERSE = ~CHANNEL_MASK;
-	public static final int CHANNEL_TURRET_TARGET = 0x10000000;
+
+	
 	public static final int CHANNEL_ZOMBIE_DEN = 0x20000000;
 	public static final int CHANNEL_FOUND_PARTS = 0x30000000;
 	public static final int CHANNEL_ENEMY_TURRET_WARNING = 0x40000000;
 	public static final int CHANNEL_UNPAIRED_SCOUT_REPORT = 0x50000000;
 	public static final int CHANNEL_DEN_ATTACK_COMMAND = 0x60000000;
 	public static final int CHANNEL_ZOMBIE_DEN_LIST = 0x70000000;
+	public static final int CHANNEL_ATTACK_TARGET = 0x80000000;
 	
 	public static final int CHANNEL_ARCHON_LOCATION = 0xa0000000;
 	public static final int CHANNEL_RADAR = 0xb0000000;
@@ -59,15 +61,14 @@ public class Messages extends Globals {
 		return data[1];
 	}
 	
-	public static void sendTurretTarget(MapLocation loc, int radiusSq) throws GameActionException {
-		sendMapLocation(CHANNEL_TURRET_TARGET, loc, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendTurretTarget " + radiusSq);
+	public static void sendAttackTarget(MapLocation loc, int radiusSq) throws GameActionException {
+		sendMapLocation(CHANNEL_ATTACK_TARGET, loc, radiusSq);
 	}
 	
-	public static MapLocation parseTurretTarget(int[] data) {
+	public static MapLocation parseAttackTarget(int[] data) {
 		return parseMapLocation(data);
 	}
-
+	
 	public static void sendZombieDenLocation(MapLocation loc, int radiusSq) throws GameActionException {
 		rc.broadcastMessageSignal(CHANNEL_ZOMBIE_DEN, intFromMapLocation(loc), radiusSq);
 //		Debug.indicate("msg", msgDILN(), "sendZombieDenLocation " + radiusSq);

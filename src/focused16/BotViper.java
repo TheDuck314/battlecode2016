@@ -18,7 +18,6 @@ public class BotViper extends Globals {
 		}
 	}
 	
-	private static MapLocation attackTarget = null;
 	
 	private static Direction wanderDirection = null;
 
@@ -31,10 +30,10 @@ public class BotViper extends Globals {
 	private static int numTurnsBlocked = 0;
 	
 	private static MapLocation closestEnemyTurretLocation = null;
-	
+
+	private static MapLocation attackTarget = null;
 	private static MapLocationHashSet destroyedZombieDens = new MapLocationHashSet();
 	private static boolean isAttackingZombieDen = false;
-	
 
 	
 	private static void turn() throws GameActionException {
@@ -67,8 +66,19 @@ public class BotViper extends Globals {
 	
 
 	private static void addAttackTarget(MapLocation targetNew, boolean isZombieDen) {
-		if (attackTarget == null 
-				|| here.distanceSquaredTo(targetNew) < here.distanceSquaredTo(attackTarget)) {
+		if (isZombieDen && destroyedZombieDens.contains(targetNew)) {
+			return;
+		}
+		if (attackTarget == null) {
+			attackTarget = targetNew;
+			isAttackingZombieDen = isZombieDen;
+		} else if (!isAttackingZombieDen && isZombieDen) {
+			isAttackingZombieDen = true;
+			attackTarget = targetNew;
+		} else if (isAttackingZombieDen && !isZombieDen) {
+			return;
+		} else {
+			isAttackingZombieDen = isZombieDen;
 			attackTarget = targetNew;
 		}
 	}
@@ -83,9 +93,25 @@ public class BotViper extends Globals {
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
-				case Messages.CHANNEL_RADAR:
-					//MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
-					//addAttackTarget(closest, false);
+				case Messages.CHANNEL_ATTACK_TARGET:
+					MapLocation suggestedTarget = Messages.parseAttackTarget(data);
+					addAttackTarget(suggestedTarget, false);
+					break;
+					
+				case Messages.CHANNEL_DEN_ATTACK_COMMAND:
+					MapLocation denTarget = Messages.parseDenAttackCommand(data);
+					addAttackTarget(denTarget, true);
+					break;
+					
+				case Messages.CHANNEL_ZOMBIE_DEN:
+					MapLocation denLoc = Messages.parseZombieDenLocation(data);
+					if (Messages.parseZombieDenWasDestroyed(data)) {
+						destroyedZombieDens.add(denLoc);
+						if (denLoc.equals(attackTarget) && isAttackingZombieDen) {
+							isAttackingZombieDen = false;
+							attackTarget = null;
+						}
+					}
 					break;
 					
 				case Messages.CHANNEL_ARCHON_LOCATION:
@@ -514,27 +540,10 @@ public class BotViper extends Globals {
 		return true;
 	}
 	
-	
+
 	private static void lookForAttackTarget() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 		
-		if (attackTarget == null) {
-//			Debug.indicate("radar", 0, "lookForAttackTarget: attackTarget == null, numCachedEnemies = " + Radar.numCachedEnemies);
-			MapLocation closest = null;
-			int bestDistSq = Integer.MAX_VALUE;
-			for (int i = 0; i < Radar.numCachedEnemies; ++i) {
-				FastRobotInfo hostile = Radar.enemyCache[i];
-				int distSq = here.distanceSquaredTo(hostile.location);
-				if (distSq < bestDistSq) {
-					bestDistSq = distSq;
-					closest = hostile.location;
-					isAttackingZombieDen = hostile.type == RobotType.ZOMBIEDEN;
-				}
-			}
-			attackTarget = closest;
-//			Debug.indicate("radar", 1, "now attackTarget = " + attackTarget);
-		}
-
 		if (attackTarget != null) {
 			if (rc.canSenseLocation(attackTarget)) {
 				RobotInfo targetInfo = rc.senseRobotAtLocation(attackTarget);
@@ -551,15 +560,11 @@ public class BotViper extends Globals {
 		}
 		
 		if (attackTarget != null) {
-			//if (Nav.goToDirect(attackTarget)) {
 			if (Nav.goToDirectSafelyAvoidingTurret(attackTarget, closestEnemyTurretLocation)) {
 				numTurnsBlocked = 0;
-//				Debug.indicate("block", 0, "not blocked!");
 			} else {
 				numTurnsBlocked += 1;
-//				Debug.indicate("block", 0, "blocked! numTurnsBlocked = " + numTurnsBlocked);
 				if (numTurnsBlocked >= 40) {
-//					Debug.indicate("block", 1, "waited too long. setting attackTarget = null");
 					attackTarget = null;
 					isAttackingZombieDen = false;
 					numTurnsBlocked = 0;
@@ -568,19 +573,7 @@ public class BotViper extends Globals {
 			return;
 		}
 		
-		if (wanderDirection == null) {
-			wanderDirection = Direction.values()[FastMath.rand256() % 8];
-		}
-		
-		MapLocation fakeTarget = here.add(wanderDirection, 10);
-		
-//		Debug.indicateDot("micro", here, 0, 100, 0);
-		
-		if (Nav.goToDirectSafelyAvoidingTurret(fakeTarget, closestEnemyTurretLocation)) {
-//			Debug.indicate("micro", 0, "wandering");
-//			Debug.indicateLine("micro", here, fakeTarget, 100, 100, 0);
-		} else {
-			wanderDirection = Direction.values()[FastMath.rand256() % 8];
-		}
+		// no attack target
+		tryToHealAtArchon();
 	}
 }

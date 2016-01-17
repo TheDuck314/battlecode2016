@@ -256,6 +256,13 @@ public class BotScout extends Globals {
 		}
 		Messages.sendRadarData(hostilesToSend, numberHostilesToSend, radarRangeSq);
 		lastRadarBroadcastRound = rc.getRoundNum();
+		
+		for (RobotInfo hostile : visibleHostiles) {
+			if (hostile.team != Team.ZOMBIE && hostile.type != RobotType.SCOUT) {
+				Messages.sendAttackTarget(hostile.location, 16*mySensorRadiusSquared);
+				return;
+			}
+		}
 	}
 	
 	private static void sendTurretWarning() throws GameActionException {

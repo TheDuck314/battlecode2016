@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("micro");		
+		Debug.init("nav");		
 		FastMath.initRand(rc);
 		while (true) {
 			try {
@@ -54,6 +54,8 @@ public class BotSoldier extends Globals {
 			closestEnemyTurretLocation = null;
 		}
 		
+		Debug.indicate("target", 0, "attackTarget = " + attackTarget + ", isAttackingZombieDen = " + isAttackingZombieDen);
+		
 		if (inHealingState) {
 			if (tryToHealAtArchon()) {
 				return;
@@ -84,22 +86,14 @@ public class BotSoldier extends Globals {
 		if (attackTarget == null) {
 			attackTarget = targetNew;
 			isAttackingZombieDen = isZombieDen;
-		}
-		if (myID % 2 == 0) {
-			if (here.distanceSquaredTo(targetNew) < here.distanceSquaredTo(attackTarget)) {
-				isAttackingZombieDen = isZombieDen;
-				attackTarget = targetNew;
-			}
+		} else if (!isAttackingZombieDen && isZombieDen) {
+			isAttackingZombieDen = true;
+			attackTarget = targetNew;
+		} else if (isAttackingZombieDen && !isZombieDen) {
+			return;
 		} else {
-			if (!isAttackingZombieDen && isZombieDen) {
-				isAttackingZombieDen = true;
-				attackTarget = targetNew;
-			} else if (isAttackingZombieDen && !isZombieDen) {
-				return;
-			} else if (here.distanceSquaredTo(targetNew) < here.distanceSquaredTo(attackTarget)) {
-				isAttackingZombieDen = isZombieDen;
-				attackTarget = targetNew;
-			}
+			isAttackingZombieDen = isZombieDen;
+			attackTarget = targetNew;
 		}
 	}
 
@@ -113,17 +107,16 @@ public class BotSoldier extends Globals {
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
-				/*case Messages.CHANNEL_ATTACK_TARGET:
+				case Messages.CHANNEL_ATTACK_TARGET:
 					MapLocation suggestedTarget = Messages.parseAttackTarget(data);
-					if (attackTarget == null || here.distanceSquaredTo(suggestedTarget) < here.distanceSquaredTo(attackTarget)) {
-						attackTarget = suggestedTarget;
-						attackTargetReceivedRound = rc.getRoundNum();
-					}
-					break;*/
-				case Messages.CHANNEL_RADAR:
+					Debug.indicate("target", 0, "received suggestedTarget = " + suggestedTarget);
+					addAttackTarget(suggestedTarget, false);
+					break;
+					
+				//case Messages.CHANNEL_RADAR:
 					//MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
 					//addAttackTarget(closest, false);
-					break;
+					//break;
 					
 				case Messages.CHANNEL_DEN_ATTACK_COMMAND:
 					MapLocation denTarget = Messages.parseDenAttackCommand(data);
@@ -677,25 +670,9 @@ public class BotSoldier extends Globals {
 	
 	
 	private static void lookForAttackTarget() throws GameActionException {
-		if (!rc.isCoreReady()) return;
+		Debug.indicate("target", 2, "lookForAttackTarget start, target = " + attackTarget + " ; ");
+		if (!rc.isCoreReady()) return;		
 		
-		if (attackTarget == null) {
-//			Debug.indicate("radar", 0, "lookForAttackTarget: attackTarget == null, numCachedEnemies = " + Radar.numCachedEnemies);
-			MapLocation closest = null;
-			int bestDistSq = Integer.MAX_VALUE;
-			for (int i = 0; i < Radar.numCachedEnemies; ++i) {
-				FastRobotInfo hostile = Radar.enemyCache[i];
-				int distSq = here.distanceSquaredTo(hostile.location);
-				if (distSq < bestDistSq) {
-					bestDistSq = distSq;
-					closest = hostile.location;
-					isAttackingZombieDen = hostile.type == RobotType.ZOMBIEDEN;
-				}
-			}
-			attackTarget = closest;
-//			Debug.indicate("radar", 1, "now attackTarget = " + attackTarget);
-		}
-
 		if (attackTarget != null) {
 			if (rc.canSenseLocation(attackTarget)) {
 				RobotInfo targetInfo = rc.senseRobotAtLocation(attackTarget);
@@ -703,6 +680,7 @@ public class BotSoldier extends Globals {
 					if (isAttackingZombieDen) {
 						destroyedZombieDens.add(attackTarget);
 					}
+					Debug.indicateAppend("target", 2, "clearing target; ");
 					attackTarget = null;
 					isAttackingZombieDen = false;
 				} else if (targetInfo.type != RobotType.ZOMBIEDEN) {
@@ -712,15 +690,14 @@ public class BotSoldier extends Globals {
 		}
 		
 		if (attackTarget != null) {
-			//if (Nav.goToDirect(attackTarget)) {
+			Debug.indicateAppend("target", 2, "closestEnemyTurretLocation = " + closestEnemyTurretLocation + " ; ");
 			if (Nav.goToDirectSafelyAvoidingTurret(attackTarget, closestEnemyTurretLocation)) {
+				Debug.indicateAppend("target", 2, "moved to target; ");
 				numTurnsBlocked = 0;
-//				Debug.indicate("block", 0, "not blocked!");
 			} else {
+				Debug.indicateAppend("target", 2, "blocked!; ");
 				numTurnsBlocked += 1;
-//				Debug.indicate("block", 0, "blocked! numTurnsBlocked = " + numTurnsBlocked);
 				if (numTurnsBlocked >= 40) {
-//					Debug.indicate("block", 1, "waited too long. setting attackTarget = null");
 					attackTarget = null;
 					isAttackingZombieDen = false;
 					numTurnsBlocked = 0;
@@ -729,19 +706,7 @@ public class BotSoldier extends Globals {
 			return;
 		}
 		
-		if (wanderDirection == null) {
-			wanderDirection = Direction.values()[FastMath.rand256() % 8];
-		}
-		
-		MapLocation fakeTarget = here.add(wanderDirection, 10);
-		
-//		Debug.indicateDot("micro", here, 0, 100, 0);
-		
-		if (Nav.goToDirectSafelyAvoidingTurret(fakeTarget, closestEnemyTurretLocation)) {
-//			Debug.indicate("micro", 0, "wandering");
-//			Debug.indicateLine("micro", here, fakeTarget, 100, 100, 0);
-		} else {
-			wanderDirection = Direction.values()[FastMath.rand256() % 8];
-		}
+		// no attack target
+		tryToHealAtArchon();
 	}
 }

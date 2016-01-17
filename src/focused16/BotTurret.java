@@ -20,9 +20,10 @@ public class BotTurret extends Globals {
 			Clock.yield();
 		}
 	}
-	
+
 	private static MapLocation attackTarget = null;
-	private static int attackTargetReceivedRound = -9999;	
+	private static MapLocationHashSet destroyedZombieDens = new MapLocationHashSet();
+	private static boolean isAttackingZombieDen = false;
 
 	private static int lastKnownArchonId = -1;
 	private static MapLocation lastKnownArchonLocation = null;
@@ -31,10 +32,11 @@ public class BotTurret extends Globals {
 	private static final int PACK_DELAY = 20;
 	private static int packCountdown = PACK_DELAY;
 	
-	private static MapLocation lastTurretAttackedWithRadar = null;
-	private static int lastTurretAttackedWithRadarRound = -99999;
+	private static boolean inHealingState = false;
 	
 	private static void turnTurret() throws GameActionException {
+		manageHealingState();
+
 		if (!rc.isWeaponReady() && !rc.isCoreReady()) return;
 		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
 		
@@ -55,6 +57,8 @@ public class BotTurret extends Globals {
 	}
 	
 	private static void turnTTM() throws GameActionException {
+		manageHealingState();
+		
 		if (!rc.isCoreReady()) return;
 		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
 		
@@ -73,7 +77,22 @@ public class BotTurret extends Globals {
 			}
 		}
 		
-		lookForAFight();
+		if (inHealingState) {
+			if (tryToHealAtArchon()) {
+				return;
+			}
+		}
+		
+		lookForAttackTarget();
+	}
+	
+	private static void manageHealingState() {
+		if (rc.getHealth() <= myType.maxHealth / 3) {
+			inHealingState = true;
+		}
+		if (rc.getHealth() == myType.maxHealth) {
+			inHealingState = false;
+		}
 	}
 
 	private static double enemyScore(RobotType type, double health) {
@@ -144,7 +163,7 @@ public class BotTurret extends Globals {
 				typeAttackedWithRadar = hostile.type;
 			}			
 		}
-		if (bestTarget == null) {
+		/*if (bestTarget == null) {
 			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
 //			Debug.indicate("memory", 0, "closestEnemyTurret = " + (closestEnemyTurret == null ? null : closestEnemyTurret.location));
 //			if (closestEnemyTurret != null) Debug.indicateDot("memory", closestEnemyTurret.location, 0, 0, 255);
@@ -153,16 +172,35 @@ public class BotTurret extends Globals {
 				//System.out.println("we are " + here + ", attacking Radar.closestEnemyTurret() = " + closestEnemyTurret.location);
 //				Debug.indicateDot("memory", closestEnemyTurret.location, 255, 0, 0);
 		    }
-		}
+		}*/
 		if (bestTarget != null) {
 			rc.attackLocation(bestTarget);
-			if (typeAttackedWithRadar == RobotType.TURRET) {
+			/*if (typeAttackedWithRadar == RobotType.TURRET) {
 				lastTurretAttackedWithRadar = bestTarget;
 				lastTurretAttackedWithRadarRound = rc.getRoundNum();
-			}
+			}*/
 			return true;
 		}
 		return false;
+	}
+	
+
+	private static void addAttackTarget(MapLocation targetNew, boolean isZombieDen) {
+		if (isZombieDen && destroyedZombieDens.contains(targetNew)) {
+			return;
+		}
+		if (attackTarget == null) {
+			attackTarget = targetNew;
+			isAttackingZombieDen = isZombieDen;
+		} else if (!isAttackingZombieDen && isZombieDen) {
+			isAttackingZombieDen = true;
+			attackTarget = targetNew;
+		} else if (isAttackingZombieDen && !isZombieDen) {
+			return;
+		} else {
+			isAttackingZombieDen = isZombieDen;
+			attackTarget = targetNew;
+		}
 	}
 
 	private static void processSignals() {
@@ -175,13 +213,27 @@ public class BotTurret extends Globals {
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
-				/*case Messages.CHANNEL_ATTACK_TARGET:
+				case Messages.CHANNEL_ATTACK_TARGET:
 					MapLocation suggestedTarget = Messages.parseAttackTarget(data);
-					if (attackTarget == null || here.distanceSquaredTo(suggestedTarget) < here.distanceSquaredTo(attackTarget)) {
-						attackTarget = suggestedTarget;
-						attackTargetReceivedRound = rc.getRoundNum();
+					addAttackTarget(suggestedTarget, false);
+					break;
+					
+				case Messages.CHANNEL_DEN_ATTACK_COMMAND:
+					MapLocation denTarget = Messages.parseDenAttackCommand(data);
+					addAttackTarget(denTarget, true);
+					break;
+					
+				case Messages.CHANNEL_ZOMBIE_DEN:
+					MapLocation denLoc = Messages.parseZombieDenLocation(data);
+					if (Messages.parseZombieDenWasDestroyed(data)) {
+						destroyedZombieDens.add(denLoc);
+						if (denLoc.equals(attackTarget) && isAttackingZombieDen) {
+							isAttackingZombieDen = false;
+							attackTarget = null;
+						}
 					}
-					break;*/
+					break;
+					
 				case Messages.CHANNEL_RADAR:
 					Messages.addRadarDataToEnemyCache(data, sig.getLocation(), myAttackRadiusSquared);
 					//MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
@@ -232,30 +284,68 @@ public class BotTurret extends Globals {
 		Nav.goToBug(new MapLocation(avgX, avgY));
 		return true;
 	}
-	
-	private static void lookForAFight() throws GameActionException {
-		if (!rc.isCoreReady()) return;
 
+
+	private static void locateNearestArchon() throws GameActionException {
+		// first look for our favorite archon
+		if (rc.canSenseRobot(lastKnownArchonId)) {
+			RobotInfo archon = rc.senseRobot(lastKnownArchonId);
+			lastKnownArchonLocation = archon.location;
+			lastKnownArchonLocationRound = rc.getRoundNum();
+			return;
+		}
+		
+		// else look for any nearby archon
+		RobotInfo[] nearbyAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		for (RobotInfo ally : nearbyAllies) {
+			if (ally.type == RobotType.ARCHON) {
+				lastKnownArchonLocation = ally.location;
+				lastKnownArchonLocationRound = rc.getRoundNum();
+				lastKnownArchonId = ally.ID;
+				return;
+			}
+		}
+		
+		// else hope that we have gotten an archon location broadcast
+	}
+	
+
+	private static boolean tryToHealAtArchon() throws GameActionException {
+		if (!rc.isCoreReady()) return false;
+		
+		locateNearestArchon();
+		
+		if (lastKnownArchonLocation == null) {
+			return false;
+		}
+		
+		Nav.goToBug(lastKnownArchonLocation);
+		return true;
+	}
+
+	private static void lookForAttackTarget() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+		
 		if (attackTarget != null) {
 			if (rc.canSenseLocation(attackTarget)) {
 				RobotInfo targetInfo = rc.senseRobotAtLocation(attackTarget);
 				if (targetInfo == null || targetInfo.team == us) {
+					if (isAttackingZombieDen) {
+						destroyedZombieDens.add(attackTarget);
+					}
 					attackTarget = null;
+					isAttackingZombieDen = false;
+				} else if (targetInfo.type != RobotType.ZOMBIEDEN) {
+					isAttackingZombieDen = false;
 				}
 			}
 		}
 		
 		if (attackTarget != null) {
 			Nav.goToBug(attackTarget);
-			return;
-		}
-		
-		if (tryGoToCenterOfMass()) {
-			return;
-		}
-		
-		if (lastKnownArchonLocation != null) {
-			Nav.goToBug(lastKnownArchonLocation);
+		} else {
+			// no attack target
+			tryToHealAtArchon();
 		}
 	}
 }

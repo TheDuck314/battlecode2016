@@ -316,8 +316,18 @@ public class BotArchon extends Globals {
 		RobotInfo[] healableAllies = rc.senseNearbyRobots(RobotType.ARCHON.attackRadiusSquared, us);
 		MapLocation bestLoc = null;
 		double mostHealth = 0;
+		boolean targetIsTurret = false;
 		for (RobotInfo ally : healableAllies) {
 			if (ally.type == RobotType.ARCHON) continue;
+			boolean allyIsTurret = (ally.type == RobotType.TTM || ally.type == RobotType.TURRET);
+			if (allyIsTurret && !targetIsTurret) {
+				bestLoc = ally.location;
+				targetIsTurret = true;				
+				continue;
+			}
+			if (!allyIsTurret && targetIsTurret) {
+				continue;
+			}
 			if (ally.health < ally.maxHealth && ally.health > mostHealth) {
 				bestLoc = ally.location;
 				mostHealth = ally.health;
