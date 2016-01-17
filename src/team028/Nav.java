@@ -190,7 +190,9 @@ public class Nav extends Globals {
 	// or 45 degrees left or right. Clear rubble if necessary.
 	// Avoids going in range of any hostile robot that we can see.
 	public static boolean goToDirectSafely(MapLocation dest) throws GameActionException {
-		if (dest == null) {
+		return goToDirectSafelyAvoidingTurret(dest, null);
+		
+		/*if (dest == null) {
 			System.out.println("goToDirectSafely dest = null");
 			return false;
 		}
@@ -247,9 +249,8 @@ public class Nav extends Globals {
 	    	rc.clearRubble(bestDir);
 	    	return true;
 	    }
-	    return false;
+	    return false;*/
 	}
-	
 	
 	// Go to the destination. At each step, move either forward
 	// or 45 degrees left or right. Clear rubble if necessary.
@@ -366,9 +367,55 @@ public class Nav extends Globals {
 	    return false;
 	}
 	
+	public static boolean scoutGoToDirectSafelyAvoidingTurret(MapLocation dest,
+			MapLocation turretLocation) throws GameActionException {
+		if (here.equals(dest)) return false;
+
+		RobotInfo[] hostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		
+        Direction forward = here.directionTo(dest);
+	    MapLocation forwardLoc = here.add(forward);
+		if (here.isAdjacentTo(dest)) {
+			if (rc.canMove(forward) && !enemyOrTurretAttacksLocation(dest, hostiles, turretLocation)) {
+				rc.move(forward);
+				return true;
+			}
+		}	
+		
+		Direction[] dirs;
+		if (preferLeft(dest)) {
+			dirs = new Direction[] { forward, forward.rotateLeft(), forward.rotateRight(),
+					forward.rotateLeft().rotateLeft(), forward.rotateRight().rotateRight() };			
+		} else {
+			dirs = new Direction[] { forward, forward.rotateRight(), forward.rotateLeft(), 
+					forward.rotateRight().rotateRight(), forward.rotateLeft().rotateLeft() };
+		}
+		
+		
+	    int currentDistSq = here.distanceSquaredTo(dest);
+	    for (Direction dir : dirs) {
+	    	MapLocation dirLoc = here.add(dir);
+	    	if (dirLoc.distanceSquaredTo(dest) >= currentDistSq) continue;
+			double rubble = rc.senseRubble(dirLoc);
+			if (rc.canMove(dir) && rubble < GameConstants.RUBBLE_SLOW_THRESH) {
+	    		if (!enemyOrTurretAttacksLocation(dirLoc, hostiles, turretLocation)) {
+	    			rc.move(dir);
+	    			return true;
+	    		} 
+	    	}
+	    }
+	    
+	    return false;
+	}
+	
 	// Always move if possible, but prefer to move toward the destination
 	// Don't move next to an archon.
-	public static void swarmToAvoidingArchons(MapLocation dest) throws GameActionException {
+	public static void swarmToAvoidingArchons(MapLocation dest) throws GameActionException {		
+		if (here.distanceSquaredTo(dest) > 24) {			
+			Nav.goToDirect(dest);
+			return;
+		}
+
 		MapLocation[] nearbyArchons = new MapLocation[10];
 		int numArchons = 0;
 		RobotInfo[] allies = rc.senseNearbyRobots(8, us);
@@ -377,7 +424,7 @@ public class Nav extends Globals {
 				nearbyArchons[numArchons++] = ally.location;
 			}
 		}		
-		
+
 		Direction forward = here.equals(dest) ? Direction.EAST : here.directionTo(dest);
 		Direction[] dirs = { forward, forward.rotateLeft(), forward.rotateRight(),
 				forward.rotateLeft().rotateLeft(), forward.rotateRight().rotateRight(),
@@ -389,7 +436,8 @@ public class Nav extends Globals {
 					continue dirSearch;
 				}
 			}
-			if (tryMoveClearDir(dir)) {
+			if (rc.canMove(dir)) {
+				rc.move(dir);
 				return;
 			}
 		}
@@ -398,6 +446,11 @@ public class Nav extends Globals {
 	// Always move if possible, but prefer to move toward the destination
 	// Don't move next to an archon, or in range of the given turret
 	public static void swarmToAvoidingArchonsAndTurret(MapLocation dest, MapLocation turretLocation) throws GameActionException {
+		if (here.distanceSquaredTo(dest) > 24) {			
+			Nav.goToDirectSafelyAvoidingTurret(dest, turretLocation);
+			return;
+		}
+
 		MapLocation[] nearbyArchons = new MapLocation[10];
 		int numArchons = 0;
 		RobotInfo[] allies = rc.senseNearbyRobots(8, us);
@@ -423,7 +476,8 @@ public class Nav extends Globals {
 					continue dirSearch;
 				}
 			}
-			if (tryMoveClearDir(dir)) {
+			if (rc.canMove(dir)) {
+				rc.move(dir);
 				return;
 			}
 		}

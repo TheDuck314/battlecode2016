@@ -38,7 +38,7 @@ public class BotScout extends Globals {
 	private static int sameDirectionSteps = 0;
 	
 	public static void loop() {
-//    	Debug.init("explore");
+    	Debug.init("lure");
     	origin = here;
     	exploredGrid[50][50] = true;   
     	birthRoundNum = rc.getRoundNum();
@@ -407,16 +407,36 @@ public class BotScout extends Globals {
 				double score = 0;
 				for (RobotInfo r : visibleZombies) {
 					score += r.attackPower;
-					if (FastMath.dotVec(targetDir, here.directionTo(r.location)) > 0
-							|| r.location.distanceSquaredTo(here) < r.type.attackRadiusSquared * 1.3) {
-						// zombie is not far behind
+					if (r.type == RobotType.BIGZOMBIE &&
+							FastMath.dotVec(targetDir, here.directionTo(r.location)) > 0) {
 						tooFar = false;
+					} else {
+						switch (r.type) {
+							case BIGZOMBIE:
+							case STANDARDZOMBIE:
+								if (here.distanceSquaredTo(r.location) <= 8) {
+									tooFar = false;
+								}
+								break;
+								
+							case FASTZOMBIE:
+								tooFar = false;
+								break;
+								
+							case RANGEDZOMBIE:
+							default:
+								if (here.distanceSquaredTo(r.location) <= 25) {
+									tooFar = false;
+								}
+								break;								
+						}
 					}
 				}
-				if (score >= 25 && !tooFar) {
-//					System.out.println("Fighting Zombies");
+				Debug.indicate("lure", 0, "target = " + target + ", targetDir = " + targetDir + ", tooFar = " + tooFar + ", score = " + score);
+				if (score >= 25) {
+					// System.out.println("Fighting Zombies");
 					if (!tooFar) {
-						return Nav.goToDirectSafely(target);
+						return Nav.scoutGoToDirectSafelyAvoidingTurret(target, null);
 					} else {
 						// Wait for zombie, maybe need to broadcast a message.
 						return true;
