@@ -434,7 +434,7 @@ public class BotScout extends Globals {
 				}
 				Debug.indicate("lure", 0, "target = " + target + ", targetDir = " + targetDir + ", tooFar = " + tooFar + ", score = " + score);
 				if (score >= 25) {
-					System.out.println("Fighting Zombies");
+					// System.out.println("Fighting Zombies");
 					if (!tooFar) {
 						return Nav.scoutGoToDirectSafelyAvoidingTurret(target, null);
 					} else {
