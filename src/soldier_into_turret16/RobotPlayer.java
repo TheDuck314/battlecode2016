@@ -1,4 +1,4 @@
-package scout_viper_soldier16;
+package soldier_into_turret16;
 
 import battlecode.common.*;
 

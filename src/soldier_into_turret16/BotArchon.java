@@ -1,4 +1,4 @@
-package scout_viper_soldier16;
+package soldier_into_turret16;
 
 import battlecode.common.*;
 
@@ -432,8 +432,7 @@ public class BotArchon extends Globals {
 		}
 //		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
-	
-	
+		
 	private static void pickDestination() throws GameActionException {
 		if (currentDestination != null) {
 			if (here.equals(currentDestination)) {
