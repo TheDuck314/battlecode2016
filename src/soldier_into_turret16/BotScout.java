@@ -38,7 +38,7 @@ public class BotScout extends Globals {
 	private static int sameDirectionSteps = 0;
 	
 	public static void loop() {
-    	Debug.init("regions");
+    	Debug.init("lure");
     	origin = here;
     	exploredGrid[50][50] = true;   
     	birthRoundNum = rc.getRoundNum();
@@ -423,12 +423,13 @@ public class BotScout extends Globals {
 		if (visibleHostiles.length == 0) {
 			return false;
 		} else {
-			if (visibleAllies.length != 0) {
-				return false;
-			}
-			if (visibleZombies.length == 0) {
+			Debug.indicate("lure", 0, "hello from tryLuringZombie()");
+			//if (visibleAllies.length != 0) {
+			//	return false;
+			//}
+			//if (visibleZombies.length == 0) {
 				// Fighting enemy
-			} else if (visibleEnemies.length == 0){
+			//} else if (visibleEnemies.length == 0){
 				// Fighting zombies
 				MapLocation target = theirInitialArchonLocations[0];
 				Direction targetDir = here.directionTo(target);
@@ -461,17 +462,17 @@ public class BotScout extends Globals {
 						}
 					}
 				}
-				Debug.indicate("lure", 0, "target = " + target + ", targetDir = " + targetDir + ", tooFar = " + tooFar + ", score = " + score);
+				Debug.indicate("lure", 1, "target = " + target + ", targetDir = " + targetDir + ", tooFar = " + tooFar + ", score = " + score);
 				if (score >= 25) {
 					// System.out.println("Fighting Zombies");
 					if (!tooFar) {
-						return Nav.scoutGoToDirectSafelyAvoidingTurret(target, null);
+						return Nav.scoutGoToDirectSafelyAvoidingZombies(target);
 					} else {
 						// Wait for zombie, maybe need to broadcast a message.
 						return true;
 					}
 				}
-			}
+			//}
 		}
 		return false;
 	}
