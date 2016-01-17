@@ -1,7 +1,8 @@
 #!/bin/bash
 
 teams=""
-teams+="scout_viper_soldier16 "
+teams+="more_soldier_into_turret16 "
+teams+="soldier_into_turret16 "
 teams+="focused16 "
 teams+="felix15 "
 teams+="scout_viper14 "
