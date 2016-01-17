@@ -410,7 +410,12 @@ public class Nav extends Globals {
 	
 	// Always move if possible, but prefer to move toward the destination
 	// Don't move next to an archon.
-	public static void swarmToAvoidingArchons(MapLocation dest) throws GameActionException {
+	public static void swarmToAvoidingArchons(MapLocation dest) throws GameActionException {		
+		if (here.distanceSquaredTo(dest) > 24) {			
+			Nav.goToDirect(dest);
+			return;
+		}
+
 		MapLocation[] nearbyArchons = new MapLocation[10];
 		int numArchons = 0;
 		RobotInfo[] allies = rc.senseNearbyRobots(8, us);
@@ -419,7 +424,7 @@ public class Nav extends Globals {
 				nearbyArchons[numArchons++] = ally.location;
 			}
 		}		
-		
+
 		Direction forward = here.equals(dest) ? Direction.EAST : here.directionTo(dest);
 		Direction[] dirs = { forward, forward.rotateLeft(), forward.rotateRight(),
 				forward.rotateLeft().rotateLeft(), forward.rotateRight().rotateRight(),
@@ -431,7 +436,8 @@ public class Nav extends Globals {
 					continue dirSearch;
 				}
 			}
-			if (tryMoveClearDir(dir)) {
+			if (rc.canMove(dir)) {
+				rc.move(dir);
 				return;
 			}
 		}
@@ -440,6 +446,11 @@ public class Nav extends Globals {
 	// Always move if possible, but prefer to move toward the destination
 	// Don't move next to an archon, or in range of the given turret
 	public static void swarmToAvoidingArchonsAndTurret(MapLocation dest, MapLocation turretLocation) throws GameActionException {
+		if (here.distanceSquaredTo(dest) > 24) {			
+			Nav.goToDirectSafelyAvoidingTurret(dest, turretLocation);
+			return;
+		}
+
 		MapLocation[] nearbyArchons = new MapLocation[10];
 		int numArchons = 0;
 		RobotInfo[] allies = rc.senseNearbyRobots(8, us);
@@ -465,7 +476,8 @@ public class Nav extends Globals {
 					continue dirSearch;
 				}
 			}
-			if (tryMoveClearDir(dir)) {
+			if (rc.canMove(dir)) {
+				rc.move(dir);
 				return;
 			}
 		}
