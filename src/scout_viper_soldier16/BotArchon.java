@@ -29,7 +29,7 @@ public class BotArchon extends Globals {
 	
 	public static void loop() throws GameActionException {
 		rc.setIndicatorString(0, "41bd9daf1997dbe55d320f76267c8be1064eab87");
-//		Debug.init("kill");
+		Debug.init("spawn");
 		FastMath.initRand(rc);
 //		for (int i = 0; i < 1000000; ++i) {
 //			System.out.println(FastMath.rand256());
@@ -240,6 +240,9 @@ public class BotArchon extends Globals {
 			} else {
 				spawnType = RobotType.SOLDIER;			
 			}
+			if (spawnCount % 15 == 14) {
+				spawnType = RobotType.VIPER;
+			}
 		} else {
 			if (lastUnpairedScoutCount < 2) {
 				switch (spawnCount % 4) {
@@ -275,7 +278,7 @@ public class BotArchon extends Globals {
 					spawnType = RobotType.SCOUT;
 				}
 			}
-			if (spawnCount % 15 == 0) {
+			if (spawnCount % 15 == 14) {
 				spawnType = RobotType.VIPER;
 			}
 		}
@@ -291,8 +294,9 @@ public class BotArchon extends Globals {
 					sendInfoToBabyScout();
 					lastUnpairedScoutCount += nArchons;
 				}
+				return;
 			}
-			dir.rotateRight();
+			dir = dir.rotateRight();
 		}
 	}
 	
