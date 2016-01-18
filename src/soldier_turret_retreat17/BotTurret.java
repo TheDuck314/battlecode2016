@@ -88,6 +88,10 @@ public class BotTurret extends Globals {
 			return 0.5 * RobotType.TURRET.attackPower / (health * RobotType.TURRET.attackDelay);
 		case TURRET:
 			return type.attackPower / (health * type.attackDelay);
+		case VIPER:
+			// vipers are dangerous and their attackPower and attackDelay
+			// do not reflect their true strength
+			return 10 / (health * 1);
 
 		default:
 			return type.attackPower / (health * type.attackDelay);

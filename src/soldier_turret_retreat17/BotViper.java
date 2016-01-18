@@ -179,8 +179,32 @@ public class BotViper extends Globals {
 		return false;
 	}
 	
+	private static double enemyScore(RobotType type, double health) {
+		switch(type) {
+		case ARCHON:
+			return 0.0001;
+		case ZOMBIEDEN:
+			return 0.00001;
+			
+		case TTM:
+			return 0.5 * RobotType.TURRET.attackPower / (health * RobotType.TURRET.attackDelay);
+		case TURRET:
+			return type.attackPower / (health * type.attackDelay);
+		case VIPER:
+			// vipers are dangerous and their attackPower and attackDelay
+			// do not reflect their true strength
+			return 10 / (health * 1);
+
+		default:
+			return type.attackPower / (health * type.attackDelay);
+		}
+	}
+	
 	// returns whether a is better to attack than b
 	private static boolean hostileIsBetterToAttack(RobotInfo a, RobotInfo b) {
+		if (a.type == RobotType.SCOUT) {
+			return false; // fast zombies are too scary, never infect scouts
+		}
 		if (a.type == RobotType.ARCHON && a.health < 500) {
 			return false;
 		}
@@ -203,7 +227,8 @@ public class BotViper extends Globals {
 			return a.viperInfectedTurns < b.viperInfectedTurns;
 		}
 		// a and b are infected for the same number of turns (likely zero)
-		return a.health < b.health;
+		//return a.health < b.health;
+		return enemyScore(a.type, a.health) > enemyScore(b.type, b.health);
 	}
 
 	
