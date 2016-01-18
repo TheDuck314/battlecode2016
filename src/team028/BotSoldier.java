@@ -309,12 +309,36 @@ public class BotSoldier extends Globals {
 		return false;
 	}
 
+	private static double enemyScore(RobotType type, double health) {
+		switch(type) {
+		case ARCHON:
+			return 0.0001;
+		case ZOMBIEDEN:
+			return 0.00001;
+			
+		case SCOUT:
+			return 0.1 / (health * 1); // scouts are low priority
+		case TTM:
+			return 0.5 * RobotType.TURRET.attackPower / (health * RobotType.TURRET.attackDelay);
+		case TURRET:
+			return type.attackPower / (health * type.attackDelay);
+		case VIPER:
+			// vipers are dangerous and their attackPower and attackDelay
+			// do not reflect their true strength
+			return 10 / (health * 1);
+
+		default:
+			return type.attackPower / (health * type.attackDelay);
+		}
+	}
+	
 	private static void chooseTargetAndAttack(RobotInfo[] targets) throws GameActionException {
 		RobotInfo bestTarget = null;
-		double minHealth = Double.MAX_VALUE;
+		double bestScore = -99;
 		for (RobotInfo target : targets) {
-			if (target.health < minHealth) {
-				minHealth = target.health;
+			double score = enemyScore(target.type, target.health);
+			if (score > bestScore) {
+				bestScore = score;
 				bestTarget = target;
 			}
 		}

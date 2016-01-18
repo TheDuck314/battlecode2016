@@ -21,7 +21,7 @@ public class Messages extends Globals {
 	public static final int CHANNEL_DEN_ATTACK_COMMAND = 0x60000000;
 	public static final int CHANNEL_ZOMBIE_DEN_LIST = 0x70000000;
 	public static final int CHANNEL_PART_REGIONS = 0x80000000;
-	
+	public static final int CHANNEL_UNIT_LOCATION = 0x90000000;
 	public static final int CHANNEL_ARCHON_LOCATION = 0xa0000000;
 	public static final int CHANNEL_RADAR = 0xb0000000;
 	public static final int CHANNEL_FOUND_NEUTRAL = 0xc0000000;
@@ -121,8 +121,6 @@ public class Messages extends Globals {
 		}
 		return numLocations;
 	}
-	
-
 	
 	public static void sendDenAttackCommand(MapLocation loc, int radiusSq) throws GameActionException {
 		sendMapLocation(CHANNEL_DEN_ATTACK_COMMAND, loc, radiusSq);
@@ -243,6 +241,22 @@ public class Messages extends Globals {
 			MapLocation loc = mapLocationFromInt(data[1]);
 			Radar.addEnemyTurret(id, loc);
 		}
+	}
+	
+	public static void sendRobotLocation(int id, RobotType type, Team team, MapLocation loc, int radiusSq) throws GameActionException {
+		int data0 = id;
+		int data1 = intFromMapLocation(loc) | (type.ordinal() & 0xf) << 20 | (team.ordinal() & 0xf) << 24;
+		rc.broadcastMessageSignal(CHANNEL_UNIT_LOCATION | data0, data1, radiusSq);
+//		Debug.indicate("msg", msgDILN(), "sendUnitLocation " + radiusSq);
+	}
+	
+	public static boolean processRobotLocation(int[] data) {
+		int id = data[0] ^ CHANNEL_UNIT_LOCATION;
+		int locInt = data[1];
+		RobotType type = RobotType.values()[(locInt >>> 20) & 0xf];
+		Team team = Team.values()[(locInt >>> 24) & 0xf];
+		MapLocation loc = mapLocationFromInt(locInt & 0xfffff);
+		return Radar.addRobot(id, type, team, loc);
 	}
 	
 	public static void sendRadarData(RobotInfo[] infos, int size, int radiusSq) throws GameActionException {

@@ -56,7 +56,43 @@ public class Radar extends Globals {
 		return storedLoc.equals(loc);
 	}
 	
-
+	public static int[] theirArchonIdList = new int[30];
+	public static int theirArchonIdListLength = 0;
+	public static int[] ourArchonIdList = new int[30];
+	public static int ourArchonIdListLength = 0;
+	
+	public static BigRobotInfo[] bigRobotInfos = new BigRobotInfo[32001];
+	
+	public static boolean addRobot(int id, RobotType type, Team team, MapLocation loc) {
+		if (bigRobotInfos[id] == null) {
+			if (team == us) {
+				switch (type) {
+				case ARCHON:
+					ourArchonIdList[ourArchonIdListLength] = id;
+					ourArchonIdListLength += 1;
+					break;
+				default:
+				}
+			} else if (team == them){
+				switch (type) {
+				case ARCHON:
+					theirArchonIdList[theirArchonIdListLength] = id;
+					theirArchonIdListLength += 1;
+					break;
+				default:
+				}
+			}
+		}
+		BigRobotInfo bri = bigRobotInfos[id];
+		if (bri != null && (loc.equals(bri.location) && bri.round < rc.getRoundNum() - 100)) {
+			return false;
+		}
+		bri = new BigRobotInfo(id, loc, type, team, rc.getRoundNum());
+		return true;
+	}
+	
+//	public static boolean addRobot()
+	
 	// store the index in enemyCache, but plus one
 	public static int[][] haveSeenEnemyLoc = new int[100][100];
 	public static FastRobotInfo[] enemyCache = new FastRobotInfo[1000];
