@@ -112,7 +112,7 @@ public class BotScout extends Globals {
 		if (rc.getInfectedTurns() == 0 
 				&& rc.getRoundNum() > 1000 
 				&& rc.senseNearbyRobots(2, Team.ZOMBIE).length > 0) {
-			System.out.println("suiciding");
+			//System.out.println("suiciding");
 			rc.disintegrate();
 		}
 	}
