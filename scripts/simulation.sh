@@ -1,15 +1,16 @@
 #!/bin/bash
 
 teams=""
-teams+="more_soldier_into_turret16 "
+teams+="soldier_turret_retreat17 "
 teams+="soldier_into_turret16 "
-teams+="focused16 "
 teams+="felix15 "
 teams+="scout_viper14 "
 teams+="postsprint_13 "
 teams+="sprint_11 "
 teams+="ttm_dense_pure_11 "
 teams+="ttm_dense_9 "
+teams+="more_soldier_into_turret16 "
+teams+="focused16 "
 teams+="supercowpowers_archonmove8 "
 teams+="supercowpowers7 "
 teams+="ttm_heal "
