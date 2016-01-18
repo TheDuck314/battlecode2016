@@ -115,7 +115,7 @@ public class Nav extends Globals {
 			if (rc.canMove(forward)) {
 				rc.move(forward);
 				return true;
-			} else if (rc.senseRubble(forwardLoc) > GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
+			} else if (!myType.ignoresRubble && rc.senseRubble(forwardLoc) > GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
 				rc.clearRubble(forward);
 				return true;
 			}
@@ -137,10 +137,11 @@ public class Nav extends Globals {
 	    	MapLocation dirLoc = here.add(dir);
 	    	if (dirLoc.distanceSquaredTo(dest) > currentDistSq) continue;
 	    	double rubble = rc.senseRubble(dirLoc);
-	    	if (rc.canMove(dir) && rubble < GameConstants.RUBBLE_SLOW_THRESH) {
+	    	if (rc.canMove(dir) && (myType.ignoresRubble || rubble < GameConstants.RUBBLE_SLOW_THRESH)) {
 	    		rc.move(dir);
 	    		return true;
-	    	} else if (rubble >= GameConstants.RUBBLE_SLOW_THRESH && rubble < bestRubble) {
+	    	} else if (!myType.ignoresRubble 
+	    			&& rubble >= GameConstants.RUBBLE_SLOW_THRESH && rubble < bestRubble) {
 	    		bestRubble = rubble;
 	    		bestDir = dir;
 	    	}
@@ -326,7 +327,8 @@ public class Nav extends Globals {
 			if (rc.canMove(forward) && !enemyOrTurretAttacksLocation(dest, hostiles, turretLocation)) {
 				rc.move(forward);
 				return true;
-			} else if (rc.senseRubble(forwardLoc) > GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
+			} else if (!myType.ignoresRubble 
+					&& rc.senseRubble(forwardLoc) > GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
 				rc.clearRubble(forward);
 				return true;
 			}
@@ -349,12 +351,13 @@ public class Nav extends Globals {
 	    	MapLocation dirLoc = here.add(dir);
 	    	if (dirLoc.distanceSquaredTo(dest) >= currentDistSq) continue;
 			double rubble = rc.senseRubble(dirLoc);
-			if (rc.canMove(dir) && rubble < GameConstants.RUBBLE_SLOW_THRESH) {
+			if (rc.canMove(dir) && (myType.ignoresRubble || rubble < GameConstants.RUBBLE_SLOW_THRESH)) {
 	    		if (!enemyOrTurretAttacksLocation(dirLoc, hostiles, turretLocation)) {
 	    			rc.move(dir);
 	    			return true;
 	    		} 
-	    	} else if (rubble >= GameConstants.RUBBLE_SLOW_THRESH && rubble < bestRubble) {
+	    	} else if (!myType.ignoresRubble
+	    			&& rubble >= GameConstants.RUBBLE_SLOW_THRESH && rubble < bestRubble) {
 	    		bestRubble = rubble;
 	    		bestDir = dir;
 	    	}
