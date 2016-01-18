@@ -44,6 +44,12 @@ public class Debug extends Globals {
     	System.out.println(String.format("turn: %d, bytecodes: %d: %s\n", rc.getRoundNum(), Clock.getBytecodeNum(), message));
     }
 
+    public static void println(String debugSet, String message) {
+        if (debugSet == activeDebugSet) {
+            System.out.println(String.format("turn %d: %s", rc.getRoundNum(), message));
+        }
+    }
+    
     static int timerStartRoundNum;
     static int timerStartBytecodeNum;
 

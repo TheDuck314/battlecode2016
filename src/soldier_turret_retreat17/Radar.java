@@ -61,10 +61,12 @@ public class Radar extends Globals {
 	public static int[] ourArchonIdList = new int[30];
 	public static int ourArchonIdListLength = 0;
 	
-	public static BigRobotInfo[] bigRobotInfos = new BigRobotInfo[32001];
+	public static BigRobotInfo[] bigRobotInfoById = new BigRobotInfo[32001];
 	
-	public static boolean addRobot(int id, RobotType type, Team team, MapLocation loc) {
-		if (bigRobotInfos[id] == null) {
+	public static BigRobotInfo addRobot(int id, RobotType type, Team team, MapLocation loc, int round) {
+		Debug.indicate("archon", 1, "Radar.addRobot id=" + id + " type=" + type + " team=" + team + " loc=" + loc + " round=" + round);
+		if (round < 0) round = 0;
+		if (bigRobotInfoById[id] == null) {
 			if (team == us) {
 				switch (type) {
 				case ARCHON:
@@ -82,16 +84,32 @@ public class Radar extends Globals {
 				default:
 				}
 			}
+			Debug.println("archon", "theirArchonIdListLength=" + theirArchonIdListLength + " Radar.addRobot id=" + id + " type=" + type + " team=" + team + " loc=" + loc + " round=" + round);
 		}
-		BigRobotInfo bri = bigRobotInfos[id];
-		if (bri != null && (loc.equals(bri.location) && bri.round < rc.getRoundNum() - 100)) {
-			return false;
+		BigRobotInfo bri = bigRobotInfoById[id];
+		if (bri != null && (loc.distanceSquaredTo(bri.location) <= 2 && bri.round > round - 100 || bri.round >= round)) {
+			return null;
 		}
-		bri = new BigRobotInfo(id, loc, type, team, rc.getRoundNum());
-		return true;
+		bigRobotInfoById[id] = new BigRobotInfo(id, loc, type, team, round);
+		Debug.indicateAppend("archon", 2, "f");
+		return bigRobotInfoById[id];
 	}
 	
-//	public static boolean addRobot()
+	public static BigRobotInfo addRobot(int id, Team team, MapLocation loc, int round) {
+		Debug.indicate("archon", 1, "Radar.addRobot id=" + id + " team=" + team + " loc=" + loc + " round=" + round);
+		if (round < 0) round = 0;
+		// We need to know this robot id already.
+		if (bigRobotInfoById[id] == null) {
+			return null;
+		}
+		BigRobotInfo bri = bigRobotInfoById[id];
+		if (loc.distanceSquaredTo(bri.location) <= 2 && bri.round > round - 100 || bri.round >= round) {
+			return null;
+		}
+		bigRobotInfoById[id] = new BigRobotInfo(id, loc, bri.type, team, round);
+		Debug.indicateAppend("archon", 2, "e");
+		return bigRobotInfoById[id];
+	}
 	
 	// store the index in enemyCache, but plus one
 	public static int[][] haveSeenEnemyLoc = new int[100][100];

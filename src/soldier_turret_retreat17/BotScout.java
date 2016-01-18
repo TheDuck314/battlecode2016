@@ -35,7 +35,7 @@ public class BotScout extends Globals {
 	private static int sameDirectionSteps = 0;
 	
 	public static void loop() {
-    	Debug.init("safety");
+    	Debug.init("archon");
     	origin = here;
     	exploredGrid[50][50] = true;   
 //    	Debug.indicate("dens", 2, "dens received at birth: ");
@@ -62,7 +62,7 @@ public class BotScout extends Globals {
 		tryBroadcastUnpairedScoutSignal();
 		
 		sendRadarInfo();
-		sendTurretWarning();
+		sendRobotInfo();
 		updateClosestEnemyTurretLocation();
 
 		trySendPartsOrNeutralLocation();
@@ -295,7 +295,7 @@ public class BotScout extends Globals {
 		lastRadarBroadcastRound = rc.getRoundNum();
 	}
 	
-	private static void sendTurretWarning() throws GameActionException {
+	private static void sendRobotInfo() throws GameActionException {
 		int turretWarningRangeSq = 9*mySensorRadiusSquared;
 		boolean first = true;
 		for (RobotInfo hostile : visibleHostiles) {
@@ -308,6 +308,12 @@ public class BotScout extends Globals {
 //					Debug.indicateAppend("turret", 0, "found turret with id " + hostile.ID + ", loc = " + hostile.location + "; ");
 					Radar.addEnemyTurret(hostile.ID, hostile.location);
 					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, turretWarningRangeSq);
+				}
+			} else if (hostile.type == RobotType.ARCHON) {
+				BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, rc.getRoundNum());
+				if (bri != null) {
+					Messages.sendRobotLocation(bri, 2*mySensorRadiusSquared);
+					Debug.indicate("archon", 0, "sent archon discover message");
 				}
 			}
 		}
@@ -338,12 +344,19 @@ public class BotScout extends Globals {
 		}
 	}
 
-	private static void processSignals() {
+	private static void processSignals() throws GameActionException {
 		Radar.clearEnemyCache();
+		
+		Debug.indicate("archon", 2, "");
 		
 		Signal[] signals = rc.emptySignalQueue();
 		for (Signal sig : signals) {
-			if (sig.getTeam() != us) continue;
+			if (sig.getTeam() != us) {
+				if (Radar.bigRobotInfoById[sig.getID()] != null) {
+					Messages.processRobotLocation(sig);
+				}
+				continue;
+			}
 			
 			int[] data = sig.getMessage();
 			if (data != null) {
@@ -351,13 +364,16 @@ public class BotScout extends Globals {
 				case Messages.CHANNEL_MAP_EDGES:
 					Messages.processMapEdges(data);
 					break;
-					
+				
 				case Messages.CHANNEL_TURRET_OWNERSHIP:
 					int turretId = Messages.parseTurretOwnershipClaim(data);
 					if (turretId == turretFollowId) {
 						turretFollowId = -1;
 					} else if (turretId == archonFollowId) {
 						archonFollowId = -1;
+					}
+					if (turretId < 0 || turretId > 32000) {
+						Debug.println("archon", "turretId=" + turretId);
 					}
 					turretOwnershipReceiveRoundById[turretId] = rc.getRoundNum();
 					break;
@@ -385,6 +401,15 @@ public class BotScout extends Globals {
 
 				case Messages.CHANNEL_RADAR:
 					Messages.addRadarDataToEnemyCache(data, sig.getLocation(), myAttackRadiusSquared);
+					break;
+					
+				// TODO: Maybe we need this ???
+				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
+					Messages.processEnemyTurretWarning(data);
+					break;
+					
+				case Messages.CHANNEL_ROBOT_LOCATION:
+					Messages.processRobotLocation(sig, data);
 					break;
 					
 				default:
