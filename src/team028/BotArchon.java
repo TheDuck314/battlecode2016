@@ -586,7 +586,8 @@ public class BotArchon extends Globals {
 		MapLocation closestCorner = MapEdges.getClosestKnownMapCorner();
 		Debug.indicateAppend("retreat", 1, "; closestCorner = " + closestCorner);
 		boolean[] directionIsDiscouraged = new boolean[8];
-		if ((closestCorner != null) && (here.distanceSquaredTo(closestCorner) <= 100)) {
+		if ((closestCorner != null) && (here.distanceSquaredTo(closestCorner) <= 100)
+				&& !here.equals(closestCorner)) {
 			// if near a corner, forbid retreating in directions toward that corner
 			int toCornerOrdinal = here.directionTo(closestCorner).ordinal();
 			Debug.indicateAppend("retreat", 1, "; toCorner = " + here.directionTo(closestCorner)); 
