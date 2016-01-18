@@ -666,8 +666,7 @@ public class BotArchon extends Globals {
 				// best retreat direction		
 				Direction oppositeDir = bestRetreatDir.opposite();			
 				Direction[] buildDirs = { oppositeDir, oppositeDir.rotateLeft(), oppositeDir.rotateRight(),
-						oppositeDir.rotateLeft().rotateLeft(), oppositeDir.rotateRight().rotateRight(), 
-						bestRetreatDir.rotateRight(), bestRetreatDir.rotateLeft() };
+						oppositeDir.rotateLeft().rotateLeft(), oppositeDir.rotateRight().rotateRight() };
 				for (Direction buildDir : buildDirs) {
 					if (rc.canBuild(buildDir, RobotType.GUARD)) {
 						rc.build(buildDir, RobotType.GUARD);
