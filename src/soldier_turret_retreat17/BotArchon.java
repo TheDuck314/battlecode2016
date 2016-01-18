@@ -2,6 +2,10 @@ package soldier_turret_retreat17;
 
 import battlecode.common.*;
 
+enum DestinationType {
+	PARTS, PARTREGION, NEUTRAL
+}
+
 public class BotArchon extends Globals {
 	private static int spawnCount = 0;
 
@@ -16,6 +20,7 @@ public class BotArchon extends Globals {
 	private static MapLocation startingLocation = null;
 	
 	private static MapLocation currentDestination = null;
+	private static DestinationType currentDestinationType;
 	
 	private static MapLocation closestEnemyTurretLocation = null;
 	
@@ -27,9 +32,12 @@ public class BotArchon extends Globals {
 	private static int GLOBAL_ZOMBIE_DEN_BROADCAST_INTERVAL = 100;
 	private static MapLocation lastDenTarget = null;
 	
+	private static int lastFleeZombiesRound = -99999;
+	private static int lastFleeOtherTeamRound = -99999;
+	
 	public static void loop() throws GameActionException {
 		rc.setIndicatorString(0, "41bd9daf1997dbe55d320f76267c8be1064eab87");
-		Debug.init("retreat");
+		Debug.init("convert");
 		FastMath.initRand(rc);
 		
 		nArchons = rc.getRobotCount();
@@ -279,6 +287,21 @@ public class BotArchon extends Globals {
 			}
 		}
 		
+		if (rc.getRoundNum() - lastFleeZombiesRound < 100) {
+			if (spawnType == RobotType.VIPER || spawnType == RobotType.TURRET
+					|| spawnType == RobotType.SCOUT) {
+				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
+				//System.out.println("converted " + spawnType + " spawn into soldier");
+				spawnType = RobotType.SOLDIER;
+			}
+		} else if (rc.getRoundNum() - lastFleeEnemyRound < 100) {
+			if (spawnType == RobotType.TURRET) {
+				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
+				//System.out.println("converted " + spawnType + " spawn into soldier");
+				spawnType = RobotType.SOLDIER;
+			}
+		}
+		
 		if (!rc.hasBuildRequirements(spawnType)) return;
 
 		Direction dir = Direction.values()[FastMath.rand256() % 8];
@@ -337,10 +360,11 @@ public class BotArchon extends Globals {
 		}
 	}
 	
-	private static void considerDestination(MapLocation loc) {
+	private static void considerDestination(MapLocation loc, DestinationType type) {
 		if (!loc.equals(here)) {
 			if (currentDestination == null || here.distanceSquaredTo(loc) < here.distanceSquaredTo(currentDestination)) {
 				currentDestination = loc;
+				currentDestinationType = type;
 			}
 		}
 	}
@@ -359,7 +383,7 @@ public class BotArchon extends Globals {
 				case Messages.CHANNEL_FOUND_PARTS:
 					PartsLocation partsLoc = Messages.parsePartsLocation(data);
 //					Debug.indicate("parts", 0, "parts at " + partsLoc.location);
-					considerDestination(partsLoc.location);
+					considerDestination(partsLoc.location, DestinationType.PARTS);
 					break;
 				case Messages.CHANNEL_PART_REGIONS:
 					PartRegion region = Messages.parsePartRegion(data);
@@ -369,7 +393,7 @@ public class BotArchon extends Globals {
 					
 				case Messages.CHANNEL_FOUND_NEUTRAL:
 					MapLocation neutralLoc = Messages.parseNeutralLocation(data);
-					considerDestination(neutralLoc);
+					considerDestination(neutralLoc, DestinationType.NEUTRAL);
 					break;
 					
 				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
@@ -438,13 +462,11 @@ public class BotArchon extends Globals {
 		}
 	
 		MapLocation[] partLocs = rc.sensePartLocations(mySensorRadiusSquared);
-		double totalVisibleParts = 0;
 		if (partLocs.length > 0) {
 			MapLocation bestPartLoc = null;
 			double bestScore = Double.NEGATIVE_INFINITY;
 			for (MapLocation partLoc : partLocs) {
 				double numParts = rc.senseParts(partLoc);
-				totalVisibleParts += numParts;
 				double score = numParts
 						- 20 * FastMath.floorSqrt(here.distanceSquaredTo(partLoc))
 						- 10 * Util.estimateRubbleClearTurns(rc.senseRubble(partLoc));
@@ -456,7 +478,16 @@ public class BotArchon extends Globals {
 					bestPartLoc = partLoc;
 				}
 			}			
-			considerDestination(bestPartLoc);
+			if (currentDestinationType == DestinationType.PARTS) {
+				// we just found the best part destination. so if the destination is
+				// already a parts destination, just set the current destination to
+				// the best one
+				currentDestination = bestPartLoc;
+			} else {
+				// otherwise just switch to a part destination if it's closer than
+				// our current destination
+				considerDestination(bestPartLoc, DestinationType.PARTS);				
+			}
 		}
 		
 		for (int i = 0; i < PartMemory.MEMORY_LENGTH; ++i) {
@@ -466,7 +497,7 @@ public class BotArchon extends Globals {
 					PartMemory.remove(i);
 				} else {
 					Debug.indicate("regions", 1, "considering " + region.centralLocation);
-					considerDestination(region.centralLocation);
+					considerDestination(region.centralLocation, DestinationType.PARTREGION);
 				}
 			}
 		}
@@ -474,7 +505,7 @@ public class BotArchon extends Globals {
 		RobotInfo[] nearbyNeutrals = rc.senseNearbyRobots(mySensorRadiusSquared, Team.NEUTRAL);
 		for (RobotInfo neutral : nearbyNeutrals) {
 			if (!neutral.location.equals(here)) {
-				considerDestination(neutral.location);
+				considerDestination(neutral.location, DestinationType.NEUTRAL);
 			}
 		}	
 		
@@ -541,6 +572,7 @@ public class BotArchon extends Globals {
 		int hostileCenterY = 0;
 		int minHostileDistSq = 999999;
 		boolean fastZombieIsAdjacent = false;
+		int numZombies = 0;
 		for (RobotInfo hostile : visibleHostiles) {
 			if (hostile.type.canAttack()) {
 				numDangerousHostiles += 1;
@@ -552,6 +584,9 @@ public class BotArchon extends Globals {
 				}
 				if (hostile.type == RobotType.FASTZOMBIE && distSq <= 2) {
 					fastZombieIsAdjacent = true;
+				}
+				if (hostile.team == Team.ZOMBIE) {
+					numZombies += 1;
 				}
 			}
 		}
@@ -580,6 +615,13 @@ public class BotArchon extends Globals {
 		if (numHelpfulAllies >= numDangerousHostiles && !fastZombieIsAdjacent) {
 			return false; // we are hopefully safe
 		}			
+		
+		if (numZombies * 2 >= numDangerousHostiles) {
+			lastFleeZombiesRound = rc.getRoundNum();
+			Debug.indicate("convert", 1, "lastFleeZombiesRound = " + lastFleeZombiesRound);
+		} else {
+			lastFleeOtherTeamRound = rc.getRoundNum();
+		}
 		
 		Debug.indicate("retreat", 1, "must flee overwhelming enemies!!!!! ");
 		
