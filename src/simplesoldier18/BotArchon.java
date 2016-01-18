@@ -144,7 +144,7 @@ public class BotArchon extends Globals {
 		
 		trySpawn();	
 		
-		if (rc.isCoreReady()) {
+		/*if (rc.isCoreReady()) {
 			pickDestination();
 			
 			if (currentDestination != null) {
@@ -152,7 +152,7 @@ public class BotArchon extends Globals {
 			} else {
 				goToCenterOfMass();
 			}
-		}
+		}*/
 	}
 	
 	private static void trySendGlobalZombieDenBroadcast() throws GameActionException {		
@@ -237,7 +237,7 @@ public class BotArchon extends Globals {
 			spawnType = RobotType.SCOUT;
 		}*/
 		
-		RobotType spawnType = RobotType.SOLDIER;
+		/*RobotType spawnType = RobotType.SOLDIER;
 		if (rc.getRoundNum() < 250) {
 			if (spawnCount % 8 == 0) {
 				spawnType = RobotType.SCOUT;
@@ -285,7 +285,9 @@ public class BotArchon extends Globals {
 			if (spawnCount % 15 == 14) {
 				spawnType = RobotType.VIPER;
 			}
-		}
+		}*/
+		
+		RobotType spawnType = RobotType.SCOUT;
 		
 		if (rc.getRoundNum() - lastFleeZombiesRound < 100) {
 			if (spawnType == RobotType.VIPER || spawnType == RobotType.TURRET

@@ -35,7 +35,7 @@ public class BotScout extends Globals {
 	private static int sameDirectionSteps = 0;
 	
 	public static void loop() {
-    	Debug.init("archon");
+    	Debug.init("lure");
     	origin = here;
     	exploredGrid[50][50] = true;   
 //    	Debug.indicate("dens", 2, "dens received at birth: ");
@@ -57,7 +57,14 @@ public class BotScout extends Globals {
 		processSignals();		
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
 
-		trySuicide();
+		if (rc.isCoreReady()) {
+			if (tryLuringZombie()) {
+				return;
+			}
+			exploreTheMap();
+		}
+		
+		/*trySuicide();
 		
 		tryBroadcastUnpairedScoutSignal();
 		
@@ -76,7 +83,7 @@ public class BotScout extends Globals {
 				return;
 			}
 			exploreTheMap();
-		}
+		}*/
 	}
 	
 	private static void updateClosestEnemyTurretLocation() {
@@ -453,6 +460,46 @@ public class BotScout extends Globals {
 	}
 	
 	private static boolean tryLuringZombie() throws GameActionException {
+		RobotInfo[] visibleZombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+		if (visibleZombies.length == 0) return false;
+		Debug.indicate("lure", 0, "hello from tryLuringZombie!");
+		
+		RobotInfo closestZombie = null;
+		int bestDistSq = Integer.MAX_VALUE;
+		for (RobotInfo zombie : visibleZombies) {
+			if (zombie.type == RobotType.ZOMBIEDEN) continue;
+			int distSq = here.distanceSquaredTo(zombie.location);
+			if (distSq < bestDistSq) {
+				bestDistSq = distSq;
+				closestZombie = zombie;
+			}
+		}
+		if (closestZombie == null) return false;
+		Debug.indicate("lure", 1, "closestZombie = " + closestZombie.location);
+		
+		// if we are near the enemy starting point, and we see an enemy,
+		// get infected and suicide
+		if (here.distanceSquaredTo(centerOfTheirInitialArchons) < here.distanceSquaredTo(centerOfOurInitialArchons)) {
+			if (rc.senseNearbyRobots(35, them).length > 0) {
+				if (rc.getInfectedTurns() > 0) {
+					rc.disintegrate();
+				} else {
+					Nav.goToDirect(closestZombie.location);
+				}
+				return true;
+			}			
+		} 
+
+		MapLocation target = centerOfTheirInitialArchons;
+		Direction lureDir = closestZombie.location.directionTo(target);
+		MapLocation lureLoc = closestZombie.location.add(lureDir, 2);
+		Nav.goToDirect(lureLoc);
+		Debug.indicate("lure", 2, "lureLoc = " + lureLoc);
+		Debug.indicateLine("lure", here, lureLoc, 255, 0, 0);
+		return true;
+	}
+	
+	/*private static boolean tryLuringZombie() throws GameActionException {
 		if (visibleHostiles.length == 0) {
 			return false;
 		} else {
@@ -508,7 +555,7 @@ public class BotScout extends Globals {
 			//}
 		}
 		return false;
-	}
+	}*/
 
 	private static int nFriend = 0;
 	
