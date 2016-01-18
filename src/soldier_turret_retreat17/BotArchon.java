@@ -294,7 +294,7 @@ public class BotArchon extends Globals {
 				//System.out.println("converted " + spawnType + " spawn into soldier");
 				spawnType = RobotType.SOLDIER;
 			}
-		} else if (rc.getRoundNum() - lastFleeEnemyRound < 100) {
+		} else if (rc.getRoundNum() - lastFleeOtherTeamRound < 100) {
 			if (spawnType == RobotType.TURRET) {
 				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
 				//System.out.println("converted " + spawnType + " spawn into soldier");
