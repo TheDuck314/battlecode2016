@@ -66,7 +66,7 @@ public class BotScout extends Globals {
 		tryBroadcastUnpairedScoutSignal();
 		
 		sendRadarInfo();
-		sendTurretWarning();
+		sendRobotInfos();
 		updateClosestEnemyTurretLocation();
 
 		trySendPartsOrNeutralLocation();
@@ -287,7 +287,7 @@ public class BotScout extends Globals {
 		lastRadarBroadcastRound = rc.getRoundNum();
 	}
 	
-	private static void sendTurretWarning() throws GameActionException {
+	private static void sendRobotInfos() throws GameActionException {
 		int turretWarningRangeSq = 9*mySensorRadiusSquared;
 		boolean first = true;
 		for (RobotInfo hostile : visibleHostiles) {
@@ -301,6 +301,8 @@ public class BotScout extends Globals {
 					Radar.addEnemyTurret(hostile.ID, hostile.location);
 					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, turretWarningRangeSq);
 				}
+			} else if (hostile.type == RobotType.ARCHON) {
+				
 			}
 		}
 		
