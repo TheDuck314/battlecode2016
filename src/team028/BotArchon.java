@@ -36,7 +36,7 @@ public class BotArchon extends Globals {
 	private static int lastFleeOtherTeamRound = -99999;
 	
 	public static void loop() throws GameActionException {
-		rc.setIndicatorString(0, "41bd9daf1997dbe55d320f76267c8be1064eab87");
+		rc.setIndicatorString(0, "0155e2feecf4e92de5abf6ee7d2a3d5405fabf1f");
 		Debug.init("convert");
 		FastMath.initRand(rc);
 		
