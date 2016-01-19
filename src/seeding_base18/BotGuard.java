@@ -7,10 +7,14 @@ public class BotGuard extends Globals {
 	public static int motherId;
 	public static MapLocation motherLocation;
 
+	private static int lastKnownArchonId = -1;
+	private static MapLocation lastKnownArchonLocation = null;
+	private static int lastKnownArchonLocationRound = -999999;
+
 	public static void loop() {
-		updateMotherId(8);
 		while (true) {
 			try {
+				Globals.update();
 			    turn();
 			} catch (Exception e) {
 				e.printStackTrace();
@@ -19,87 +23,105 @@ public class BotGuard extends Globals {
 		}
 	}
 	
-	public static void updateMotherId(int range) {
-		RobotInfo[] infos = rc.senseNearbyRobots(range, us);
-		for (RobotInfo info : infos) {
-			if (info.type == RobotType.ARCHON) {
-				motherId = info.ID;
-				motherLocation = info.location;
-				break;
+	
+	private static void turn() throws GameActionException {
+		processSignals();
+		
+		if (tryToMicro()) {
+			return;
+		}
+		tryToHealAtArchon();
+	}
+	
+	private static void processSignals() throws GameActionException {
+		Radar.clearEnemyCache();
+
+		Signal[] signals = rc.emptySignalQueue();
+		for (Signal sig : signals) {
+			if (sig.getTeam() != us) continue;
+
+			int[] data = sig.getMessage();
+			if (data != null) {
+				switch(data[0] & Messages.CHANNEL_MASK) {
+				case Messages.CHANNEL_ARCHON_LOCATION:
+					MapLocation archonLoc = Messages.parseArchonLocation(data);
+					if (lastKnownArchonLocation == null 
+							|| (lastKnownArchonLocationRound < rc.getRoundNum() - 50)
+							|| here.distanceSquaredTo(lastKnownArchonLocation) > here.distanceSquaredTo(archonLoc)) {
+						lastKnownArchonLocation = archonLoc;
+						lastKnownArchonLocationRound = rc.getRoundNum();
+					}
+					break;
+					
+				default:
+				}
 			}
 		}
 	}
 	
-	public static void updateMotherLocation() throws GameActionException {
-		if (rc.canSenseRobot(motherId)) {
-			motherLocation = rc.senseRobot(motherId).location;
+	private static boolean tryToMicro() throws GameActionException {
+		RobotInfo[] visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		if (visibleHostiles.length == 0) return false;
+		
+		RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
+		if (attackableHostiles.length > 0) {
+			if (rc.isWeaponReady()) {
+				attackAHostile(attackableHostiles);
+			}
 		} else {
-			updateMotherId(mySensorRadiusSquared);
+			RobotInfo closestHostile = Util.closest(visibleHostiles);
+			Nav.tryMoveInDirection(here.directionTo(closestHostile.location));
 		}
-	}
-	
-	private static boolean tryAttack(RobotInfo[] infos) throws GameActionException {
-		if (infos.length == 0) return false;
-		rc.attackLocation(infos[0].location);
 		return true;
 	}
 	
-
-//	private static boolean tryMoveToward(RobotInfo[] infos1, ) {
-//		if (infos.length == 0) return false;
-//		RobotInfo closest = null;
-//		int bestDistSq = Integer.MAX_VALUE;
-//		for (RobotInfo info : infos) {
-//			int distSq = here.distanceSquaredTo(info.location);
-//			if (distSq < )
-//		}
-//	}
-	
-	public static boolean tryShootEnemies() throws GameActionException {
-		RobotInfo[] adjacentEnemies = rc.senseNearbyRobots(myAttackRadiusSquared, them);
-		if(tryAttack(adjacentEnemies)) return true;
-		
-		RobotInfo[] adjacentZombies = rc.senseNearbyRobots(myAttackRadiusSquared, Team.ZOMBIE);
-		if(tryAttack(adjacentZombies)) return true;
-		
-		return false;
-	}
-	
-	private static boolean tryChargeEnemies() throws GameActionException {
-		RobotInfo[] nearbyEnemies = rc.senseNearbyRobots(mySensorRadiusSquared, them);
-		RobotInfo[] nerabyZombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
-		RobotInfo closest = null;
-		int bestDistSq = Integer.MAX_VALUE;
-		for (RobotInfo info : nearbyEnemies) {
-			int distSq = here.distanceSquaredTo(info.location);
-			if (distSq < bestDistSq) {
-				bestDistSq = distSq;
-				closest = info;
+	private static void attackAHostile(RobotInfo[] attackableHostiles) throws GameActionException {
+		double minHealth = Double.MAX_VALUE;
+		MapLocation target = null;
+		for (RobotInfo hostile : attackableHostiles) {
+			if (hostile.health < minHealth) {
+				minHealth = hostile.health;
+				target = hostile.location;
 			}
 		}
-		for (RobotInfo info : nerabyZombies) {
-			int distSq = here.distanceSquaredTo(info.location);
-			if (distSq < bestDistSq) {
-				bestDistSq = distSq;
-				closest = info;
-			}
+		if (target != null) {
+			rc.attackLocation(target);
 		}
-		if (closest != null) {
-			Nav.tryMoveInDirection(here.directionTo(closest.location));
-			return true;
-		}
-		return false;
 	}
 	
-	private static void turn() throws GameActionException {
-		update();
-		updateMotherLocation();
-		if (rc.isWeaponReady()) {
-			if(tryShootEnemies()) return;
+	private static void locateNearestArchon() throws GameActionException {
+		// first look for our favorite archon
+		if (rc.canSenseRobot(lastKnownArchonId)) {
+			RobotInfo archon = rc.senseRobot(lastKnownArchonId);
+			lastKnownArchonLocation = archon.location;
+			lastKnownArchonLocationRound = rc.getRoundNum();
+			return;
 		}
-		if (rc.isCoreReady()) {
-			if (tryChargeEnemies()) return;
-			Nav.swarmToAvoidingArchons(motherLocation);
+		
+		// else look for any nearby archon
+		RobotInfo[] nearbyAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		for (RobotInfo ally : nearbyAllies) {
+			if (ally.type == RobotType.ARCHON) {
+				lastKnownArchonLocation = ally.location;
+				lastKnownArchonLocationRound = rc.getRoundNum();
+				lastKnownArchonId = ally.ID;
+				return;
+			}
 		}
+		
+		// else hope that we have gotten an archon location broadcast
+	}
+	
+	private static boolean tryToHealAtArchon() throws GameActionException {
+		if (!rc.isCoreReady()) return false;
+		
+		locateNearestArchon();
+		
+		if (lastKnownArchonLocation == null) {
+			return false;
+		}
+		
+		Nav.swarmToAvoidingArchonsAndTurret(lastKnownArchonLocation, null);
+		return true;
 	}
 }
