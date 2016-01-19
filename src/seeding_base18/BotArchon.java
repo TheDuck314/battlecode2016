@@ -34,8 +34,14 @@ public class BotArchon extends Globals {
 	
 	private static int lastFleeZombiesRound = -99999;
 	private static int lastFleeOtherTeamRound = -99999;
+
+	//private static boolean pullMode = false;
 	
-	public static void loop() throws GameActionException {
+	public static void loop() throws GameActionException {	
+		/*if (calculateSpawnScheduleScaryness() > ZOMBIE_SCHEDULE_SCARYNESS_THRESHOLD) {
+			pullMode = true;
+		}*/
+		
 		rc.setIndicatorString(0, "41bd9daf1997dbe55d320f76267c8be1064eab87");
 		Debug.init("heal");
 		FastMath.initRand(rc);
@@ -46,11 +52,16 @@ public class BotArchon extends Globals {
 		// Clock.yield();
 
 		while (true) {
+			int startTurn = rc.getRoundNum();
 			try {
 				Globals.update();
 			    turn();
 			} catch (Exception e) {
 				e.printStackTrace();
+			}
+			int endTurn = rc.getRoundNum();
+			if (startTurn != endTurn) {
+				System.out.println("OVER BYTECODE LIMIT");
 			}
 			Clock.yield();
 		}
@@ -288,6 +299,11 @@ public class BotArchon extends Globals {
 				spawnType = RobotType.VIPER;
 			}
 		}
+		/*if (pullMode && rc.getRoundNum() <= 500) {
+			if (spawnCount % 2 == 0) {
+				spawnType = RobotType.SCOUT;
+			}
+		}*/
 		
 		if (rc.getRoundNum() - lastFleeZombiesRound < 100) {
 			if (spawnType == RobotType.VIPER || spawnType == RobotType.TURRET
@@ -341,6 +357,8 @@ public class BotArchon extends Globals {
 			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
 			Messages.sendRobotLocation(bri, 2);
 		}
+		
+		Messages.sendFlushSignalQueue(2);
 	}
 	
 	private static double repairScore(RobotInfo ally) {
