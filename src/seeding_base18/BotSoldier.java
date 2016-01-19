@@ -812,7 +812,7 @@ public class BotSoldier extends Globals {
 			return;
 		}
 		
-		if (wanderDirection == null) {
+		/*if (wanderDirection == null) {
 			wanderDirection = Direction.values()[FastMath.rand256() % 8];
 		}
 		
@@ -825,6 +825,7 @@ public class BotSoldier extends Globals {
 //			Debug.indicateLine("micro", here, fakeTarget, 100, 100, 0);
 		} else {
 			wanderDirection = Direction.values()[FastMath.rand256() % 8];
-		}
+		}*/
+		tryToHealAtArchon();
 	}
 }
