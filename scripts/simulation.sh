@@ -1,6 +1,7 @@
 #!/bin/bash
 
 teams=""
+teams+="seeding_base18 "
 teams+="soldier_turret_retreat17 "
 teams+="soldier_into_turret16 "
 teams+="felix15 "
@@ -63,6 +64,14 @@ simulate() {
 if [ "$#" == 2 ] ; then
     simulate "$1" "$2"
     simulate "$2" "$1"
+    exit
+fi
+
+if [ "$#" == 1 ] ; then
+    for team_b in $teams ; do
+        simulate "$1" "$team_b"
+        simulate "$team_b" "$1"
+    done
     exit
 fi
 
