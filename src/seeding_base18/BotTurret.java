@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotTurret extends Globals {
 	public static void loop() {
-//		Debug.init("memory");
+		Debug.init("target");
 		while (true) {
 			try {
 				Globals.update();
@@ -33,9 +33,13 @@ public class BotTurret extends Globals {
 
 	private static int numAttacksOnRememberedTurret = 0;
 	
+	private static MapLocation lastAttackLocation = null;
+	
 	private static void turnTurret() throws GameActionException {
 		if (!rc.isWeaponReady() && !rc.isCoreReady()) return;
+		
 		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+		//Radar.removeOldEnemyTurrets(Radar.TURRET_MEMORY_ROUNDS);
 		
 		RobotInfo[] attackableEnemies = rc.senseHostileRobots(here, myAttackRadiusSquared);
 		if (rc.isWeaponReady()) {
@@ -55,7 +59,9 @@ public class BotTurret extends Globals {
 	
 	private static void turnTTM() throws GameActionException {
 		if (!rc.isCoreReady()) return;
+		
 		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+		//Radar.removeOldEnemyTurrets(Radar.TURRET_MEMORY_ROUNDS);
 		
 		RobotInfo[] attackableEnemies = rc.senseHostileRobots(here, RobotType.TURRET.attackRadiusSquared);
 		if (attackableEnemies.length > 0) {
@@ -102,6 +108,7 @@ public class BotTurret extends Globals {
 		MapLocation bestTarget = null;
 		double maxScore = -99;
 		boolean weAreAttacked = false;
+		Debug.indicate("target", 0, "visible targets: ");
 		for (RobotInfo hostile : attackableEnemies) {
 			if (!rc.canAttackLocation(hostile.location)) continue;
 			boolean hostileIsAttackingUs = hostile.location.distanceSquaredTo(here) <= hostile.type.attackRadiusSquared;
@@ -117,11 +124,13 @@ public class BotTurret extends Globals {
 			}
 			
 			double score = enemyScore(hostile.type, hostile.health);
+			Debug.indicateAppend("target", 0, String.format("%s(%.1f)=%.5f, ", hostile.type, hostile.health, score));
 			if (score > maxScore) {
 				maxScore = score;
 				bestTarget = hostile.location;				
 			}
 		}
+		Debug.indicate("target", 1, "radar targets: ");
 		for (int i = 0; i < Radar.numCachedEnemies; ++i) {
 			FastRobotInfo hostile = Radar.enemyCache[i];
 			if (here.distanceSquaredTo(hostile.location) <= mySensorRadiusSquared) continue;
@@ -138,8 +147,12 @@ public class BotTurret extends Globals {
 					maxScore = -99;
 				}
 			}
-			
+
 			double score = enemyScore(hostile.type, hostile.type.maxHealth);
+			if (hostile.location.equals(lastAttackLocation)) {
+				score *= 2; // prefer to finish off enemies
+			}
+			Debug.indicateAppend("target", 1, String.format("%s=%.5f, ", hostile.type, score));
 			if (score > maxScore) {
 				maxScore = score;
 				bestTarget = hostile.location;	
@@ -157,6 +170,8 @@ public class BotTurret extends Globals {
 		} else {
 			numAttacksOnRememberedTurret = 0;
 		}
+		lastAttackLocation = bestTarget;
+		Debug.indicate("target", 2, "bestTarget = " + bestTarget);
 		if (bestTarget != null) {
 			rc.attackLocation(bestTarget);
 			return true;
