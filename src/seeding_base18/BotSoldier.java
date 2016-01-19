@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("micro");		
+		Debug.init("archon");		
 		FastMath.initRand(rc);
 		while (true) {
 			try {
@@ -37,7 +37,6 @@ public class BotSoldier extends Globals {
 	private static boolean isAttackingZombieDen = false;
 	
 
-	
 	private static void turn() throws GameActionException {
 		processSignals();
 
@@ -106,7 +105,7 @@ public class BotSoldier extends Globals {
 		}
 	}
 
-	private static void processSignals() {
+	private static void processSignals() throws GameActionException {
 		Radar.clearEnemyCache();
 
 		Signal[] signals = rc.emptySignalQueue();
@@ -156,6 +155,10 @@ public class BotSoldier extends Globals {
 					
 				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
 					Messages.processEnemyTurretWarning(data);
+					break;
+					
+				case Messages.CHANNEL_ROBOT_LOCATION:
+					Messages.processRobotLocation(sig, data);
 					break;
 					
 				default:
@@ -747,7 +750,6 @@ public class BotSoldier extends Globals {
 		return true;
 	}
 	
-	
 	private static void lookForAttackTarget() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 		
@@ -767,7 +769,15 @@ public class BotSoldier extends Globals {
 			attackTarget = closest;
 //			Debug.indicate("radar", 1, "now attackTarget = " + attackTarget);
 		}
-
+		
+		if (attackTarget == null) {
+			// attackTarget = Radar.closestEnemyArchonLocation();
+			if (attackTarget != null) {
+				Debug.println("archon", "Not target, going to attack enemy archon at " + attackTarget);
+				// Debug.println("archon", "attackTarget=" + attackTarget);
+			}
+		}
+		
 		if (attackTarget != null) {
 			if (rc.canSenseLocation(attackTarget)) {
 				RobotInfo targetInfo = rc.senseRobotAtLocation(attackTarget);

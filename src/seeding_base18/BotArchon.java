@@ -335,6 +335,12 @@ public class BotArchon extends Globals {
 			}
 			Messages.sendUpToThreeZombieDens(denList, listLen, 2);
 		}
+		
+		// tell scout known enemy archon
+		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
+			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
+			Messages.sendRobotLocation(bri, 2);
+		}
 	}
 	
 	private static double repairScore(RobotInfo ally) {
@@ -438,6 +444,10 @@ public class BotArchon extends Globals {
 //							Debug.indicate("dense", 1, "heard about a new den at " + denLoc + ", but I already knew about it");
 						}
 					}
+					break;
+
+				case Messages.CHANNEL_ROBOT_LOCATION:
+					Messages.processRobotLocation(sig, data);
 					break;
 					
 				default:

@@ -85,7 +85,7 @@ public class Radar extends Globals {
 				default:
 				}
 			}
-			Debug.println("archon", "theirArchonIdListLength=" + theirArchonIdListLength + " Radar.addRobot id=" + id + " type=" + type + " team=" + team + " loc=" + loc + " round=" + round);
+//			Debug.println("archon", "theirArchonIdListLength=" + theirArchonIdListLength + " Radar.addRobot id=" + id + " type=" + type + " team=" + team + " loc=" + loc + " round=" + round);
 		}
 		BigRobotInfo bri = bigRobotInfoById[id];
 		if (bri != null && (loc.distanceSquaredTo(bri.location) <= 2 && bri.round > round - 100 || bri.round >= round)) {
@@ -113,8 +113,7 @@ public class Radar extends Globals {
 		return bigRobotInfoById[id];
 	}
 	
-	
-	private static MapLocation closestEnemyArchonLocation() {
+	public static MapLocation closestEnemyArchonLocation() {
 		MapLocation bestLoc = null;
 		double bestDistSq = Double.MAX_VALUE;
 		int roundDelay = Int.MaxValue();

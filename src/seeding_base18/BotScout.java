@@ -451,62 +451,98 @@ public class BotScout extends Globals {
 		return false;
 	}
 	
-	private static boolean tryLuringZombie() throws GameActionException {
-		if (visibleHostiles.length == 0) {
-			return false;
-		} else {
-			Debug.indicate("lure", 0, "hello from tryLuringZombie()");
-			//if (visibleAllies.length != 0) {
-			//	return false;
-			//}
-			//if (visibleZombies.length == 0) {
-				// Fighting enemy
-			//} else if (visibleEnemies.length == 0){
-				// Fighting zombies
-				MapLocation target = theirInitialArchonLocations[0];
-				Direction targetDir = here.directionTo(target);
-				boolean tooFar = true; // zombie maybe far behind us.
-				double score = 0;
-				for (RobotInfo r : visibleZombies) {
-					score += r.attackPower;
-					if (r.type == RobotType.BIGZOMBIE &&
-							FastMath.dotVec(targetDir, here.directionTo(r.location)) > 0) {
-						tooFar = false;
-					} else {
-						switch (r.type) {
-							case BIGZOMBIE:
-							case STANDARDZOMBIE:
-								if (here.distanceSquaredTo(r.location) <= 8) {
-									tooFar = false;
-								}
-								break;
-								
-							case FASTZOMBIE:
-								tooFar = false;
-								break;
-								
-							case RANGEDZOMBIE:
-							default:
-								if (here.distanceSquaredTo(r.location) <= 25) {
-									tooFar = false;
-								}
-								break;								
-						}
-					}
-				}
-				Debug.indicate("lure", 1, "target = " + target + ", targetDir = " + targetDir + ", tooFar = " + tooFar + ", score = " + score);
-				if (score >= 25) {
-					// System.out.println("Fighting Zombies");
-					if (!tooFar) {
-						return Nav.scoutGoToDirectSafelyAvoidingZombies(target);
-					} else {
-						// Wait for zombie, maybe need to broadcast a message.
-						return true;
-					}
-				}
-			//}
+	private static boolean squareIsAttackedByAZombie(MapLocation loc, RobotInfo[] zombies) {
+		for (RobotInfo zombie : zombies) {
+			if (!zombie.type.canAttack()) continue;
+			if (zombie.location.distanceSquaredTo(loc) <= zombie.type.attackRadiusSquared) {
+				return true;
+			}
 		}
 		return false;
+	}
+	
+	private static boolean tryLuringZombie() throws GameActionException {
+		RobotInfo[] visibleZombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+		if (visibleZombies.length == 0) return false;
+		Debug.indicate("lure", 0, "hello from tryLuringZombie!");
+		
+		RobotInfo closestZombie = null;
+		int bestDistSq = Integer.MAX_VALUE;
+		boolean fastZombieIsAdjacent = false;
+		for (RobotInfo zombie : visibleZombies) {
+			if (zombie.type == RobotType.ZOMBIEDEN) continue;
+			int distSq = here.distanceSquaredTo(zombie.location);
+			if (distSq < bestDistSq) {
+				bestDistSq = distSq;
+				closestZombie = zombie;
+			}
+			if (zombie.type == RobotType.FASTZOMBIE && zombie.location.isAdjacentTo(here)) {
+				fastZombieIsAdjacent = true;
+			}
+		}
+		if (closestZombie == null) return false;
+		Debug.indicate("lure", 1, "closestZombie = " + closestZombie.location);
+		
+		// if we are near the enemy starting point, and we see an enemy,
+		// get infected and suicide
+		if (here.distanceSquaredTo(centerOfTheirInitialArchons) < here.distanceSquaredTo(centerOfOurInitialArchons)) {
+			if (rc.senseNearbyRobots(35, them).length > 0) {
+				if (rc.getInfectedTurns() > 0) {
+					rc.disintegrate();
+				} else {
+					Nav.goToDirect(closestZombie.location);
+				}
+				return true;
+			}			
+		} 
+
+		MapLocation target = Radar.closestEnemyArchonLocation();
+		if (target == null) {
+			target = centerOfTheirInitialArchons;
+		}
+		Direction lureDir = closestZombie.location.directionTo(target);
+		MapLocation lureLoc = closestZombie.location.add(lureDir, 2);
+		while (squareIsAttackedByAZombie(lureLoc, visibleZombies) && !lureLoc.equals(target)) {
+			lureLoc = lureLoc.add(lureDir);
+		}
+		//if (fastZombieIsAdjacent) {
+			Nav.goToDirect(lureLoc);
+		//} else {
+		//	goToCirclingZombies(lureLoc, visibleZombies);
+		//}
+		Debug.indicate("lure", 2, "lureLoc = " + lureLoc);
+		Debug.indicateLine("lure", here, lureLoc, 255, 0, 0);
+		return true;
+	}
+	
+	private static boolean circleLeft = true;
+	
+	private static void goToCirclingZombies(MapLocation dest, RobotInfo[] visibleZombies) throws GameActionException {
+		if (here.equals(dest)) {
+			return;
+		}
+		
+		Direction dir = here.directionTo(dest);
+		for (int i = 0; i < 8; ++i) {
+		    MapLocation dirLoc = here.add(dir);
+			if (rc.canMove(dir)) {
+			    if (!squareIsAttackedByAZombie(dirLoc, visibleZombies)) {
+			    	rc.move(dir);
+			    	return;
+			    }
+			} else {
+				if (!rc.onTheMap(dirLoc)) {
+					circleLeft = !circleLeft;
+				}
+			}
+			if (circleLeft) {
+				dir = dir.rotateLeft();
+			} else {
+				dir = dir.rotateRight();
+			}
+		}
+		// couldn't circle
+		Nav.goToDirect(dest);
 	}
 	
 	private static void exploreTheMap() throws GameActionException {
@@ -792,7 +828,6 @@ public class BotScout extends Globals {
 		finishedExploring = true;
 	}
 
-
 	private static boolean retreatIfNecessary() throws GameActionException {
 		// if any enemy is too close, try to get farther away
 		if (visibleHostiles.length == 0) return false;
@@ -841,7 +876,6 @@ public class BotScout extends Globals {
 		}
 		return false;
 	}
-	
 	
 	private static void explore() throws GameActionException {
 		if (finishedExploring) return;

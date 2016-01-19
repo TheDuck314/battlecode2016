@@ -245,6 +245,7 @@ public class Messages extends Globals {
 	
 	public static BigRobotInfo sendRobotLocation(BigRobotInfo bri, int radiusSq) throws GameActionException {
 		if (bri == null) return null;
+		if (myType != RobotType.SCOUT && myType != RobotType.ARCHON) return null;
 		int data0 = (bri.id & 0xffff | ((bri.round & 0xfff) << 16)) & CHANNEL_MASK_INVERSE;
 		int data1 = intFromMapLocation(bri.location) | (bri.type.ordinal() & 0xf) << 20 | (bri.team.ordinal() & 0xf) << 24;
 		rc.broadcastMessageSignal(CHANNEL_ROBOT_LOCATION | data0, data1, radiusSq);
@@ -260,16 +261,21 @@ public class Messages extends Globals {
 		RobotType type = RobotType.values()[(locInt >>> 20) & 0xf];
 		Team team = Team.values()[(locInt >>> 24) & 0xf];
 		MapLocation loc = mapLocationFromInt(locInt & 0xfffff);
-		if (sig.getLocation().distanceSquaredTo(here) >= 24) {
-			return sendRobotLocation(Radar.addRobot(id, type, team, loc, round), 2*mySensorRadiusSquared);
+		BigRobotInfo bri = Radar.addRobot(id, type, team, loc, round);
+		if (myType == RobotType.SCOUT && sig.getLocation().distanceSquaredTo(here) >= 24) {
+			return sendRobotLocation(bri, 2*mySensorRadiusSquared);
 		} else {
-			Radar.addRobot(id, type, team, loc, round);
 			return null;
 		}
 	}
 	
 	public static BigRobotInfo processRobotLocation(Signal sig) throws GameActionException {
-		return sendRobotLocation(Radar.addRobot(sig.getID(), sig.getTeam(), sig.getLocation(), rc.getRoundNum() - 1), 2*mySensorRadiusSquared);
+		BigRobotInfo bri = Radar.addRobot(sig.getID(), sig.getTeam(), sig.getLocation(), rc.getRoundNum() - 1);
+		if (myType == RobotType.SCOUT) {
+			return sendRobotLocation(bri, 9*mySensorRadiusSquared);
+		} else {
+			return null;
+		}
 	}
 	
 	public static void sendRadarData(RobotInfo[] infos, int size, int radiusSq) throws GameActionException {

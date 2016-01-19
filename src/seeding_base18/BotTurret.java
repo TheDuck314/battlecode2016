@@ -179,7 +179,7 @@ public class BotTurret extends Globals {
 		return false;
 	}
 
-	private static void processSignals() {
+	private static void processSignals() throws GameActionException {
 		Radar.clearEnemyCache();
 		
 		Signal[] signals = rc.emptySignalQueue();
@@ -219,6 +219,10 @@ public class BotTurret extends Globals {
 					
 				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
 					Messages.processEnemyTurretWarning(data);
+					break;
+					
+				case Messages.CHANNEL_ROBOT_LOCATION:
+					Messages.processRobotLocation(sig, data);
 					break;
 					
 				default:

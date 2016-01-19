@@ -60,6 +60,12 @@ simulate() {
     fi
 }
 
+if [ "$#" == 2 ] ; then
+    simulate "$1" "$2"
+    simulate "$2" "$1"
+    exit
+fi
+
 mkdir logs
 echo $teams
 for team_a in $teams ; do
