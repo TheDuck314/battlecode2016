@@ -35,7 +35,7 @@ public class BotScout extends Globals {
 	private static int sameDirectionSteps = 0;
 	
 	public static void loop() {
-    	Debug.init("archon");
+//    	Debug.init("archon");
     	origin = here;
     	exploredGrid[50][50] = true;   
 //    	Debug.indicate("dens", 2, "dens received at birth: ");
@@ -73,6 +73,9 @@ public class BotScout extends Globals {
 				return;
 			}		
 			if (tryFollowTurret()) {
+				return;
+			}
+			if (tryMicro()) {
 				return;
 			}
 			exploreTheMap();
@@ -310,9 +313,12 @@ public class BotScout extends Globals {
 					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, turretWarningRangeSq);
 				}
 			} else if (hostile.type == RobotType.ARCHON) {
+				boolean isNewID = Radar.bigRobotInfoById[hostile.ID] == null;
+				int rangeSq = 4*mySensorRadiusSquared;
+				if (isNewID) rangeSq = MapEdges.maxBroadcastDistSq();
 				BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, rc.getRoundNum());
 				if (bri != null) {
-					Messages.sendRobotLocation(bri, 2*mySensorRadiusSquared);
+					Messages.sendRobotLocation(bri, rangeSq);
 					Debug.indicate("archon", 0, "sent archon discover message");
 				}
 			}
@@ -440,13 +446,6 @@ public class BotScout extends Globals {
 		}
 	}
 	
-	private static void exploreTheMap() throws GameActionException {
-		if (tryMicro()) {
-			return;
-		}
-		moveAround();
-	}
-	
 	private static boolean tryMicro() throws GameActionException {
 		if (tryLuringZombie()) return true;
 		return false;
@@ -508,6 +507,10 @@ public class BotScout extends Globals {
 			//}
 		}
 		return false;
+	}
+	
+	private static void exploreTheMap() throws GameActionException {
+		moveAround();
 	}
 
 	private static int nFriend = 0;

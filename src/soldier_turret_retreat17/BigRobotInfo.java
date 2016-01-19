@@ -4,12 +4,12 @@ import battlecode.common.*;
 
 public class BigRobotInfo {
 	public final int id;
-	public final MapLocation location;
 	public final RobotType type;
 	public final Team team;
-	public final int round;
+	public MapLocation location;
+	public int round;
 	
-	public BigRobotInfo(int id, MapLocation location, RobotType type, Team team, int round) {
+	public BigRobotInfo(int id, RobotType type, Team team, MapLocation location, int round) {
 		this.id = id;
 		this.location = location;
 		this.type = type;

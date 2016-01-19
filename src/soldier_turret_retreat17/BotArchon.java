@@ -11,11 +11,11 @@ public class BotArchon extends Globals {
 
 	private static int lastArchonLocationMessageRound = 0;
 
-	private static int nArchons = 0;
-	private static MapLocation[] archonsLoc = new MapLocation[10];
-	private static int[] archonsId = new int[10];
-	private static int archonOrder = 0;
-	private static MapLocation rallyPoint = null;
+//	private static int nArchons = 0;
+//	private static MapLocation[] archonsLoc = new MapLocation[10];
+//	private static int[] archonsId = new int[10];
+//	private static int archonOrder = 0;
+//	private static MapLocation rallyPoint = null;
 	
 	private static MapLocation startingLocation = null;
 	
@@ -40,10 +40,10 @@ public class BotArchon extends Globals {
 		Debug.init("convert");
 		FastMath.initRand(rc);
 		
-		nArchons = rc.getRobotCount();
+		// nArchons = rc.getRobotCount();
 		lastGlobalZombieDenBroadcastRound = (int)(FastMath.rand256() * GLOBAL_ZOMBIE_DEN_BROADCAST_INTERVAL / 256.0);
 		startingLocation = here;
-		Clock.yield();
+		// Clock.yield();
 
 		while (true) {
 			try {
@@ -56,38 +56,38 @@ public class BotArchon extends Globals {
 		}
 	}
 	
-	private static void initArchons() throws GameActionException {
-		Globals.update();
-		archonsLoc[nArchons] = here;
-		archonsId[nArchons] = myID;
-		nArchons += 1;
-		Messages.sendArchonLocation(here, MapEdges.maxBroadcastDistSq());
-		Clock.yield();
-		Signal[] signals = rc.emptySignalQueue();
-		for (Signal sig : signals) {
-			if (sig.getTeam() != us) continue;
-			int[] data = sig.getMessage();
-			if (data != null) {
-				if ((data[0] & Messages.CHANNEL_MASK) == Messages.CHANNEL_ARCHON_LOCATION) {
-					archonsLoc[nArchons] = sig.getLocation();
-					archonsId[nArchons] = sig.getID();
-					nArchons += 1;
-				}
-			}
-		}
-		rallyPoint = here;
-		for (int i = 1; i < nArchons; ++i) {
-			rallyPoint = FastMath.addVec(rallyPoint, archonsLoc[i]);
-		}
-		rallyPoint = FastMath.multiplyVec(1.0/(double)nArchons, rallyPoint);
-		rallyPoint = rallyPoint.add(rallyPoint.directionTo(here), 0);
-//		Debug.indicateDot("rally", rallyPoint, 255, 0, 0);
-		for (int i = 0; i < nArchons; ++i) {
-			if (archonsId[i] < myID) {
-				archonOrder += 1;
-			}
-		}
-	}
+//	private static void initArchons() throws GameActionException {
+//		Globals.update();
+//		archonsLoc[nArchons] = here;
+//		archonsId[nArchons] = myID;
+//		nArchons += 1;
+//		Messages.sendArchonLocation(here, MapEdges.maxBroadcastDistSq());
+//		Clock.yield();
+//		Signal[] signals = rc.emptySignalQueue();
+//		for (Signal sig : signals) {
+//			if (sig.getTeam() != us) continue;
+//			int[] data = sig.getMessage();
+//			if (data != null) {
+//				if ((data[0] & Messages.CHANNEL_MASK) == Messages.CHANNEL_ARCHON_LOCATION) {
+//					archonsLoc[nArchons] = sig.getLocation();
+//					archonsId[nArchons] = sig.getID();
+//					nArchons += 1;
+//				}
+//			}
+//		}
+//		rallyPoint = here;
+//		for (int i = 1; i < nArchons; ++i) {
+//			rallyPoint = FastMath.addVec(rallyPoint, archonsLoc[i]);
+//		}
+//		rallyPoint = FastMath.multiplyVec(1.0/(double)nArchons, rallyPoint);
+//		rallyPoint = rallyPoint.add(rallyPoint.directionTo(here), 0);
+////		Debug.indicateDot("rally", rallyPoint, 255, 0, 0);
+//		for (int i = 0; i < nArchons; ++i) {
+//			if (archonsId[i] < myID) {
+//				archonOrder += 1;
+//			}
+//		}
+//	}
 	
 	private static void turn() throws GameActionException {
 		processSignals();
@@ -311,7 +311,7 @@ public class BotArchon extends Globals {
 				++spawnCount;
 				if (spawnType == RobotType.SCOUT) {
 					sendInfoToBabyScout();
-					lastUnpairedScoutCount += nArchons;
+					lastUnpairedScoutCount += numberOfInitialArchon;
 				}
 				return;
 			}

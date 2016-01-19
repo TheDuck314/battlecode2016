@@ -1,5 +1,6 @@
 package soldier_turret_retreat17;
 
+import scala.Int;
 import battlecode.common.*;
 
 public class Radar extends Globals {	
@@ -90,7 +91,7 @@ public class Radar extends Globals {
 		if (bri != null && (loc.distanceSquaredTo(bri.location) <= 2 && bri.round > round - 100 || bri.round >= round)) {
 			return null;
 		}
-		bigRobotInfoById[id] = new BigRobotInfo(id, loc, type, team, round);
+		bigRobotInfoById[id] = new BigRobotInfo(id, type, team, loc, round);
 		Debug.indicateAppend("archon", 2, "f");
 		return bigRobotInfoById[id];
 	}
@@ -106,9 +107,38 @@ public class Radar extends Globals {
 		if (loc.distanceSquaredTo(bri.location) <= 2 && bri.round > round - 100 || bri.round >= round) {
 			return null;
 		}
-		bigRobotInfoById[id] = new BigRobotInfo(id, loc, bri.type, team, round);
+		bri.location = loc;
+		bri.round = round;
 		Debug.indicateAppend("archon", 2, "e");
 		return bigRobotInfoById[id];
+	}
+	
+	
+	private static MapLocation closestEnemyArchonLocation() {
+		MapLocation bestLoc = null;
+		double bestDistSq = Double.MAX_VALUE;
+		int roundDelay = Int.MaxValue();
+		int round = rc.getRoundNum();
+		for (int i = 0; i < theirArchonIdListLength; ++i) {
+			BigRobotInfo bri = bigRobotInfoById[theirArchonIdList[i]];
+			if (roundDelay <= 200) {
+				if (round - bri.round <= 200) {
+					int distSq = bri.location.distanceSquaredTo(here);
+					if (distSq < bestDistSq) {
+						bestLoc = bri.location;
+						bestDistSq = distSq;
+						roundDelay = round - bri.round;
+					}
+				}
+			} else {
+				if (round - bri.round < roundDelay) {
+					bestLoc = bri.location;
+					bestDistSq = bri.location.distanceSquaredTo(here);
+					roundDelay = round - bri.round;
+				}
+			}
+		}
+		return bestLoc;
 	}
 	
 	// store the index in enemyCache, but plus one
