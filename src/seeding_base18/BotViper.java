@@ -67,7 +67,7 @@ public class BotViper extends Globals {
 			}
 		}
 		
-		if (attackTarget != null) Debug.indicateLine("target", here, attackTarget, 100, 0, 0);
+//		if (attackTarget != null) Debug.indicateLine("target", here, attackTarget, 100, 0, 0);
 		lookForAttackTarget();
 	}
 	
@@ -126,13 +126,13 @@ public class BotViper extends Globals {
 				}
 			}
 			if (leftHealth <= 0) {
-				Debug.indicate("micro", 0, "Doomed by infection");
+//				Debug.indicate("micro", 0, "Doomed by infection");
 				if (tryChargeToEnemy()) {
-					Debug.indicate("micro", 1, "Going for enemies");
+//					Debug.indicate("micro", 1, "Going for enemies");
 					return true;
 				}
 				if (tryGoAwayFromAlly()) {
-					Debug.indicate("micro", 1, "Cannot find enemy, keep distance from allies.");
+//					Debug.indicate("micro", 1, "Cannot find enemy, keep distance from allies.");
 					return true;
 				}
 			}

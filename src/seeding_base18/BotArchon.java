@@ -43,7 +43,7 @@ public class BotArchon extends Globals {
 		}*/
 		
 		rc.setIndicatorString(0, "41bd9daf1997dbe55d320f76267c8be1064eab87");
-		Debug.init("heal");
+//		Debug.init("heal");
 		FastMath.initRand(rc);
 		
 		// nArchons = rc.getRobotCount();
@@ -308,13 +308,13 @@ public class BotArchon extends Globals {
 		if (rc.getRoundNum() - lastFleeZombiesRound < 100) {
 			if (spawnType == RobotType.VIPER || spawnType == RobotType.TURRET
 					|| spawnType == RobotType.SCOUT) {
-				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
+//				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
 				//System.out.println("converted " + spawnType + " spawn into soldier");
 				spawnType = RobotType.SOLDIER;
 			}
 		} else if (rc.getRoundNum() - lastFleeOtherTeamRound < 100) {
 			if (spawnType == RobotType.TURRET) {
-				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
+//				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
 				//System.out.println("converted " + spawnType + " spawn into soldier");
 				spawnType = RobotType.SOLDIER;
 			}
@@ -384,7 +384,7 @@ public class BotArchon extends Globals {
 				bestLoc = ally.location;
 			}
 		}
-		Debug.indicate("heal", 0, "bestLoc = " + bestLoc);
+//		Debug.indicate("heal", 0, "bestLoc = " + bestLoc);
 		if (bestLoc != null) {
 			rc.repair(bestLoc);
 		}
@@ -426,7 +426,7 @@ public class BotArchon extends Globals {
 					break;
 				case Messages.CHANNEL_PART_REGIONS:
 					PartRegion region = Messages.parsePartRegion(data);
-					Debug.indicate("regions", 0, "got region: parts=" + region.totalParts + ", loc=" + region.centralLocation + ", avgTurnsToUncover=" + region.avgTurnsToUncover);;
+//					Debug.indicate("regions", 0, "got region: parts=" + region.totalParts + ", loc=" + region.centralLocation + ", avgTurnsToUncover=" + region.avgTurnsToUncover);;
 					PartMemory.add(region);
 					break;
 					
@@ -539,7 +539,7 @@ public class BotArchon extends Globals {
 				if (here.distanceSquaredTo(region.centralLocation) <= 13) {
 					PartMemory.remove(i);
 				} else {
-					Debug.indicate("regions", 1, "considering " + region.centralLocation);
+//					Debug.indicate("regions", 1, "considering " + region.centralLocation);
 					considerDestination(region.centralLocation, DestinationType.PARTREGION);
 				}
 			}
@@ -552,9 +552,9 @@ public class BotArchon extends Globals {
 			}
 		}	
 		
-		Debug.indicate("regions", 2, "destination = " + currentDestination);
+//		Debug.indicate("regions", 2, "destination = " + currentDestination);
 		if (currentDestination != null) {
-			Debug.indicateLine("regions", here, currentDestination, 255, 0, 0);
+//			Debug.indicateLine("regions", here, currentDestination, 255, 0, 0);
 		}
 	}
 	
@@ -664,8 +664,8 @@ public class BotArchon extends Globals {
 			}
 		}
 		
-		Debug.indicate("retreat", 0, "numDangerousHostiles = " + numDangerousHostiles + ", numHelpfulAllies = " + numHelpfulAllies);
-		Debug.indicateAppend("retreat", 0, "; minY = " + MapEdges.minY + ", maxY = " + MapEdges.maxY);
+//		Debug.indicate("retreat", 0, "numDangerousHostiles = " + numDangerousHostiles + ", numHelpfulAllies = " + numHelpfulAllies);
+//		Debug.indicateAppend("retreat", 0, "; minY = " + MapEdges.minY + ", maxY = " + MapEdges.maxY);
 		
 		if (numHelpfulAllies >= numDangerousHostiles && !fastZombieIsAdjacent) {
 			return false; // we are hopefully safe
@@ -673,21 +673,21 @@ public class BotArchon extends Globals {
 		
 		if (numZombies * 2 >= numDangerousHostiles) {
 			lastFleeZombiesRound = rc.getRoundNum();
-			Debug.indicate("convert", 1, "lastFleeZombiesRound = " + lastFleeZombiesRound);
+//			Debug.indicate("convert", 1, "lastFleeZombiesRound = " + lastFleeZombiesRound);
 		} else {
 			lastFleeOtherTeamRound = rc.getRoundNum();
 		}
 		
-		Debug.indicate("retreat", 1, "must flee overwhelming enemies!!!!! ");
+//		Debug.indicate("retreat", 1, "must flee overwhelming enemies!!!!! ");
 		
 		MapLocation closestCorner = MapEdges.getClosestKnownMapCorner();
-		Debug.indicateAppend("retreat", 1, "; closestCorner = " + closestCorner);
+//		Debug.indicateAppend("retreat", 1, "; closestCorner = " + closestCorner);
 		boolean[] directionIsDiscouraged = new boolean[8];
 		if ((closestCorner != null) && (here.distanceSquaredTo(closestCorner) <= 100)
 				&& !here.equals(closestCorner)) {
 			// if near a corner, forbid retreating in directions toward that corner
 			int toCornerOrdinal = here.directionTo(closestCorner).ordinal();
-			Debug.indicateAppend("retreat", 1, "; toCorner = " + here.directionTo(closestCorner)); 
+//			Debug.indicateAppend("retreat", 1, "; toCorner = " + here.directionTo(closestCorner)); 
 			directionIsDiscouraged[toCornerOrdinal] = true;
 			//directionIsDiscouraged[(toCornerOrdinal+1)%8] = true;
 			//directionIsDiscouraged[(toCornerOrdinal+7)%8] = true;
@@ -707,7 +707,7 @@ public class BotArchon extends Globals {
 				bestRetreatDir = dir;
 			}
 		}
-		Debug.indicateAppend("retreat", 1, "; bestRetreatDir = " + bestRetreatDir); 
+//		Debug.indicateAppend("retreat", 1, "; bestRetreatDir = " + bestRetreatDir); 
 		
 		if (bestRetreatDir == null) {
 			return false;
@@ -726,7 +726,7 @@ public class BotArchon extends Globals {
 					for (Direction buildDir : buildDirs) {
 						if (rc.canBuild(buildDir, RobotType.GUARD)) {
 							rc.build(buildDir, RobotType.GUARD);
-							Debug.indicate("retreat", 2, "building guard!"); 
+//							Debug.indicate("retreat", 2, "building guard!"); 
 							return true;
 						}
 					}
@@ -735,7 +735,7 @@ public class BotArchon extends Globals {
 		}
 
 		rc.move(bestRetreatDir);
-		Debug.indicate("retreat", 2, "moving!"); 
+//		Debug.indicate("retreat", 2, "moving!"); 
 		return true;
 	}
 }

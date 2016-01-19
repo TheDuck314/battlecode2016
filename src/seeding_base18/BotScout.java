@@ -246,13 +246,13 @@ public class BotScout extends Globals {
 			MapLocation partsCenter = new MapLocation((int)partsCenterX, (int)partsCenterY);
 			avgTurnsToUncover /= totalParts;
 			
-			Debug.indicate("regions", 0, "totalParts = " + totalParts + ", partsCenter = " + partsCenter + ", avgTurnsToUncover = " + avgTurnsToUncover);
+//			Debug.indicate("regions", 0, "totalParts = " + totalParts + ", partsCenter = " + partsCenter + ", avgTurnsToUncover = " + avgTurnsToUncover);
 			
 			if (totalParts >= 180) {
 				PartRegion region = new PartRegion((int)totalParts, (int)avgTurnsToUncover, partsCenter);			
 				if (PartMemory.add(region)) {
 					// TODO: REMEMBER ARCHON LOCATION AND REDUCE RANGE
-					Debug.indicate("regions", 1, "sending region!!");
+//					Debug.indicate("regions", 1, "sending region!!");
 					Messages.sendPartRegion(partsCenter, (int)totalParts, (int)avgTurnsToUncover,
 							30*mySensorRadiusSquared);
 				}
@@ -393,7 +393,7 @@ public class BotScout extends Globals {
 	private static void processSignals(boolean justBorn) throws GameActionException {
 		Radar.clearEnemyCache();
 		
-		Debug.indicate("archon", 2, "");
+//		Debug.indicate("archon", 2, "");
 		
 		Signal[] signals = rc.emptySignalQueue();
 		for (Signal sig : signals) {
@@ -417,9 +417,6 @@ public class BotScout extends Globals {
 						turretFollowId = -1;
 					} else if (turretId == archonFollowId) {
 						archonFollowId = -1;
-					}
-					if (turretId < 0 || turretId > 32000) {
-						Debug.println("archon", "turretId=" + turretId);
 					}
 					turretOwnershipReceiveRoundById[turretId] = rc.getRoundNum();
 					break;
@@ -512,7 +509,7 @@ public class BotScout extends Globals {
 	private static boolean tryLuringZombie() throws GameActionException {
 		RobotInfo[] visibleZombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
 		if (visibleZombies.length == 0) return false;
-		Debug.indicate("lure", 0, "hello from tryLuringZombie!");
+//		Debug.indicate("lure", 0, "hello from tryLuringZombie!");
 				
 		RobotInfo closestZombie = null;
 		int bestDistSq = Integer.MAX_VALUE;
@@ -539,7 +536,7 @@ public class BotScout extends Globals {
 		if (zombieScore < 10) return false;
 		if (closestZombie == null) return false;
 		System.out.println("luring zombie!");
-		Debug.indicate("lure", 1, "closestZombie = " + closestZombie.location);
+//		Debug.indicate("lure", 1, "closestZombie = " + closestZombie.location);
 		
 		// if we are near the target, and we see an enemy,
 		// get infected and suicide
@@ -547,7 +544,7 @@ public class BotScout extends Globals {
 		if (target == null) {
 			target = centerOfTheirInitialArchons;
 		}
-		Debug.indicateLine("lure", here, target, 255, 0, 0);
+//		Debug.indicateLine("lure", here, target, 255, 0, 0);
 		if (here.distanceSquaredTo(target) < here.distanceSquaredTo(centerOfOurInitialArchons)) {
 			if (rc.senseNearbyRobots(35, them).length > 0) {
 				if (rc.getInfectedTurns() > 0) {
@@ -564,14 +561,14 @@ public class BotScout extends Globals {
 		while (squareIsAttackedByAZombie(lureLoc, visibleZombies) && !lureLoc.equals(target)) {
 			lureLoc = lureLoc.add(lureDir);
 		}
-		Debug.indicateLine("lure", here, lureLoc, 0, 0, 255);
+//		Debug.indicateLine("lure", here, lureLoc, 0, 0, 255);
 		//if (fastZombieIsAdjacent) {
 			Nav.goToDirect(lureLoc);
 		//} else {
 		//	goToCirclingZombies(lureLoc, visibleZombies);
 		//}
-		Debug.indicate("lure", 2, "lureLoc = " + lureLoc);
-		Debug.indicateLine("lure", here, lureLoc, 255, 0, 0);
+//		Debug.indicate("lure", 2, "lureLoc = " + lureLoc);
+//		Debug.indicateLine("lure", here, lureLoc, 255, 0, 0);
 		return true;
 	}
 	
@@ -933,7 +930,7 @@ public class BotScout extends Globals {
 		}
 		
 		if (bestDir != null) {
-			Debug.indicate("safety", 0, "retreating!");
+//			Debug.indicate("safety", 0, "retreating!");
 			rc.move(bestDir);
 			return true;
 		}

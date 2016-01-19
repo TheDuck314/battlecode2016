@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("archon");		
+//		Debug.init("archon");		
 		FastMath.initRand(rc);
 		rc.emptySignalQueue(); // flush signal backlog
 		while (true) {
@@ -185,13 +185,13 @@ public class BotSoldier extends Globals {
 				}
 			}
 			if (leftHealth <= 0) {
-				Debug.indicate("micro", 0, "Doomed by infection");
+//				Debug.indicate("micro", 0, "Doomed by infection");
 				if (tryChargeToEnemy()) {
-					Debug.indicate("micro", 1, "Going for enemies");
+//					Debug.indicate("micro", 1, "Going for enemies");
 					return true;
 				}
 				if (tryGoAwayFromAlly()) {
-					Debug.indicate("micro", 1, "Cannot find enemy, keep distance from allies.");
+//					Debug.indicate("micro", 1, "Cannot find enemy, keep distance from allies.");
 					return true;
 				}
 			}
@@ -203,7 +203,7 @@ public class BotSoldier extends Globals {
 			if (rc.isCoreReady()) {
 				if (visibleHostiles.length > 0) {
 					if (fleeInHealingState(visibleHostiles)) {
-						Debug.indicate("micro", 0, "fleeing in healing state");
+//						Debug.indicate("micro", 0, "fleeing in healing state");
 						return true;
 					}
 				}
@@ -211,7 +211,7 @@ public class BotSoldier extends Globals {
 			if (rc.isWeaponReady() && rc.getCoreDelay() >= myType.cooldownDelay) {
 				RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 				if (attackableHostiles.length > 0) {
-					Debug.indicate("micro", 0, "attacking in healing state");
+//					Debug.indicate("micro", 0, "attacking in healing state");
 					chooseTargetAndAttack(attackableHostiles);
 					return true;
 				}
@@ -223,7 +223,7 @@ public class BotSoldier extends Globals {
 		
 		if (rc.isCoreReady()) {
 			if (retreatIfOutnumbered(visibleHostiles)) {
-				Debug.indicate("micro", 0, "retreating because outnumbered");
+//				Debug.indicate("micro", 0, "retreating because outnumbered");
 				return true;
 			}
 		}
@@ -233,23 +233,23 @@ public class BotSoldier extends Globals {
  			    // retreat if there is slow zombie adjacent to us
 				if (rc.isCoreReady()) {
 					if (retreatFromSlowZombiesIfNecessary()) {
-						Debug.indicate("micro", 0, "retreating from slow zombies");
+//						Debug.indicate("micro", 0, "retreating from slow zombies");
 						return true;
 					}
 				}
 				// otherwise just shoot someone
-				Debug.indicate("micro", 0, "attacking");
+//				Debug.indicate("micro", 0, "attacking");
 				chooseTargetAndAttack(attackableHostiles);
 				return true;
 			}
 			// we can't shoot anyone. try to help an ally or attack a helpless target
 			if (rc.isCoreReady()) {
 				if (tryMoveToHelpAlly(visibleHostiles)) {
-					Debug.indicate("micro", 0, "moving to help ally");
+//					Debug.indicate("micro", 0, "moving to help ally");
 					return true;
 				}
 				if (tryMoveToAttackHelplessTarget(visibleHostiles)) {
-					Debug.indicate("micro", 0, "moving to attack helpless target");
+//					Debug.indicate("micro", 0, "moving to attack helpless target");
 					return true;
 				}
 			}
@@ -260,15 +260,15 @@ public class BotSoldier extends Globals {
 			// from a safer distance
 			if (attackableHostiles.length > 0) {
 				if (tryToBackUpToMaintainMaxRange(attackableHostiles)) {
-					Debug.indicate("micro", 0, "backing up to maintain max range");
+//					Debug.indicate("micro", 0, "backing up to maintain max range");
 					return true;
 				}
 				if (tryMoveToAttackHelplessNonDenTarget(visibleHostiles)) {
-					Debug.indicate("micro", 0, "moving to attack helpless non den target");
+//					Debug.indicate("micro", 0, "moving to attack helpless non den target");
 					return true;
 				}
 				if (tryGetCloserToZombieDen(attackableHostiles)) {
-					Debug.indicate("micro", 0, "getting closer to zombie den");
+//					Debug.indicate("micro", 0, "getting closer to zombie den");
 					return true;
 				}
 				return true; // we are fighting, don't move
@@ -276,15 +276,15 @@ public class BotSoldier extends Globals {
 			
 			// otherwise try to help an ally or attack a helpless target
 			if (tryMoveToHelpAlly(visibleHostiles)) {
-				Debug.indicate("micro", 0, "moving to help ally");
+//				Debug.indicate("micro", 0, "moving to help ally");
 				return true;
 			}
 			if (tryMoveToEngageOutnumberedEnemy(visibleHostiles)) {
-				Debug.indicate("micro", 0, "moving to engage outnumbered enemy");
+//				Debug.indicate("micro", 0, "moving to engage outnumbered enemy");
 				return true;
 			}
 			if (tryMoveToAttackHelplessTarget(visibleHostiles)) {
-				Debug.indicate("micro", 0, "moving to attack helpless target");
+//				Debug.indicate("micro", 0, "moving to attack helpless target");
 				return true;
 			}
 		}

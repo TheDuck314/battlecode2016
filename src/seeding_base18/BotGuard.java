@@ -29,7 +29,6 @@ public class BotGuard extends Globals {
 		}
 	}
 	
-	
 	private static void turn() throws GameActionException {
 		processSignals();
 		

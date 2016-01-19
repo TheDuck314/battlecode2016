@@ -65,7 +65,7 @@ public class Radar extends Globals {
 	public static BigRobotInfo[] bigRobotInfoById = new BigRobotInfo[32001];
 	
 	public static BigRobotInfo addRobot(int id, RobotType type, Team team, MapLocation loc, int round) {
-		Debug.indicate("archon", 1, "Radar.addRobot id=" + id + " type=" + type + " team=" + team + " loc=" + loc + " round=" + round);
+//		Debug.indicate("archon", 1, "Radar.addRobot id=" + id + " type=" + type + " team=" + team + " loc=" + loc + " round=" + round);
 		if (round < 0) round = 0;
 		if (bigRobotInfoById[id] == null) {
 			if (team == us) {
@@ -92,12 +92,12 @@ public class Radar extends Globals {
 			return null;
 		}
 		bigRobotInfoById[id] = new BigRobotInfo(id, type, team, loc, round);
-		Debug.indicateAppend("archon", 2, "f");
+//		Debug.indicateAppend("archon", 2, "f");
 		return bigRobotInfoById[id];
 	}
 	
 	public static BigRobotInfo addRobot(int id, Team team, MapLocation loc, int round) {
-		Debug.indicate("archon", 1, "Radar.addRobot id=" + id + " team=" + team + " loc=" + loc + " round=" + round);
+//		Debug.indicate("archon", 1, "Radar.addRobot id=" + id + " team=" + team + " loc=" + loc + " round=" + round);
 		if (round < 0) round = 0;
 		// We need to know this robot id already.
 		if (bigRobotInfoById[id] == null) {
@@ -109,7 +109,7 @@ public class Radar extends Globals {
 		}
 		bri.location = loc;
 		bri.round = round;
-		Debug.indicateAppend("archon", 2, "e");
+//		Debug.indicateAppend("archon", 2, "e");
 		return bigRobotInfoById[id];
 	}
 	
