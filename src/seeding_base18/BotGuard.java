@@ -12,12 +12,18 @@ public class BotGuard extends Globals {
 	private static int lastKnownArchonLocationRound = -999999;
 
 	public static void loop() {
+		rc.emptySignalQueue(); // flush signal backlog
 		while (true) {
+			int startTurn = rc.getRoundNum();
 			try {
 				Globals.update();
 			    turn();
 			} catch (Exception e) {
 				e.printStackTrace();
+			}
+			int endTurn = rc.getRoundNum();
+			if (startTurn != endTurn) {
+				System.out.println("OVER BYTECODE LIMIT");
 			}
 			Clock.yield();
 		}

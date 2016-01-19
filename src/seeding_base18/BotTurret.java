@@ -5,7 +5,9 @@ import battlecode.common.*;
 public class BotTurret extends Globals {
 	public static void loop() {
 		Debug.init("target");
+		rc.emptySignalQueue(); // flush signal backlog
 		while (true) {
+			int startTurn = rc.getRoundNum();
 			try {
 				Globals.update();
 				processSignals();
@@ -16,6 +18,10 @@ public class BotTurret extends Globals {
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
+			}
+			int endTurn = rc.getRoundNum();
+			if (startTurn != endTurn) {
+				System.out.println("OVER BYTECODE LIMIT");
 			}
 			Clock.yield();
 		}
