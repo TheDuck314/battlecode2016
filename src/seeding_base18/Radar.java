@@ -147,8 +147,8 @@ public class Radar extends Globals {
 	
 	public static boolean addEnemyToCache(FastRobotInfo info) {
 		MapLocation loc = info.location;
-		int x = (loc.x + 32000) % 100;
-		int y = (loc.y + 32000) % 100;
+		int x = loc.x % 100;
+		int y = loc.y % 100;
 		int index = haveSeenEnemyLoc[x][y];
 		if (index == 0) {
 			haveSeenEnemyLoc[x][y] = numCachedEnemies + 1; // Note, we plus one to differ from zero
