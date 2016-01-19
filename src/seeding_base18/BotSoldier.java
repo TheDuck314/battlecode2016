@@ -769,14 +769,15 @@ public class BotSoldier extends Globals {
 			attackTarget = closest;
 //			Debug.indicate("radar", 1, "now attackTarget = " + attackTarget);
 		}
-		
-		if (attackTarget == null) {
-			// attackTarget = Radar.closestEnemyArchonLocation();
-			if (attackTarget != null) {
-				Debug.println("archon", "Not target, going to attack enemy archon at " + attackTarget);
-				// Debug.println("archon", "attackTarget=" + attackTarget);
-			}
-		}
+
+		// Not very good against felix
+//		if (attackTarget == null) {
+//			attackTarget = Radar.closestEnemyArchonLocation();
+//			if (attackTarget != null) {
+//				Debug.println("archon", "Not target, going to attack enemy archon at " + attackTarget);
+//				// Debug.println("archon", "attackTarget=" + attackTarget);
+//			}
+//		}
 		
 		if (attackTarget != null) {
 			if (rc.canSenseLocation(attackTarget)) {
