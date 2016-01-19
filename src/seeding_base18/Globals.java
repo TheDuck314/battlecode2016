@@ -57,6 +57,19 @@ public class Globals {
 		here = rc.getLocation();
 	}
 	
+	public static MapLocation closetInitalEnemyArchonLocation() {
+		MapLocation ret = null;
+		int minDistSq = Integer.MAX_VALUE;
+		for (int i = theirInitialArchonLocations.length; i --> 0; ) {
+			int distSq = here.distanceSquaredTo(theirInitialArchonLocations[i]);
+			if (distSq < minDistSq) {
+				minDistSq = distSq;
+				ret = theirInitialArchonLocations[i];
+			}
+		}
+		return ret;
+	}
+	
 	public static void update() {
 		here = rc.getLocation();
 	}
