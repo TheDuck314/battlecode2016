@@ -61,6 +61,9 @@ simulate() {
     fi
 }
 
+mkdir logs
+echo $teams
+
 if [ "$#" == 2 ] ; then
     simulate "$1" "$2"
     simulate "$2" "$1"
@@ -75,8 +78,6 @@ if [ "$#" == 1 ] ; then
     exit
 fi
 
-mkdir logs
-echo $teams
 for team_a in $teams ; do
     for team_b in $teams ; do
         simulate "$team_a" "$team_b"
