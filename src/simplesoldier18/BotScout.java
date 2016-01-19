@@ -476,12 +476,16 @@ public class BotScout extends Globals {
 		
 		RobotInfo closestZombie = null;
 		int bestDistSq = Integer.MAX_VALUE;
+		boolean fastZombieIsAdjacent = false;
 		for (RobotInfo zombie : visibleZombies) {
 			if (zombie.type == RobotType.ZOMBIEDEN) continue;
 			int distSq = here.distanceSquaredTo(zombie.location);
 			if (distSq < bestDistSq) {
 				bestDistSq = distSq;
 				closestZombie = zombie;
+			}
+			if (zombie.type == RobotType.FASTZOMBIE && zombie.location.isAdjacentTo(here)) {
+				fastZombieIsAdjacent = true;
 			}
 		}
 		if (closestZombie == null) return false;
@@ -506,10 +510,44 @@ public class BotScout extends Globals {
 		while (squareIsAttackedByAZombie(lureLoc, visibleZombies) && !lureLoc.equals(target)) {
 			lureLoc = lureLoc.add(lureDir);
 		}
-		Nav.goToDirect(lureLoc);
+		//if (fastZombieIsAdjacent) {
+			Nav.goToDirect(lureLoc);
+		//} else {
+		//	goToCirclingZombies(lureLoc, visibleZombies);
+		//}
 		Debug.indicate("lure", 2, "lureLoc = " + lureLoc);
 		Debug.indicateLine("lure", here, lureLoc, 255, 0, 0);
 		return true;
+	}
+	
+	private static boolean circleLeft = true;
+	
+	private static void goToCirclingZombies(MapLocation dest, RobotInfo[] visibleZombies) throws GameActionException {
+		if (here.equals(dest)) {
+			return;
+		}
+		
+		Direction dir = here.directionTo(dest);
+		for (int i = 0; i < 8; ++i) {
+		    MapLocation dirLoc = here.add(dir);
+			if (rc.canMove(dir)) {
+			    if (!squareIsAttackedByAZombie(dirLoc, visibleZombies)) {
+			    	rc.move(dir);
+			    	return;
+			    }
+			} else {
+				if (!rc.onTheMap(dirLoc)) {
+					circleLeft = !circleLeft;
+				}
+			}
+			if (circleLeft) {
+				dir = dir.rotateLeft();
+			} else {
+				dir = dir.rotateRight();
+			}
+		}
+		// couldn't circle
+		Nav.goToDirect(dest);
 	}
 	
 	/*private static boolean tryLuringZombie() throws GameActionException {
