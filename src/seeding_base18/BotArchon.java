@@ -124,7 +124,7 @@ public class BotArchon extends Globals {
 			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
 			if (closestEnemyTurret != null) {
 				closestEnemyTurretLocation = closestEnemyTurret.location;
-				Debug.indicateLine("turret", here, closestEnemyTurretLocation, 0, 0, 255);
+				//Debug.indicateLine("turret", here, closestEnemyTurretLocation, 0, 0, 255);
 			} else {
 				closestEnemyTurretLocation = null;
 			}
@@ -546,6 +546,7 @@ public class BotArchon extends Globals {
 		for (RobotInfo ally : allies) {
 			if (ally.type == RobotType.SCOUT) continue;
 			if (ally.type == RobotType.SOLDIER && ally.health < ally.maxHealth / 2) continue;
+			if (ally.type == RobotType.GUARD) continue;
 			avgX += ally.location.x;
 			avgY += ally.location.y;			
 			N += 1;
@@ -588,6 +589,8 @@ public class BotArchon extends Globals {
 		int minHostileDistSq = 999999;
 		boolean fastZombieIsAdjacent = false;
 		int numZombies = 0;
+		int closestFastEnemyDistSq = Integer.MAX_VALUE;
+		int closestSlowEnemyDistSq = Integer.MAX_VALUE;
 		for (RobotInfo hostile : visibleHostiles) {
 			if (hostile.type.canAttack()) {
 				numDangerousHostiles += 1;
@@ -602,6 +605,15 @@ public class BotArchon extends Globals {
 				}
 				if (hostile.team == Team.ZOMBIE) {
 					numZombies += 1;
+				}
+				if (hostile.type.movementDelay <= 2) {
+					if (distSq < closestFastEnemyDistSq) {
+						closestFastEnemyDistSq = distSq;
+					}
+				} else {
+					if (distSq < closestSlowEnemyDistSq) {
+						closestSlowEnemyDistSq = distSq;
+					}
 				}
 			}
 		}
@@ -649,8 +661,8 @@ public class BotArchon extends Globals {
 			int toCornerOrdinal = here.directionTo(closestCorner).ordinal();
 			Debug.indicateAppend("retreat", 1, "; toCorner = " + here.directionTo(closestCorner)); 
 			directionIsDiscouraged[toCornerOrdinal] = true;
-			directionIsDiscouraged[(toCornerOrdinal+1)%8] = true;
-			directionIsDiscouraged[(toCornerOrdinal+7)%8] = true;
+			//directionIsDiscouraged[(toCornerOrdinal+1)%8] = true;
+			//directionIsDiscouraged[(toCornerOrdinal+7)%8] = true;
 		}
 		
 		
@@ -675,18 +687,20 @@ public class BotArchon extends Globals {
 		
 		// consider building a guard to protect us
 		if (rc.getTeamParts() >= RobotType.GUARD.partCost) {
-			if (numHelpfulAllies == 0 || minHostileDistSq < minAllyDistSq || fastZombieIsAdjacent) {
-				// try to build a guard to defend us.
-				// but we are not allow to build a guard that blocks the
-				// best retreat direction		
-				Direction oppositeDir = bestRetreatDir.opposite();			
-				Direction[] buildDirs = { oppositeDir, oppositeDir.rotateLeft(), oppositeDir.rotateRight(),
-						oppositeDir.rotateLeft().rotateLeft(), oppositeDir.rotateRight().rotateRight() };
-				for (Direction buildDir : buildDirs) {
-					if (rc.canBuild(buildDir, RobotType.GUARD)) {
-						rc.build(buildDir, RobotType.GUARD);
-						Debug.indicate("retreat", 2, "building guard!"); 
-						return true;
+			if (closestSlowEnemyDistSq > 2 && closestFastEnemyDistSq < closestSlowEnemyDistSq) {
+				if (numHelpfulAllies == 0 || minHostileDistSq < minAllyDistSq || fastZombieIsAdjacent) {
+					// try to build a guard to defend us.
+					// but we are not allow to build a guard that blocks the
+					// best retreat direction		
+					Direction oppositeDir = bestRetreatDir.opposite();			
+					Direction[] buildDirs = { oppositeDir, oppositeDir.rotateLeft(), oppositeDir.rotateRight(),
+							oppositeDir.rotateLeft().rotateLeft(), oppositeDir.rotateRight().rotateRight() };
+					for (Direction buildDir : buildDirs) {
+						if (rc.canBuild(buildDir, RobotType.GUARD)) {
+							rc.build(buildDir, RobotType.GUARD);
+							Debug.indicate("retreat", 2, "building guard!"); 
+							return true;
+						}
 					}
 				}
 			}
