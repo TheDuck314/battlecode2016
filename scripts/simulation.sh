@@ -1,6 +1,7 @@
 #!/bin/bash
 
 teams=""
+teams+="seeding_18 "
 teams+="sprint_11 "
 teams+="felix15 "
 teams+="ttm_dense_pure_11 "
