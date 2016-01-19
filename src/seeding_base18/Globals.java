@@ -5,6 +5,7 @@ import battlecode.common.*;
 public class Globals {
 	
 	public static final int checkUnpairedScoutInterval = 50;
+	public static final int ZOMBIE_SCHEDULE_SCARYNESS_THRESHOLD = 130;
 	
 	public static RobotController rc;
 	public static MapLocation here;
@@ -80,5 +81,33 @@ public class Globals {
 		visibleZombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
 		visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
+	}
+	
+	
+	
+	
+	public static int zombieScarinessMultiplier(RobotType type) {
+		switch (type) {
+		case STANDARDZOMBIE: return 1;
+		case RANGEDZOMBIE: return 2;
+		case FASTZOMBIE: return 5;
+		case BIGZOMBIE: return 20;
+		default: return 0;
+		}
+	}
+	
+	public static int calculateSpawnScheduleScaryness() {
+		int score = 0;
+		ZombieSpawnSchedule schedule = rc.getZombieSpawnSchedule();
+		int[] rounds = schedule.getRounds();
+		for (int round : rounds) {
+			if (round <= 550) {
+				ZombieCount[] roundCounts = schedule.getScheduleForRound(round);
+				for (ZombieCount count : roundCounts) {
+					score += count.getCount() * zombieScarinessMultiplier(count.getType());
+				}
+			}
+		}
+		return score;
 	}
 }
