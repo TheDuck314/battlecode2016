@@ -69,8 +69,10 @@ public class BotGuard extends Globals {
 				attackAHostile(attackableHostiles);
 			}
 		} else {
-			RobotInfo closestHostile = Util.closest(visibleHostiles);
-			Nav.tryMoveInDirection(here.directionTo(closestHostile.location));
+			if (rc.isCoreReady()) {
+				RobotInfo closestHostile = Util.closest(visibleHostiles);
+				Nav.tryMoveInDirection(here.directionTo(closestHostile.location));
+			}
 		}
 		return true;
 	}
