@@ -43,7 +43,7 @@ public class BotScout extends Globals {
 			pullMode = true;
 		}*/
 		
-		Debug.init("bytecodes");
+		Debug.init("radar");
     	origin = here;
     	exploredGrid[50][50] = true;   
 //    	Debug.indicate("dens", 2, "dens received at birth: ");
@@ -305,6 +305,7 @@ public class BotScout extends Globals {
 	private static void sendRadarInfo() throws GameActionException {
 //		Debug.indicate("radar", 0, "sendRaderInfo: hostiles.length = " + visibleHostiles.length);
 		if (visibleHostiles.length == 0) return;
+		Debug.indicate("radar", 0, "lastGlobalRadarBroadcastRound = " + lastGlobalRadarBroadcastRound);
 		
 		int radarRangeSq = 4*mySensorRadiusSquared;
 		if (visibleAllies.length == 0) {
@@ -315,12 +316,14 @@ public class BotScout extends Globals {
 		if (rc.getRoundNum() - lastLongRangeRadarBroadcastRound > 50) {
 			radarRangeSq = 30 * mySensorRadiusSquared;
 			lastLongRangeRadarBroadcastRound = rc.getRoundNum();
+			Debug.indicate("radar", 1, "setting range to medium = " + radarRangeSq);
 		}
 		
 		if (rc.getRoundNum() - lastGlobalRadarBroadcastRound > 400) {
 			radarRangeSq = MapEdges.maxBroadcastDistSq();
 			lastGlobalRadarBroadcastRound = rc.getRoundNum();
 			lastLongRangeRadarBroadcastRound = rc.getRoundNum();
+			Debug.indicate("radar", 1, "setting range to global = " + radarRangeSq);
 		}
 		
 		RobotInfo[] hostilesToSend = new RobotInfo[5];
@@ -442,9 +445,9 @@ public class BotScout extends Globals {
 					receiveZombieDenList(data, sig.getLocation());
 					break;
 
-				case Messages.CHANNEL_RADAR:
+				/*case Messages.CHANNEL_RADAR:
 					Messages.addRadarDataToEnemyCache(data, sig.getLocation(), myAttackRadiusSquared);
-					break;
+					break;*/
 					
 				// TODO: Maybe we need this ???
 				case Messages.CHANNEL_ENEMY_TURRET_WARNING:

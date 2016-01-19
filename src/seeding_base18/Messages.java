@@ -298,9 +298,10 @@ public class Messages extends Globals {
 		int data1 = (int)(data & 0x00000000ffffffffL);
 		rc.broadcastMessageSignal(CHANNEL_RADAR | (CHANNEL_MASK_INVERSE & data0), data1, radiusSq);
 //		Debug.indicate("msg", msgDILN(), "sendRadarData " + radiusSq);
+		Debug.indicate("radar", 2, "sent radar data with radiusSq = " + radiusSq);
 	}
 	
-	public static void addRadarDataToEnemyCache(int[] intData, MapLocation origin, int maxDistSq) {
+	/*public static void addRadarDataToEnemyCache(int[] intData, MapLocation origin, int maxDistSq) {
 		long data = (((long)(CHANNEL_RADAR ^ intData[0])) << 32) 
 				| (((long)intData[1]) & 0x00000000ffffffffL);
 		
@@ -318,6 +319,37 @@ public class Messages extends Globals {
 			}
 			data >>= 12;
 		}
+	}*/
+	
+	// adds radar hits within maxDistSq to the enemy cache.
+	// returns the closest radar hit, whether or not it is within maxDistSq
+	public static MapLocation addRadarDataToEnemyCacheAndReturnClosestHit(int[] intData, 
+			MapLocation origin, int maxDistSq) {
+		long data = (((long)(CHANNEL_RADAR ^ intData[0])) << 32) 
+				| (((long)intData[1]) & 0x00000000ffffffffL);
+		
+		int round = rc.getRoundNum();
+		RobotType[] types = RobotType.values();		
+		MapLocation closestHit = null;
+		int closestDistSq = Integer.MAX_VALUE;
+		while (data != 0) {
+			int y = origin.y - 8 + (int)(data & 0xfL);
+			int x = origin.x - 8 + (int)((data >> 4) & 0xfL);
+			MapLocation loc = new MapLocation(x, y);
+			int distSq = here.distanceSquaredTo(loc);
+			if (distSq <= maxDistSq) {
+				int typeOrdinal = (int)((data >> 8) & 0xfL) - 1;		
+				RobotType type = types[typeOrdinal];
+				FastRobotInfo info = new FastRobotInfo(loc, type, round);
+				Radar.addEnemyToCache(info);
+			}
+			if (distSq < closestDistSq) {
+				closestDistSq = distSq;
+				closestHit = loc;
+			}
+			data >>= 12;
+		}
+		return closestHit;
 	}
 	
 	public static MapLocation getClosestRadarHit(int[] intData, MapLocation origin) {

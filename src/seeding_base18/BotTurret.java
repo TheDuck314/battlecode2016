@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotTurret extends Globals {
 	public static void loop() {
-		Debug.init("bytecodes");
+		Debug.init("radar");
 		rc.emptySignalQueue(); // flush signal backlog
 		while (true) {
 			int startTurn = rc.getRoundNum();
@@ -215,12 +215,19 @@ public class BotTurret extends Globals {
 					}
 					break;*/
 				case Messages.CHANNEL_RADAR:
-					Messages.addRadarDataToEnemyCache(data, sig.getLocation(), myAttackRadiusSquared);
-					/*MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
+					Debug.indicate("radar", 2, "got radar from " + sig.getLocation());
+					/*Messages.addRadarDataToEnemyCache(data, sig.getLocation(), myAttackRadiusSquared);
+					MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
 					if (attackTarget == null
 							|| here.distanceSquaredTo(closest) < here.distanceSquaredTo(attackTarget)) {
 						attackTarget = closest;
 					}*/
+					MapLocation closest = Messages.addRadarDataToEnemyCacheAndReturnClosestHit(data, 
+							sig.getLocation(), myAttackRadiusSquared);
+					if (attackTarget == null
+							|| here.distanceSquaredTo(closest) < here.distanceSquaredTo(attackTarget)) {
+						attackTarget = closest;
+					}
 					break;
 					
 				case Messages.CHANNEL_ARCHON_LOCATION:
@@ -248,7 +255,7 @@ public class BotTurret extends Globals {
 			}
 		}
 		
-		MapLocation closestRadarHit = null;
+		/*MapLocation closestRadarHit = null;
 		int bestDistSq = Integer.MAX_VALUE;
 		for (int i = 0; i < Radar.numCachedEnemies; ++i) {
 			MapLocation hitLoc = Radar.enemyCache[i].location;
@@ -258,12 +265,17 @@ public class BotTurret extends Globals {
 				closestRadarHit = hitLoc;
 			}
 		}
+		Debug.indicate("radar", 0, "numCachedEnemies = " + Radar.numCachedEnemies + "; closestRadarHit = " + closestRadarHit);
 		if (closestRadarHit != null) {
 			if (attackTarget == null
 					|| here.distanceSquaredTo(closestRadarHit) < here.distanceSquaredTo(attackTarget)) {
 				attackTarget = closestRadarHit;
 			}
 		}
+		Debug.indicate("radar", 1, "attackTarget = " + attackTarget);
+		if (attackTarget != null) {
+			Debug.indicateLine("radar", here, attackTarget, 255, 0, 0);
+		}*/
 	}
 	
 	private static boolean tryGoToCenterOfMass() throws GameActionException {
