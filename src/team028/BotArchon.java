@@ -11,11 +11,11 @@ public class BotArchon extends Globals {
 
 	private static int lastArchonLocationMessageRound = 0;
 
-	private static int nArchons = 0;
-	private static MapLocation[] archonsLoc = new MapLocation[10];
-	private static int[] archonsId = new int[10];
-	private static int archonOrder = 0;
-	private static MapLocation rallyPoint = null;
+//	private static int nArchons = 0;
+//	private static MapLocation[] archonsLoc = new MapLocation[10];
+//	private static int[] archonsId = new int[10];
+//	private static int archonOrder = 0;
+//	private static MapLocation rallyPoint = null;
 	
 	private static MapLocation startingLocation = null;
 	
@@ -34,60 +34,71 @@ public class BotArchon extends Globals {
 	
 	private static int lastFleeZombiesRound = -99999;
 	private static int lastFleeOtherTeamRound = -99999;
+
+	//private static boolean pullMode = false;
 	
-	public static void loop() throws GameActionException {
-		rc.setIndicatorString(0, "0155e2feecf4e92de5abf6ee7d2a3d5405fabf1f");
-		Debug.init("convert");
+	public static void loop() throws GameActionException {	
+		/*if (calculateSpawnScheduleScaryness() > ZOMBIE_SCHEDULE_SCARYNESS_THRESHOLD) {
+			pullMode = true;
+		}*/
+		
+		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
+//		Debug.init("heal");
 		FastMath.initRand(rc);
 		
-		nArchons = rc.getRobotCount();
+		// nArchons = rc.getRobotCount();
 		lastGlobalZombieDenBroadcastRound = (int)(FastMath.rand256() * GLOBAL_ZOMBIE_DEN_BROADCAST_INTERVAL / 256.0);
 		startingLocation = here;
-		Clock.yield();
+		// Clock.yield();
 
 		while (true) {
+			int startTurn = rc.getRoundNum();
 			try {
 				Globals.update();
 			    turn();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+			int endTurn = rc.getRoundNum();
+			if (startTurn != endTurn) {
+				System.out.println("OVER BYTECODE LIMIT");
+			}
 			Clock.yield();
 		}
 	}
 	
-	private static void initArchons() throws GameActionException {
-		Globals.update();
-		archonsLoc[nArchons] = here;
-		archonsId[nArchons] = myID;
-		nArchons += 1;
-		Messages.sendArchonLocation(here, MapEdges.maxBroadcastDistSq());
-		Clock.yield();
-		Signal[] signals = rc.emptySignalQueue();
-		for (Signal sig : signals) {
-			if (sig.getTeam() != us) continue;
-			int[] data = sig.getMessage();
-			if (data != null) {
-				if ((data[0] & Messages.CHANNEL_MASK) == Messages.CHANNEL_ARCHON_LOCATION) {
-					archonsLoc[nArchons] = sig.getLocation();
-					archonsId[nArchons] = sig.getID();
-					nArchons += 1;
-				}
-			}
-		}
-		rallyPoint = here;
-		for (int i = 1; i < nArchons; ++i) {
-			rallyPoint = FastMath.addVec(rallyPoint, archonsLoc[i]);
-		}
-		rallyPoint = FastMath.multiplyVec(1.0/(double)nArchons, rallyPoint);
-		rallyPoint = rallyPoint.add(rallyPoint.directionTo(here), 0);
-//		Debug.indicateDot("rally", rallyPoint, 255, 0, 0);
-		for (int i = 0; i < nArchons; ++i) {
-			if (archonsId[i] < myID) {
-				archonOrder += 1;
-			}
-		}
-	}
+//	private static void initArchons() throws GameActionException {
+//		Globals.update();
+//		archonsLoc[nArchons] = here;
+//		archonsId[nArchons] = myID;
+//		nArchons += 1;
+//		Messages.sendArchonLocation(here, MapEdges.maxBroadcastDistSq());
+//		Clock.yield();
+//		Signal[] signals = rc.emptySignalQueue();
+//		for (Signal sig : signals) {
+//			if (sig.getTeam() != us) continue;
+//			int[] data = sig.getMessage();
+//			if (data != null) {
+//				if ((data[0] & Messages.CHANNEL_MASK) == Messages.CHANNEL_ARCHON_LOCATION) {
+//					archonsLoc[nArchons] = sig.getLocation();
+//					archonsId[nArchons] = sig.getID();
+//					nArchons += 1;
+//				}
+//			}
+//		}
+//		rallyPoint = here;
+//		for (int i = 1; i < nArchons; ++i) {
+//			rallyPoint = FastMath.addVec(rallyPoint, archonsLoc[i]);
+//		}
+//		rallyPoint = FastMath.multiplyVec(1.0/(double)nArchons, rallyPoint);
+//		rallyPoint = rallyPoint.add(rallyPoint.directionTo(here), 0);
+////		Debug.indicateDot("rally", rallyPoint, 255, 0, 0);
+//		for (int i = 0; i < nArchons; ++i) {
+//			if (archonsId[i] < myID) {
+//				archonOrder += 1;
+//			}
+//		}
+//	}
 	
 	private static void turn() throws GameActionException {
 		processSignals();
@@ -119,10 +130,12 @@ public class BotArchon extends Globals {
 
 		if (rc.isCoreReady()) {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+			//Radar.removeOldEnemyTurrets(Radar.TURRET_MEMORY_ROUNDS);
 			
 			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
 			if (closestEnemyTurret != null) {
 				closestEnemyTurretLocation = closestEnemyTurret.location;
+				//Debug.indicateLine("turret", here, closestEnemyTurretLocation, 0, 0, 255);
 			} else {
 				closestEnemyTurretLocation = null;
 			}
@@ -286,17 +299,22 @@ public class BotArchon extends Globals {
 				spawnType = RobotType.VIPER;
 			}
 		}
+		/*if (pullMode && rc.getRoundNum() <= 500) {
+			if (spawnCount % 2 == 0) {
+				spawnType = RobotType.SCOUT;
+			}
+		}*/
 		
 		if (rc.getRoundNum() - lastFleeZombiesRound < 100) {
 			if (spawnType == RobotType.VIPER || spawnType == RobotType.TURRET
 					|| spawnType == RobotType.SCOUT) {
-				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
+//				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
 				//System.out.println("converted " + spawnType + " spawn into soldier");
 				spawnType = RobotType.SOLDIER;
 			}
 		} else if (rc.getRoundNum() - lastFleeOtherTeamRound < 100) {
 			if (spawnType == RobotType.TURRET) {
-				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
+//				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
 				//System.out.println("converted " + spawnType + " spawn into soldier");
 				spawnType = RobotType.SOLDIER;
 			}
@@ -311,7 +329,7 @@ public class BotArchon extends Globals {
 				++spawnCount;
 				if (spawnType == RobotType.SCOUT) {
 					sendInfoToBabyScout();
-					lastUnpairedScoutCount += nArchons;
+					lastUnpairedScoutCount += numberOfInitialArchon;
 				}
 				return;
 			}
@@ -333,19 +351,40 @@ public class BotArchon extends Globals {
 			}
 			Messages.sendUpToThreeZombieDens(denList, listLen, 2);
 		}
+		
+		// tell scout known enemy archon
+		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
+			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
+			Messages.sendRobotLocation(bri, 2);
+		}
+		
+		Messages.sendFlushSignalQueue(2);
+	}
+	
+	private static double repairScore(RobotInfo ally) {
+		switch (ally.type) {
+		case TURRET: 
+			return 1000000.0 + ally.health;
+			
+		default:
+			return ally.health;
+		}
 	}
 	
 	private static void tryRepairAlly() throws GameActionException {
 		RobotInfo[] healableAllies = rc.senseNearbyRobots(RobotType.ARCHON.attackRadiusSquared, us);
 		MapLocation bestLoc = null;
-		double mostHealth = 0;
+		double bestRepairScore = 0;
 		for (RobotInfo ally : healableAllies) {
-			if (ally.type == RobotType.ARCHON) continue;
-			if (ally.health < ally.maxHealth && ally.health > mostHealth) {
+			if (ally.type == RobotType.ARCHON || ally.health >= ally.type.maxHealth) continue;
+			
+			double score = repairScore(ally);
+			if (score > bestRepairScore) {
+				bestRepairScore = score;
 				bestLoc = ally.location;
-				mostHealth = ally.health;
 			}
 		}
+//		Debug.indicate("heal", 0, "bestLoc = " + bestLoc);
 		if (bestLoc != null) {
 			rc.repair(bestLoc);
 		}
@@ -387,7 +426,7 @@ public class BotArchon extends Globals {
 					break;
 				case Messages.CHANNEL_PART_REGIONS:
 					PartRegion region = Messages.parsePartRegion(data);
-					Debug.indicate("regions", 0, "got region: parts=" + region.totalParts + ", loc=" + region.centralLocation + ", avgTurnsToUncover=" + region.avgTurnsToUncover);;
+//					Debug.indicate("regions", 0, "got region: parts=" + region.totalParts + ", loc=" + region.centralLocation + ", avgTurnsToUncover=" + region.avgTurnsToUncover);;
 					PartMemory.add(region);
 					break;
 					
@@ -423,6 +462,10 @@ public class BotArchon extends Globals {
 //							Debug.indicate("dense", 1, "heard about a new den at " + denLoc + ", but I already knew about it");
 						}
 					}
+					break;
+
+				case Messages.CHANNEL_ROBOT_LOCATION:
+					Messages.processRobotLocation(sig, data);
 					break;
 					
 				default:
@@ -496,7 +539,7 @@ public class BotArchon extends Globals {
 				if (here.distanceSquaredTo(region.centralLocation) <= 13) {
 					PartMemory.remove(i);
 				} else {
-					Debug.indicate("regions", 1, "considering " + region.centralLocation);
+//					Debug.indicate("regions", 1, "considering " + region.centralLocation);
 					considerDestination(region.centralLocation, DestinationType.PARTREGION);
 				}
 			}
@@ -509,9 +552,9 @@ public class BotArchon extends Globals {
 			}
 		}	
 		
-		Debug.indicate("regions", 2, "destination = " + currentDestination);
+//		Debug.indicate("regions", 2, "destination = " + currentDestination);
 		if (currentDestination != null) {
-			Debug.indicateLine("regions", here, currentDestination, 255, 0, 0);
+//			Debug.indicateLine("regions", here, currentDestination, 255, 0, 0);
 		}
 	}
 	
@@ -531,6 +574,7 @@ public class BotArchon extends Globals {
 		for (RobotInfo ally : allies) {
 			if (ally.type == RobotType.SCOUT) continue;
 			if (ally.type == RobotType.SOLDIER && ally.health < ally.maxHealth / 2) continue;
+			if (ally.type == RobotType.GUARD) continue;
 			avgX += ally.location.x;
 			avgY += ally.location.y;			
 			N += 1;
@@ -573,6 +617,8 @@ public class BotArchon extends Globals {
 		int minHostileDistSq = 999999;
 		boolean fastZombieIsAdjacent = false;
 		int numZombies = 0;
+		int closestFastEnemyDistSq = Integer.MAX_VALUE;
+		int closestSlowEnemyDistSq = Integer.MAX_VALUE;
 		for (RobotInfo hostile : visibleHostiles) {
 			if (hostile.type.canAttack()) {
 				numDangerousHostiles += 1;
@@ -587,6 +633,15 @@ public class BotArchon extends Globals {
 				}
 				if (hostile.team == Team.ZOMBIE) {
 					numZombies += 1;
+				}
+				if (hostile.type.movementDelay <= 2) {
+					if (distSq < closestFastEnemyDistSq) {
+						closestFastEnemyDistSq = distSq;
+					}
+				} else {
+					if (distSq < closestSlowEnemyDistSq) {
+						closestSlowEnemyDistSq = distSq;
+					}
 				}
 			}
 		}
@@ -609,8 +664,8 @@ public class BotArchon extends Globals {
 			}
 		}
 		
-		Debug.indicate("retreat", 0, "numDangerousHostiles = " + numDangerousHostiles + ", numHelpfulAllies = " + numHelpfulAllies);
-		Debug.indicateAppend("retreat", 0, "; minY = " + MapEdges.minY + ", maxY = " + MapEdges.maxY);
+//		Debug.indicate("retreat", 0, "numDangerousHostiles = " + numDangerousHostiles + ", numHelpfulAllies = " + numHelpfulAllies);
+//		Debug.indicateAppend("retreat", 0, "; minY = " + MapEdges.minY + ", maxY = " + MapEdges.maxY);
 		
 		if (numHelpfulAllies >= numDangerousHostiles && !fastZombieIsAdjacent) {
 			return false; // we are hopefully safe
@@ -618,24 +673,24 @@ public class BotArchon extends Globals {
 		
 		if (numZombies * 2 >= numDangerousHostiles) {
 			lastFleeZombiesRound = rc.getRoundNum();
-			Debug.indicate("convert", 1, "lastFleeZombiesRound = " + lastFleeZombiesRound);
+//			Debug.indicate("convert", 1, "lastFleeZombiesRound = " + lastFleeZombiesRound);
 		} else {
 			lastFleeOtherTeamRound = rc.getRoundNum();
 		}
 		
-		Debug.indicate("retreat", 1, "must flee overwhelming enemies!!!!! ");
+//		Debug.indicate("retreat", 1, "must flee overwhelming enemies!!!!! ");
 		
 		MapLocation closestCorner = MapEdges.getClosestKnownMapCorner();
-		Debug.indicateAppend("retreat", 1, "; closestCorner = " + closestCorner);
+//		Debug.indicateAppend("retreat", 1, "; closestCorner = " + closestCorner);
 		boolean[] directionIsDiscouraged = new boolean[8];
 		if ((closestCorner != null) && (here.distanceSquaredTo(closestCorner) <= 100)
 				&& !here.equals(closestCorner)) {
 			// if near a corner, forbid retreating in directions toward that corner
 			int toCornerOrdinal = here.directionTo(closestCorner).ordinal();
-			Debug.indicateAppend("retreat", 1, "; toCorner = " + here.directionTo(closestCorner)); 
+//			Debug.indicateAppend("retreat", 1, "; toCorner = " + here.directionTo(closestCorner)); 
 			directionIsDiscouraged[toCornerOrdinal] = true;
-			directionIsDiscouraged[(toCornerOrdinal+1)%8] = true;
-			directionIsDiscouraged[(toCornerOrdinal+7)%8] = true;
+			//directionIsDiscouraged[(toCornerOrdinal+1)%8] = true;
+			//directionIsDiscouraged[(toCornerOrdinal+7)%8] = true;
 		}
 		
 		
@@ -652,7 +707,7 @@ public class BotArchon extends Globals {
 				bestRetreatDir = dir;
 			}
 		}
-		Debug.indicateAppend("retreat", 1, "; bestRetreatDir = " + bestRetreatDir); 
+//		Debug.indicateAppend("retreat", 1, "; bestRetreatDir = " + bestRetreatDir); 
 		
 		if (bestRetreatDir == null) {
 			return false;
@@ -660,25 +715,27 @@ public class BotArchon extends Globals {
 		
 		// consider building a guard to protect us
 		if (rc.getTeamParts() >= RobotType.GUARD.partCost) {
-			if (numHelpfulAllies == 0 || minHostileDistSq < minAllyDistSq || fastZombieIsAdjacent) {
-				// try to build a guard to defend us.
-				// but we are not allow to build a guard that blocks the
-				// best retreat direction		
-				Direction oppositeDir = bestRetreatDir.opposite();			
-				Direction[] buildDirs = { oppositeDir, oppositeDir.rotateLeft(), oppositeDir.rotateRight(),
-						oppositeDir.rotateLeft().rotateLeft(), oppositeDir.rotateRight().rotateRight() };
-				for (Direction buildDir : buildDirs) {
-					if (rc.canBuild(buildDir, RobotType.GUARD)) {
-						rc.build(buildDir, RobotType.GUARD);
-						Debug.indicate("retreat", 2, "building guard!"); 
-						return true;
+			if (closestSlowEnemyDistSq > 2 && closestFastEnemyDistSq < closestSlowEnemyDistSq) {
+				if (numHelpfulAllies == 0 || minHostileDistSq < minAllyDistSq || fastZombieIsAdjacent) {
+					// try to build a guard to defend us.
+					// but we are not allow to build a guard that blocks the
+					// best retreat direction		
+					Direction oppositeDir = bestRetreatDir.opposite();			
+					Direction[] buildDirs = { oppositeDir, oppositeDir.rotateLeft(), oppositeDir.rotateRight(),
+							oppositeDir.rotateLeft().rotateLeft(), oppositeDir.rotateRight().rotateRight() };
+					for (Direction buildDir : buildDirs) {
+						if (rc.canBuild(buildDir, RobotType.GUARD)) {
+							rc.build(buildDir, RobotType.GUARD);
+//							Debug.indicate("retreat", 2, "building guard!"); 
+							return true;
+						}
 					}
 				}
 			}
 		}
 
 		rc.move(bestRetreatDir);
-		Debug.indicate("retreat", 2, "moving!"); 
+//		Debug.indicate("retreat", 2, "moving!"); 
 		return true;
 	}
 }

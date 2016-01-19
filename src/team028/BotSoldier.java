@@ -4,9 +4,11 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("micro");		
+//		Debug.init("archon");		
 		FastMath.initRand(rc);
+		rc.emptySignalQueue(); // flush signal backlog
 		while (true) {
+			int startTurn = rc.getRoundNum();
 			try {
 				Globals.update();
 				turn();
@@ -14,6 +16,10 @@ public class BotSoldier extends Globals {
 
 			} catch (Exception e) {
 				e.printStackTrace();
+			}
+			int endTurn = rc.getRoundNum();
+			if (startTurn != endTurn) {
+				System.out.println("OVER BYTECODE LIMIT");
 			}
 			Clock.yield();
 		}
@@ -37,7 +43,6 @@ public class BotSoldier extends Globals {
 	private static boolean isAttackingZombieDen = false;
 	
 
-	
 	private static void turn() throws GameActionException {
 		processSignals();
 
@@ -106,7 +111,7 @@ public class BotSoldier extends Globals {
 		}
 	}
 
-	private static void processSignals() {
+	private static void processSignals() throws GameActionException {
 		Radar.clearEnemyCache();
 
 		Signal[] signals = rc.emptySignalQueue();
@@ -158,6 +163,10 @@ public class BotSoldier extends Globals {
 					Messages.processEnemyTurretWarning(data);
 					break;
 					
+				case Messages.CHANNEL_ROBOT_LOCATION:
+					Messages.processRobotLocation(sig, data);
+					break;
+					
 				default:
 				}
 			}
@@ -176,13 +185,13 @@ public class BotSoldier extends Globals {
 				}
 			}
 			if (leftHealth <= 0) {
-				Debug.indicate("micro", 0, "Doomed by infection");
+//				Debug.indicate("micro", 0, "Doomed by infection");
 				if (tryChargeToEnemy()) {
-					Debug.indicate("micro", 1, "Going for enemies");
+//					Debug.indicate("micro", 1, "Going for enemies");
 					return true;
 				}
 				if (tryGoAwayFromAlly()) {
-					Debug.indicate("micro", 1, "Cannot find enemy, keep distance from allies.");
+//					Debug.indicate("micro", 1, "Cannot find enemy, keep distance from allies.");
 					return true;
 				}
 			}
@@ -194,7 +203,7 @@ public class BotSoldier extends Globals {
 			if (rc.isCoreReady()) {
 				if (visibleHostiles.length > 0) {
 					if (fleeInHealingState(visibleHostiles)) {
-						Debug.indicate("micro", 0, "fleeing in healing state");
+//						Debug.indicate("micro", 0, "fleeing in healing state");
 						return true;
 					}
 				}
@@ -202,7 +211,7 @@ public class BotSoldier extends Globals {
 			if (rc.isWeaponReady() && rc.getCoreDelay() >= myType.cooldownDelay) {
 				RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 				if (attackableHostiles.length > 0) {
-					Debug.indicate("micro", 0, "attacking in healing state");
+//					Debug.indicate("micro", 0, "attacking in healing state");
 					chooseTargetAndAttack(attackableHostiles);
 					return true;
 				}
@@ -214,7 +223,7 @@ public class BotSoldier extends Globals {
 		
 		if (rc.isCoreReady()) {
 			if (retreatIfOutnumbered(visibleHostiles)) {
-				Debug.indicate("micro", 0, "retreating because outnumbered");
+//				Debug.indicate("micro", 0, "retreating because outnumbered");
 				return true;
 			}
 		}
@@ -224,23 +233,23 @@ public class BotSoldier extends Globals {
  			    // retreat if there is slow zombie adjacent to us
 				if (rc.isCoreReady()) {
 					if (retreatFromSlowZombiesIfNecessary()) {
-						Debug.indicate("micro", 0, "retreating from slow zombies");
+//						Debug.indicate("micro", 0, "retreating from slow zombies");
 						return true;
 					}
 				}
 				// otherwise just shoot someone
-				Debug.indicate("micro", 0, "attacking");
+//				Debug.indicate("micro", 0, "attacking");
 				chooseTargetAndAttack(attackableHostiles);
 				return true;
 			}
 			// we can't shoot anyone. try to help an ally or attack a helpless target
 			if (rc.isCoreReady()) {
 				if (tryMoveToHelpAlly(visibleHostiles)) {
-					Debug.indicate("micro", 0, "moving to help ally");
+//					Debug.indicate("micro", 0, "moving to help ally");
 					return true;
 				}
 				if (tryMoveToAttackHelplessTarget(visibleHostiles)) {
-					Debug.indicate("micro", 0, "moving to attack helpless target");
+//					Debug.indicate("micro", 0, "moving to attack helpless target");
 					return true;
 				}
 			}
@@ -251,15 +260,15 @@ public class BotSoldier extends Globals {
 			// from a safer distance
 			if (attackableHostiles.length > 0) {
 				if (tryToBackUpToMaintainMaxRange(attackableHostiles)) {
-					Debug.indicate("micro", 0, "backing up to maintain max range");
+//					Debug.indicate("micro", 0, "backing up to maintain max range");
 					return true;
 				}
 				if (tryMoveToAttackHelplessNonDenTarget(visibleHostiles)) {
-					Debug.indicate("micro", 0, "moving to attack helpless non den target");
+//					Debug.indicate("micro", 0, "moving to attack helpless non den target");
 					return true;
 				}
 				if (tryGetCloserToZombieDen(attackableHostiles)) {
-					Debug.indicate("micro", 0, "getting closer to zombie den");
+//					Debug.indicate("micro", 0, "getting closer to zombie den");
 					return true;
 				}
 				return true; // we are fighting, don't move
@@ -267,15 +276,15 @@ public class BotSoldier extends Globals {
 			
 			// otherwise try to help an ally or attack a helpless target
 			if (tryMoveToHelpAlly(visibleHostiles)) {
-				Debug.indicate("micro", 0, "moving to help ally");
+//				Debug.indicate("micro", 0, "moving to help ally");
 				return true;
 			}
 			if (tryMoveToEngageOutnumberedEnemy(visibleHostiles)) {
-				Debug.indicate("micro", 0, "moving to engage outnumbered enemy");
+//				Debug.indicate("micro", 0, "moving to engage outnumbered enemy");
 				return true;
 			}
 			if (tryMoveToAttackHelplessTarget(visibleHostiles)) {
-				Debug.indicate("micro", 0, "moving to attack helpless target");
+//				Debug.indicate("micro", 0, "moving to attack helpless target");
 				return true;
 			}
 		}
@@ -747,7 +756,6 @@ public class BotSoldier extends Globals {
 		return true;
 	}
 	
-	
 	private static void lookForAttackTarget() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 		
@@ -768,6 +776,15 @@ public class BotSoldier extends Globals {
 //			Debug.indicate("radar", 1, "now attackTarget = " + attackTarget);
 		}
 
+		// Not very good against felix
+//		if (attackTarget == null) {
+//			attackTarget = Radar.closestEnemyArchonLocation();
+//			if (attackTarget != null) {
+//				Debug.indicate("archon", 2, "No target, going to attack enemy archon at " + attackTarget);
+//				// Debug.println("archon", "attackTarget=" + attackTarget);
+//			}
+//		}
+		
 		if (attackTarget != null) {
 			if (rc.canSenseLocation(attackTarget)) {
 				RobotInfo targetInfo = rc.senseRobotAtLocation(attackTarget);
@@ -801,7 +818,7 @@ public class BotSoldier extends Globals {
 			return;
 		}
 		
-		if (wanderDirection == null) {
+		/*if (wanderDirection == null) {
 			wanderDirection = Direction.values()[FastMath.rand256() % 8];
 		}
 		
@@ -814,6 +831,7 @@ public class BotSoldier extends Globals {
 //			Debug.indicateLine("micro", here, fakeTarget, 100, 100, 0);
 		} else {
 			wanderDirection = Direction.values()[FastMath.rand256() % 8];
-		}
+		}*/
+		tryToHealAtArchon();
 	}
 }

@@ -34,48 +34,91 @@ public class BotScout extends Globals {
 	
 	private static int sameDirectionSteps = 0;
 	
+	//private static boolean pullMode = false;
+	//private static int birthRound;\
+	
 	public static void loop() {
-    	Debug.init("safety");
+		/*birthRound = rc.getRoundNum();
+		if (calculateSpawnScheduleScaryness() > ZOMBIE_SCHEDULE_SCARYNESS_THRESHOLD) {
+			pullMode = true;
+		}*/
+		
+//		Debug.init("radar");
     	origin = here;
     	exploredGrid[50][50] = true;   
 //    	Debug.indicate("dens", 2, "dens received at birth: ");
+    	try {
+    		processSignals(true);
+    	} catch (Exception e) {
+    		System.out.println("SCOUT EXCEPTION IN INITIAL PROCESSSIGNALS:");
+			e.printStackTrace();    		
+    	}
 		while (true) {
+			int startTurn = rc.getRoundNum();
 			try {
 				Globals.update();
 			    turn();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
+			int endTurn = rc.getRoundNum();
+			if (startTurn != endTurn) {
+				System.out.println("OVER BYTECODE LIMIT");
+			}
 			Clock.yield();
 		}
 	}
 	
-	private static void turn() throws GameActionException {
-		
-		Globals.updateRobotInfos();
+	private static void turn() throws GameActionException {	
+//		Debug.indicate("bytecodes", 0, "start: " + Clock.getBytecodeNum());
+		Globals.updateRobotInfos();		
 				
-		processSignals();		
+		processSignals(false);		
+//		Debug.indicate("bytecodes", 0, "; after processSignals: " + Clock.getBytecodeNum());
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
 
+		/*if (pullMode && birthRound <= 500 && rc.getRoundNum() <= 700) {
+			if (rc.isCoreReady()) {
+				if (tryLuringZombie()) {
+					return;
+				}
+				exploreTheMap();
+			}
+			return;
+		}*/
+				
 		trySuicide();
 		
 		tryBroadcastUnpairedScoutSignal();
 		
+//		Debug.indicateAppend("bytecodes", 0, "; before radar: " + Clock.getBytecodeNum());
 		sendRadarInfo();
-		sendTurretWarning();
+//		Debug.indicateAppend("bytecodes", 0, "; after radar: " + Clock.getBytecodeNum());
+		sendRobotInfo();
+//		Debug.indicateAppend("bytecodes", 0, "; after sendRobotInfo: " + Clock.getBytecodeNum());
 		updateClosestEnemyTurretLocation();
+//		Debug.indicateAppend("bytecodes", 0, "; after uCETL: " + Clock.getBytecodeNum());
 
 		trySendPartsOrNeutralLocation();
+//		Debug.indicate("bytecodes", 1, "; after tSPONL: " + Clock.getBytecodeNum());
 		trySendZombieDenLocations();
+//		Debug.indicateAppend("bytecodes", 1, "; after tSZDL: " + Clock.getBytecodeNum());
 		
 		if (rc.isCoreReady()) {
 			if (retreatIfNecessary()) {
 				return;
 			}		
+//			Debug.indicateAppend("bytecodes", 1, "; after retreat: " + Clock.getBytecodeNum());
 			if (tryFollowTurret()) {
 				return;
 			}
+//			Debug.indicateAppend("bytecodes", 1, "; after tryFollow: " + Clock.getBytecodeNum());
+			/*if (tryMicro()) {
+				return;
+			}*/
+
 			exploreTheMap();
+//			Debug.indicateAppend("bytecodes", 1, "; after explore: " + Clock.getBytecodeNum());
 		}
 	}
 	
@@ -203,13 +246,13 @@ public class BotScout extends Globals {
 			MapLocation partsCenter = new MapLocation((int)partsCenterX, (int)partsCenterY);
 			avgTurnsToUncover /= totalParts;
 			
-			Debug.indicate("regions", 0, "totalParts = " + totalParts + ", partsCenter = " + partsCenter + ", avgTurnsToUncover = " + avgTurnsToUncover);
+//			Debug.indicate("regions", 0, "totalParts = " + totalParts + ", partsCenter = " + partsCenter + ", avgTurnsToUncover = " + avgTurnsToUncover);
 			
 			if (totalParts >= 180) {
 				PartRegion region = new PartRegion((int)totalParts, (int)avgTurnsToUncover, partsCenter);			
 				if (PartMemory.add(region)) {
 					// TODO: REMEMBER ARCHON LOCATION AND REDUCE RANGE
-					Debug.indicate("regions", 1, "sending region!!");
+//					Debug.indicate("regions", 1, "sending region!!");
 					Messages.sendPartRegion(partsCenter, (int)totalParts, (int)avgTurnsToUncover,
 							30*mySensorRadiusSquared);
 				}
@@ -262,6 +305,7 @@ public class BotScout extends Globals {
 	private static void sendRadarInfo() throws GameActionException {
 //		Debug.indicate("radar", 0, "sendRaderInfo: hostiles.length = " + visibleHostiles.length);
 		if (visibleHostiles.length == 0) return;
+//		Debug.indicate("radar", 0, "lastGlobalRadarBroadcastRound = " + lastGlobalRadarBroadcastRound);
 		
 		int radarRangeSq = 4*mySensorRadiusSquared;
 		if (visibleAllies.length == 0) {
@@ -272,12 +316,14 @@ public class BotScout extends Globals {
 		if (rc.getRoundNum() - lastLongRangeRadarBroadcastRound > 50) {
 			radarRangeSq = 30 * mySensorRadiusSquared;
 			lastLongRangeRadarBroadcastRound = rc.getRoundNum();
+//			Debug.indicate("radar", 1, "setting range to medium = " + radarRangeSq);
 		}
 		
 		if (rc.getRoundNum() - lastGlobalRadarBroadcastRound > 400) {
 			radarRangeSq = MapEdges.maxBroadcastDistSq();
 			lastGlobalRadarBroadcastRound = rc.getRoundNum();
 			lastLongRangeRadarBroadcastRound = rc.getRoundNum();
+//			Debug.indicate("radar", 1, "setting range to global = " + radarRangeSq);
 		}
 		
 		RobotInfo[] hostilesToSend = new RobotInfo[5];
@@ -295,7 +341,7 @@ public class BotScout extends Globals {
 		lastRadarBroadcastRound = rc.getRoundNum();
 	}
 	
-	private static void sendTurretWarning() throws GameActionException {
+	private static void sendRobotInfo() throws GameActionException {
 		int turretWarningRangeSq = 9*mySensorRadiusSquared;
 		boolean first = true;
 		for (RobotInfo hostile : visibleHostiles) {
@@ -309,7 +355,16 @@ public class BotScout extends Globals {
 					Radar.addEnemyTurret(hostile.ID, hostile.location);
 					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, turretWarningRangeSq);
 				}
-			}
+			} /*else if (hostile.type == RobotType.ARCHON) {
+				boolean isNewID = Radar.bigRobotInfoById[hostile.ID] == null;
+				int rangeSq = 4*mySensorRadiusSquared;
+				if (isNewID) rangeSq = MapEdges.maxBroadcastDistSq();
+				BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, rc.getRoundNum());
+				if (bri != null) {
+					Messages.sendRobotLocation(bri, rangeSq);
+					Debug.indicate("archon", 0, "sent archon discover message");
+				}
+			}*/
 		}
 		
 		// Check to see whether the closest turret to us has moved or gone missing.
@@ -338,12 +393,19 @@ public class BotScout extends Globals {
 		}
 	}
 
-	private static void processSignals() {
+	private static void processSignals(boolean justBorn) throws GameActionException {
 		Radar.clearEnemyCache();
+		
+//		Debug.indicate("archon", 2, "");
 		
 		Signal[] signals = rc.emptySignalQueue();
 		for (Signal sig : signals) {
-			if (sig.getTeam() != us) continue;
+			if (sig.getTeam() != us) {
+				/*if (Radar.bigRobotInfoById[sig.getID()] != null) {
+					Messages.processRobotLocation(sig);
+				}*/
+				continue;
+			}
 			
 			int[] data = sig.getMessage();
 			if (data != null) {
@@ -351,7 +413,7 @@ public class BotScout extends Globals {
 				case Messages.CHANNEL_MAP_EDGES:
 					Messages.processMapEdges(data);
 					break;
-					
+				
 				case Messages.CHANNEL_TURRET_OWNERSHIP:
 					int turretId = Messages.parseTurretOwnershipClaim(data);
 					if (turretId == turretFollowId) {
@@ -383,8 +445,23 @@ public class BotScout extends Globals {
 					receiveZombieDenList(data, sig.getLocation());
 					break;
 
-				case Messages.CHANNEL_RADAR:
+				/*case Messages.CHANNEL_RADAR:
 					Messages.addRadarDataToEnemyCache(data, sig.getLocation(), myAttackRadiusSquared);
+					break;*/
+					
+				// TODO: Maybe we need this ???
+				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
+					Messages.processEnemyTurretWarning(data);
+					break;
+					
+				case Messages.CHANNEL_ROBOT_LOCATION:
+					Messages.processRobotLocation(sig, data);
+					break;
+					
+				case Messages.CHANNEL_FLUSH_SIGNAL_QUEUE:
+					if (justBorn) {
+						return;
+					}
 					break;
 					
 				default:
@@ -415,74 +492,121 @@ public class BotScout extends Globals {
 		}
 	}
 	
-	private static void exploreTheMap() throws GameActionException {
-		if (tryMicro()) {
-			return;
+	private static boolean tryMicro() throws GameActionException {
+		if (tryLuringZombie()) {
+			return true;
 		}
-		moveAround();
+		return false;
 	}
 	
-	private static boolean tryMicro() throws GameActionException {
-		if (tryLuringZombie()) return true;
+	private static boolean squareIsAttackedByAZombie(MapLocation loc, RobotInfo[] zombies) {
+		for (RobotInfo zombie : zombies) {
+			if (!zombie.type.canAttack()) continue;
+			if (zombie.location.distanceSquaredTo(loc) <= zombie.type.attackRadiusSquared) {
+				return true;
+			}
+		}
 		return false;
 	}
 	
 	private static boolean tryLuringZombie() throws GameActionException {
-		if (visibleHostiles.length == 0) {
-			return false;
-		} else {
-			Debug.indicate("lure", 0, "hello from tryLuringZombie()");
-			//if (visibleAllies.length != 0) {
-			//	return false;
-			//}
-			//if (visibleZombies.length == 0) {
-				// Fighting enemy
-			//} else if (visibleEnemies.length == 0){
-				// Fighting zombies
-				MapLocation target = theirInitialArchonLocations[0];
-				Direction targetDir = here.directionTo(target);
-				boolean tooFar = true; // zombie maybe far behind us.
-				double score = 0;
-				for (RobotInfo r : visibleZombies) {
-					score += r.attackPower;
-					if (r.type == RobotType.BIGZOMBIE &&
-							FastMath.dotVec(targetDir, here.directionTo(r.location)) > 0) {
-						tooFar = false;
-					} else {
-						switch (r.type) {
-							case BIGZOMBIE:
-							case STANDARDZOMBIE:
-								if (here.distanceSquaredTo(r.location) <= 8) {
-									tooFar = false;
-								}
-								break;
-								
-							case FASTZOMBIE:
-								tooFar = false;
-								break;
-								
-							case RANGEDZOMBIE:
-							default:
-								if (here.distanceSquaredTo(r.location) <= 25) {
-									tooFar = false;
-								}
-								break;								
-						}
-					}
-				}
-				Debug.indicate("lure", 1, "target = " + target + ", targetDir = " + targetDir + ", tooFar = " + tooFar + ", score = " + score);
-				if (score >= 25) {
-					// System.out.println("Fighting Zombies");
-					if (!tooFar) {
-						return Nav.scoutGoToDirectSafelyAvoidingZombies(target);
-					} else {
-						// Wait for zombie, maybe need to broadcast a message.
-						return true;
-					}
-				}
-			//}
+		RobotInfo[] visibleZombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+		if (visibleZombies.length == 0) return false;
+//		Debug.indicate("lure", 0, "hello from tryLuringZombie!");
+				
+		RobotInfo closestZombie = null;
+		int bestDistSq = Integer.MAX_VALUE;
+		boolean fastZombieIsAdjacent = false;
+		int zombieScore = 0;
+		for (RobotInfo zombie : visibleZombies) {
+			if (zombie.type == RobotType.ZOMBIEDEN) continue;
+			int distSq = here.distanceSquaredTo(zombie.location);
+			if (distSq < bestDistSq) {
+				bestDistSq = distSq;
+				closestZombie = zombie;
+			}
+			if (zombie.type == RobotType.FASTZOMBIE && zombie.location.isAdjacentTo(here)) {
+				fastZombieIsAdjacent = true;
+			}
+			switch (zombie.type) {
+			case STANDARDZOMBIE: zombieScore += 1; break;
+			case RANGEDZOMBIE: zombieScore += 2; break;
+			case FASTZOMBIE: zombieScore += 5; break;
+			case BIGZOMBIE: zombieScore += 10; break;
+			default:
+			}
 		}
-		return false;
+		if (zombieScore < 10) return false;
+		if (closestZombie == null) return false;
+		System.out.println("luring zombie!");
+//		Debug.indicate("lure", 1, "closestZombie = " + closestZombie.location);
+		
+		// if we are near the target, and we see an enemy,
+		// get infected and suicide
+		MapLocation target = Radar.closestEnemyArchonLocation();
+		if (target == null) {
+			target = centerOfTheirInitialArchons;
+		}
+//		Debug.indicateLine("lure", here, target, 255, 0, 0);
+		if (here.distanceSquaredTo(target) < here.distanceSquaredTo(centerOfOurInitialArchons)) {
+			if (rc.senseNearbyRobots(35, them).length > 0) {
+				if (rc.getInfectedTurns() > 0) {
+					rc.disintegrate();
+				} else {
+					Nav.goToDirect(closestZombie.location);
+				}
+				return true;
+			}			
+		} 
+
+		Direction lureDir = closestZombie.location.directionTo(target);
+		MapLocation lureLoc = closestZombie.location.add(lureDir, 2);
+		while (squareIsAttackedByAZombie(lureLoc, visibleZombies) && !lureLoc.equals(target)) {
+			lureLoc = lureLoc.add(lureDir);
+		}
+//		Debug.indicateLine("lure", here, lureLoc, 0, 0, 255);
+		//if (fastZombieIsAdjacent) {
+			Nav.goToDirect(lureLoc);
+		//} else {
+		//	goToCirclingZombies(lureLoc, visibleZombies);
+		//}
+//		Debug.indicate("lure", 2, "lureLoc = " + lureLoc);
+//		Debug.indicateLine("lure", here, lureLoc, 255, 0, 0);
+		return true;
+	}
+	
+	private static boolean circleLeft = true;
+	
+	private static void goToCirclingZombies(MapLocation dest, RobotInfo[] visibleZombies) throws GameActionException {
+		if (here.equals(dest)) {
+			return;
+		}
+		
+		Direction dir = here.directionTo(dest);
+		for (int i = 0; i < 8; ++i) {
+		    MapLocation dirLoc = here.add(dir);
+			if (rc.canMove(dir)) {
+			    if (!squareIsAttackedByAZombie(dirLoc, visibleZombies)) {
+			    	rc.move(dir);
+			    	return;
+			    }
+			} else {
+				if (!rc.onTheMap(dirLoc)) {
+					circleLeft = !circleLeft;
+				}
+			}
+			if (circleLeft) {
+				dir = dir.rotateLeft();
+			} else {
+				dir = dir.rotateRight();
+			}
+		}
+		// couldn't circle
+		Nav.goToDirect(dest);
+	}
+	
+	private static void exploreTheMap() throws GameActionException {
+		moveAround();
 	}
 
 	private static int nFriend = 0;
@@ -514,9 +638,9 @@ public class BotScout extends Globals {
 		boolean[] cmoves = new boolean[9];
 		MapLocation[] locs = new MapLocation[9];
 //		boolean[] oddPos = new boolean[9];
-		double[] rubbles = new double[9];
+		//double[] rubbles = new double[9];
 		double[] attacks = new double[9];
-		double[] nfriends = new double[9];
+		//double[] nfriends = new double[9];
 		double[] friends = new double[9];
 		double[] scouts  = new double[9];
 		double[] archons  = new double[9];
@@ -528,14 +652,17 @@ public class BotScout extends Globals {
 			locs[i] = here.add(dirs[i]);
 			cmoves[i] = rc.canMove(dirs[i]);
 		}
-		for (int i = 0; i < 9; ++i) {
+		/*for (int i = 0; i < 9; ++i) {
 //			oddPos[i] = !isGoodTurretLocation(locs[i]);
-			rubbles[i] = rc.senseRubble(locs[i]);
-		}
+			//rubbles[i] = rc.senseRubble(locs[i]);
+		}*/
 		RobotInfo[] infos;
 		infos = visibleHostiles;
 		for (RobotInfo e : infos) {
 			if (!e.type.canAttack()) continue;
+			if (e.location.distanceSquaredTo(here) > e.type.attackRadiusSquared * 3 + 10) {
+				continue; // enemy is too far away to worry about
+			}
 			for (int i = 0; i < 9; ++i) {
 				int distSq = e.location.distanceSquaredTo(locs[i]);
 				if (distSq <= e.type.attackRadiusSquared) {
@@ -562,11 +689,11 @@ public class BotScout extends Globals {
 				break;
 			// case SOLDIER:
 			case TURRET:
-				for (int i = 0; i < 9; ++i) {
+				/*for (int i = 0; i < 9; ++i) {
 					if (f.location.distanceSquaredTo(locs[i]) < 9) {
 						nfriends[i] += 1;
 					}
-				}
+				}*/
 				friendVec = friendVec.add(here.directionTo(f.location));
 				break;
 			case SCOUT:
@@ -633,24 +760,24 @@ public class BotScout extends Globals {
 		}
 		double bestScore = -100000;
 		Direction bestDir = null;
-		int bestI = 8;
+		//int bestI = 8;
 		int rdn = FastMath.rand256();
 		for (int i = 0; i < 9; ++i) {
 			if (bestScore < scores[(rdn + i) % 9]) {
 				bestDir = dirs[(rdn + i) % 9];
 				bestScore = scores[(rdn + i) % 9];
-				bestI = i;
+				//bestI = i;
 			}
 		}
-		nFriend = (int)nfriends[8];
+		//nFriend = (int)nfriends[8];
 		if (bestDir != null) {
 			if (rc.canMove(bestDir)) {
-				nFriend = (int)nfriends[bestI];
+				//nFriend = (int)nfriends[bestI];
 				rc.move(bestDir);
 			}
-		} else if (rubbles[8] >= GameConstants.RUBBLE_SLOW_THRESH) {
+		} /*else if (rubbles[8] >= GameConstants.RUBBLE_SLOW_THRESH) {
 			rc.clearRubble(Direction.NONE);
-		}
+		}*/
 		
 		if (lastDir == bestDir) {
 			sameDirectionSteps += 1;
@@ -764,7 +891,6 @@ public class BotScout extends Globals {
 		finishedExploring = true;
 	}
 
-
 	private static boolean retreatIfNecessary() throws GameActionException {
 		// if any enemy is too close, try to get farther away
 		if (visibleHostiles.length == 0) return false;
@@ -807,13 +933,12 @@ public class BotScout extends Globals {
 		}
 		
 		if (bestDir != null) {
-			Debug.indicate("safety", 0, "retreating!");
+//			Debug.indicate("safety", 0, "retreating!");
 			rc.move(bestDir);
 			return true;
 		}
 		return false;
 	}
-	
 	
 	private static void explore() throws GameActionException {
 		if (finishedExploring) return;

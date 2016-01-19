@@ -13,6 +13,7 @@ public class Messages extends Globals {
 	
 	public static final int CHANNEL_MASK = 0xf0000000;
 	public static final int CHANNEL_MASK_INVERSE = ~CHANNEL_MASK;
+	public static final int CHANNEL_FLUSH_SIGNAL_QUEUE = 0x00000000;
 	public static final int CHANNEL_TURRET_TARGET = 0x10000000;
 	public static final int CHANNEL_ZOMBIE_DEN = 0x20000000;
 	public static final int CHANNEL_FOUND_PARTS = 0x30000000;
@@ -21,7 +22,7 @@ public class Messages extends Globals {
 	public static final int CHANNEL_DEN_ATTACK_COMMAND = 0x60000000;
 	public static final int CHANNEL_ZOMBIE_DEN_LIST = 0x70000000;
 	public static final int CHANNEL_PART_REGIONS = 0x80000000;
-	public static final int CHANNEL_UNIT_LOCATION = 0x90000000;
+	public static final int CHANNEL_ROBOT_LOCATION = 0x90000000;
 	public static final int CHANNEL_ARCHON_LOCATION = 0xa0000000;
 	public static final int CHANNEL_RADAR = 0xb0000000;
 	public static final int CHANNEL_FOUND_NEUTRAL = 0xc0000000;
@@ -58,6 +59,10 @@ public class Messages extends Globals {
 	
 	private static int parseInt(int[] data) {
 		return data[1];
+	}
+	
+	public static void sendFlushSignalQueue(int radiusSq) throws GameActionException {
+		rc.broadcastMessageSignal(CHANNEL_FLUSH_SIGNAL_QUEUE, 0, radiusSq);
 	}
 	
 	public static void sendTurretTarget(MapLocation loc, int radiusSq) throws GameActionException {
@@ -97,7 +102,7 @@ public class Messages extends Globals {
 			data *= 200;
 			data += 100 + locations[i].y - here.y;
 		}
-		int data0 = (int)(data >> 32);
+		int data0 = (int)(data >> 32) & CHANNEL_MASK_INVERSE;
 		int data1 = (int)(data & 0x00000000ffffffffL);
 		rc.broadcastMessageSignal(CHANNEL_ZOMBIE_DEN_LIST | data0, data1, radiusSq);
 //		Debug.indicate("msg", msgDILN(), "sendUpToThreeZombieDens " + radiusSq);
@@ -219,14 +224,14 @@ public class Messages extends Globals {
 	}
 	
 	public static void sendEnemyTurretWarning(int id, MapLocation loc, int radiusSq) throws GameActionException {
-		int data0 = id;
+		int data0 = id & CHANNEL_MASK_INVERSE;
 		int data1 = intFromMapLocation(loc);
 		rc.broadcastMessageSignal(CHANNEL_ENEMY_TURRET_WARNING | data0, data1, radiusSq);
 //		Debug.indicate("msg", msgDILN(), "sendEnemyTurretWarning " + radiusSq);
 	}
 	
 	public static void sendEnemyTurretMissing(int id, int radiusSq) throws GameActionException {
-		int data0 = id;
+		int data0 = id & CHANNEL_MASK_INVERSE;
 		int data1 = ENEMY_TURRET_MISSING_VALUE;
 		rc.broadcastMessageSignal(CHANNEL_ENEMY_TURRET_WARNING | data0, data1, radiusSq);
 //		Debug.indicate("msg", msgDILN(), "sendEnemyTurretMissing " + radiusSq);
@@ -243,20 +248,39 @@ public class Messages extends Globals {
 		}
 	}
 	
-	public static void sendRobotLocation(int id, RobotType type, Team team, MapLocation loc, int radiusSq) throws GameActionException {
-		int data0 = id;
-		int data1 = intFromMapLocation(loc) | (type.ordinal() & 0xf) << 20 | (team.ordinal() & 0xf) << 24;
-		rc.broadcastMessageSignal(CHANNEL_UNIT_LOCATION | data0, data1, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendUnitLocation " + radiusSq);
+	public static BigRobotInfo sendRobotLocation(BigRobotInfo bri, int radiusSq) throws GameActionException {
+		if (bri == null) return null;
+		if (myType != RobotType.SCOUT && myType != RobotType.ARCHON) return null;
+		int data0 = (bri.id & 0xffff | ((bri.round & 0xfff) << 16)) & CHANNEL_MASK_INVERSE;
+		int data1 = intFromMapLocation(bri.location) | (bri.type.ordinal() & 0xf) << 20 | (bri.team.ordinal() & 0xf) << 24;
+		rc.broadcastMessageSignal(CHANNEL_ROBOT_LOCATION | data0, data1, radiusSq);
+//		Debug.indicate("msg", msgDILN(), "sendRobotLocation " + radiusSq);
+		return bri;
 	}
 	
-	public static boolean processRobotLocation(int[] data) {
-		int id = data[0] ^ CHANNEL_UNIT_LOCATION;
+	public static BigRobotInfo processRobotLocation(Signal sig, int[] data) throws GameActionException {
+		int data0 = data[0] ^ CHANNEL_ROBOT_LOCATION;
 		int locInt = data[1];
+		int id = data0 & 0xffff;
+		int round = (data0 >>> 16) & 0xfff;
 		RobotType type = RobotType.values()[(locInt >>> 20) & 0xf];
 		Team team = Team.values()[(locInt >>> 24) & 0xf];
 		MapLocation loc = mapLocationFromInt(locInt & 0xfffff);
-		return Radar.addRobot(id, type, team, loc);
+		BigRobotInfo bri = Radar.addRobot(id, type, team, loc, round);
+		if (myType == RobotType.SCOUT && sig.getLocation().distanceSquaredTo(here) >= 24) {
+			return sendRobotLocation(bri, 2*mySensorRadiusSquared);
+		} else {
+			return null;
+		}
+	}
+	
+	public static BigRobotInfo processRobotLocation(Signal sig) throws GameActionException {
+		BigRobotInfo bri = Radar.addRobot(sig.getID(), sig.getTeam(), sig.getLocation(), rc.getRoundNum() - 1);
+		if (myType == RobotType.SCOUT) {
+			return sendRobotLocation(bri, 9*mySensorRadiusSquared);
+		} else {
+			return null;
+		}
 	}
 	
 	public static void sendRadarData(RobotInfo[] infos, int size, int radiusSq) throws GameActionException {
@@ -274,9 +298,10 @@ public class Messages extends Globals {
 		int data1 = (int)(data & 0x00000000ffffffffL);
 		rc.broadcastMessageSignal(CHANNEL_RADAR | (CHANNEL_MASK_INVERSE & data0), data1, radiusSq);
 //		Debug.indicate("msg", msgDILN(), "sendRadarData " + radiusSq);
+//		Debug.indicate("radar", 2, "sent radar data with radiusSq = " + radiusSq);
 	}
 	
-	public static void addRadarDataToEnemyCache(int[] intData, MapLocation origin, int maxDistSq) {
+	/*public static void addRadarDataToEnemyCache(int[] intData, MapLocation origin, int maxDistSq) {
 		long data = (((long)(CHANNEL_RADAR ^ intData[0])) << 32) 
 				| (((long)intData[1]) & 0x00000000ffffffffL);
 		
@@ -294,6 +319,37 @@ public class Messages extends Globals {
 			}
 			data >>= 12;
 		}
+	}*/
+	
+	// adds radar hits within maxDistSq to the enemy cache.
+	// returns the closest radar hit, whether or not it is within maxDistSq
+	public static MapLocation addRadarDataToEnemyCacheAndReturnClosestHit(int[] intData, 
+			MapLocation origin, int maxDistSq) {
+		long data = (((long)(CHANNEL_RADAR ^ intData[0])) << 32) 
+				| (((long)intData[1]) & 0x00000000ffffffffL);
+		
+		int round = rc.getRoundNum();
+		RobotType[] types = RobotType.values();		
+		MapLocation closestHit = null;
+		int closestDistSq = Integer.MAX_VALUE;
+		while (data != 0) {
+			int y = origin.y - 8 + (int)(data & 0xfL);
+			int x = origin.x - 8 + (int)((data >> 4) & 0xfL);
+			MapLocation loc = new MapLocation(x, y);
+			int distSq = here.distanceSquaredTo(loc);
+			if (distSq <= maxDistSq) {
+				int typeOrdinal = (int)((data >> 8) & 0xfL) - 1;		
+				RobotType type = types[typeOrdinal];
+				FastRobotInfo info = new FastRobotInfo(loc, type, round);
+				Radar.addEnemyToCache(info);
+			}
+			if (distSq < closestDistSq) {
+				closestDistSq = distSq;
+				closestHit = loc;
+			}
+			data >>= 12;
+		}
+		return closestHit;
 	}
 	
 	public static MapLocation getClosestRadarHit(int[] intData, MapLocation origin) {
@@ -337,7 +393,7 @@ public class Messages extends Globals {
 		int locInt = intFromMapLocation(partsCenter);
 		if (avgTurnsToUncover > 2047) avgTurnsToUncover = 2047;
 		int data1 = (avgTurnsToUncover << 20) | locInt;
-		int data0 = totalParts;
+		int data0 = totalParts & CHANNEL_MASK_INVERSE;
 		rc.broadcastMessageSignal(CHANNEL_PART_REGIONS | data0, data1, radiusSq);
 	}
 	

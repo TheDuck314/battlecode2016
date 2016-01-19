@@ -4,11 +4,15 @@ import battlecode.common.*;
 
 public class BotTurret extends Globals {
 	public static void loop() {
-//		Debug.init("memory");
+//		Debug.init("radar");
+		rc.emptySignalQueue(); // flush signal backlog
 		while (true) {
+			int startTurn = rc.getRoundNum();
 			try {
 				Globals.update();
+//				Debug.indicate("bytecodes", 0, "start: " + Clock.getBytecodeNum());
 				processSignals();
+//				Debug.indicateAppend("bytecodes", 0, "; after processSignals: " + Clock.getBytecodeNum());
 				if (rc.getType() == RobotType.TURRET) {
 				    turnTurret();
 				} else {
@@ -16,6 +20,10 @@ public class BotTurret extends Globals {
 				}
 			} catch (Exception e) {
 				e.printStackTrace();
+			}
+			int endTurn = rc.getRoundNum();
+			if (startTurn != endTurn) {
+				System.out.println("OVER BYTECODE LIMIT");
 			}
 			Clock.yield();
 		}
@@ -33,16 +41,24 @@ public class BotTurret extends Globals {
 
 	private static int numAttacksOnRememberedTurret = 0;
 	
+	private static MapLocation lastAttackLocation = null;
+	
 	private static void turnTurret() throws GameActionException {
 		if (!rc.isWeaponReady() && !rc.isCoreReady()) return;
+		
 		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+//		Debug.indicate("bytecodes", 1, "; after removeDistantTurrets: " + Clock.getBytecodeNum());
+		//Radar.removeOldEnemyTurrets(Radar.TURRET_MEMORY_ROUNDS);
 		
 		RobotInfo[] attackableEnemies = rc.senseHostileRobots(here, myAttackRadiusSquared);
 		if (rc.isWeaponReady()) {
+//			Debug.indicateAppend("bytecodes", 1, "; after tryToAttack: " + Clock.getBytecodeNum());
 			if (tryToAttackAnEnemy(attackableEnemies)) {
+//				Debug.indicateAppend("bytecodes", 1, "; after tryToAttack: " + Clock.getBytecodeNum());
 				packCountdown = PACK_DELAY;
 				return;
 			}
+//			Debug.indicateAppend("bytecodes", 1, "; after tryToAttack: " + Clock.getBytecodeNum());
 			if (attackableEnemies.length == 0 && rc.isCoreReady()) {
 				--packCountdown;
 				if (packCountdown == 0) {
@@ -55,7 +71,9 @@ public class BotTurret extends Globals {
 	
 	private static void turnTTM() throws GameActionException {
 		if (!rc.isCoreReady()) return;
+		
 		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+		//Radar.removeOldEnemyTurrets(Radar.TURRET_MEMORY_ROUNDS);
 		
 		RobotInfo[] attackableEnemies = rc.senseHostileRobots(here, RobotType.TURRET.attackRadiusSquared);
 		if (attackableEnemies.length > 0) {
@@ -99,9 +117,11 @@ public class BotTurret extends Globals {
 	}
 	
 	public static boolean tryToAttackAnEnemy(RobotInfo[] attackableEnemies) throws GameActionException {
+//		Debug.indicateAppend("bytecodes", 1, "; tryToAttack start: " + Clock.getBytecodeNum());
 		MapLocation bestTarget = null;
 		double maxScore = -99;
 		boolean weAreAttacked = false;
+//		Debug.indicate("target", 0, "visible targets: ");
 		for (RobotInfo hostile : attackableEnemies) {
 			if (!rc.canAttackLocation(hostile.location)) continue;
 			boolean hostileIsAttackingUs = hostile.location.distanceSquaredTo(here) <= hostile.type.attackRadiusSquared;
@@ -117,11 +137,15 @@ public class BotTurret extends Globals {
 			}
 			
 			double score = enemyScore(hostile.type, hostile.health);
+//			Debug.indicateAppend("target", 0, String.format("%s(%.1f)=%.5f, ", hostile.type, hostile.health, score));
 			if (score > maxScore) {
 				maxScore = score;
 				bestTarget = hostile.location;				
 			}
 		}
+//		Debug.indicate("target", 1, "radar targets: ");
+//		Debug.indicateAppend("bytecodes", 1, "; after visible targets: " + Clock.getBytecodeNum());
+//		Debug.indicate("bytecodes", 2, "; numCachedEnemies = " + Radar.numCachedEnemies);
 		for (int i = 0; i < Radar.numCachedEnemies; ++i) {
 			FastRobotInfo hostile = Radar.enemyCache[i];
 			if (here.distanceSquaredTo(hostile.location) <= mySensorRadiusSquared) continue;
@@ -138,13 +162,18 @@ public class BotTurret extends Globals {
 					maxScore = -99;
 				}
 			}
-			
+
 			double score = enemyScore(hostile.type, hostile.type.maxHealth);
+			if (hostile.location.equals(lastAttackLocation)) {
+				score *= 2; // prefer to finish off enemies
+			}
+//			Debug.indicateAppend("target", 1, String.format("%s=%.5f, ", hostile.type, score));
 			if (score > maxScore) {
 				maxScore = score;
 				bestTarget = hostile.location;	
 			}			
 		}
+//		Debug.indicateAppend("bytecodes", 1, "; after radar targets: " + Clock.getBytecodeNum());
 		if (bestTarget == null) {
 			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
 			if (closestEnemyTurret != null && rc.canAttackLocation(closestEnemyTurret.location)) {
@@ -157,6 +186,9 @@ public class BotTurret extends Globals {
 		} else {
 			numAttacksOnRememberedTurret = 0;
 		}
+		lastAttackLocation = bestTarget;
+//		Debug.indicate("target", 2, "bestTarget = " + bestTarget);
+//		Debug.indicateAppend("bytecodes", 1, "; after selection: " + Clock.getBytecodeNum());
 		if (bestTarget != null) {
 			rc.attackLocation(bestTarget);
 			return true;
@@ -164,10 +196,11 @@ public class BotTurret extends Globals {
 		return false;
 	}
 
-	private static void processSignals() {
+	private static void processSignals() throws GameActionException {
 		Radar.clearEnemyCache();
 		
 		Signal[] signals = rc.emptySignalQueue();
+//		Debug.indicateAppend("bytecodes", 0, "; signals.length=" + signals.length);
 		for (Signal sig : signals) {
 			if (sig.getTeam() != us) continue;
 
@@ -182,8 +215,15 @@ public class BotTurret extends Globals {
 					}
 					break;*/
 				case Messages.CHANNEL_RADAR:
-					Messages.addRadarDataToEnemyCache(data, sig.getLocation(), myAttackRadiusSquared);
+//					Debug.indicate("radar", 2, "got radar from " + sig.getLocation());
+					/*Messages.addRadarDataToEnemyCache(data, sig.getLocation(), myAttackRadiusSquared);
 					MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
+					if (attackTarget == null
+							|| here.distanceSquaredTo(closest) < here.distanceSquaredTo(attackTarget)) {
+						attackTarget = closest;
+					}*/
+					MapLocation closest = Messages.addRadarDataToEnemyCacheAndReturnClosestHit(data, 
+							sig.getLocation(), myAttackRadiusSquared);
 					if (attackTarget == null
 							|| here.distanceSquaredTo(closest) < here.distanceSquaredTo(attackTarget)) {
 						attackTarget = closest;
@@ -206,10 +246,36 @@ public class BotTurret extends Globals {
 					Messages.processEnemyTurretWarning(data);
 					break;
 					
+				/*case Messages.CHANNEL_ROBOT_LOCATION:
+					Messages.processRobotLocation(sig, data);
+					break;*/
+					
 				default:
 				}
 			}
 		}
+		
+		/*MapLocation closestRadarHit = null;
+		int bestDistSq = Integer.MAX_VALUE;
+		for (int i = 0; i < Radar.numCachedEnemies; ++i) {
+			MapLocation hitLoc = Radar.enemyCache[i].location;
+			int distSq = here.distanceSquaredTo(hitLoc);
+			if (distSq < bestDistSq) {
+				bestDistSq = distSq;
+				closestRadarHit = hitLoc;
+			}
+		}
+		Debug.indicate("radar", 0, "numCachedEnemies = " + Radar.numCachedEnemies + "; closestRadarHit = " + closestRadarHit);
+		if (closestRadarHit != null) {
+			if (attackTarget == null
+					|| here.distanceSquaredTo(closestRadarHit) < here.distanceSquaredTo(attackTarget)) {
+				attackTarget = closestRadarHit;
+			}
+		}
+		Debug.indicate("radar", 1, "attackTarget = " + attackTarget);
+		if (attackTarget != null) {
+			Debug.indicateLine("radar", here, attackTarget, 255, 0, 0);
+		}*/
 	}
 	
 	private static boolean tryGoToCenterOfMass() throws GameActionException {

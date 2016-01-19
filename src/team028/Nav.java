@@ -194,7 +194,7 @@ public class Nav extends Globals {
 		return goToDirectSafelyAvoidingTurret(dest, null);
 		
 		/*if (dest == null) {
-			System.out.println("goToDirectSafely dest = null");
+//			System.out.println("goToDirectSafely dest = null");
 			return false;
 		}
 		if (here.equals(dest)) return false;
