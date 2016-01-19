@@ -37,7 +37,7 @@ public class BotArchon extends Globals {
 	
 	public static void loop() throws GameActionException {
 		rc.setIndicatorString(0, "41bd9daf1997dbe55d320f76267c8be1064eab87");
-		Debug.init("convert");
+		Debug.init("heal");
 		FastMath.initRand(rc);
 		
 		// nArchons = rc.getRobotCount();
@@ -119,10 +119,12 @@ public class BotArchon extends Globals {
 
 		if (rc.isCoreReady()) {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+			//Radar.removeOldEnemyTurrets(Radar.TURRET_MEMORY_ROUNDS);
 			
 			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
 			if (closestEnemyTurret != null) {
 				closestEnemyTurretLocation = closestEnemyTurret.location;
+				Debug.indicateLine("turret", here, closestEnemyTurretLocation, 0, 0, 255);
 			} else {
 				closestEnemyTurretLocation = null;
 			}
@@ -335,17 +337,30 @@ public class BotArchon extends Globals {
 		}
 	}
 	
+	private static double repairScore(RobotInfo ally) {
+		switch (ally.type) {
+		case TURRET: 
+			return 1000000.0 + ally.health;
+			
+		default:
+			return ally.health;
+		}
+	}
+	
 	private static void tryRepairAlly() throws GameActionException {
 		RobotInfo[] healableAllies = rc.senseNearbyRobots(RobotType.ARCHON.attackRadiusSquared, us);
 		MapLocation bestLoc = null;
-		double mostHealth = 0;
+		double bestRepairScore = 0;
 		for (RobotInfo ally : healableAllies) {
-			if (ally.type == RobotType.ARCHON) continue;
-			if (ally.health < ally.maxHealth && ally.health > mostHealth) {
+			if (ally.type == RobotType.ARCHON || ally.health >= ally.type.maxHealth) continue;
+			
+			double score = repairScore(ally);
+			if (score > bestRepairScore) {
+				bestRepairScore = score;
 				bestLoc = ally.location;
-				mostHealth = ally.health;
 			}
 		}
+		Debug.indicate("heal", 0, "bestLoc = " + bestLoc);
 		if (bestLoc != null) {
 			rc.repair(bestLoc);
 		}
