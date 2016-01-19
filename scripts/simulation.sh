@@ -1,23 +1,23 @@
 #!/bin/bash
 
 teams=""
-teams+="seeding_base18 "
-teams+="soldier_turret_retreat17 "
-teams+="soldier_into_turret16 "
-teams+="felix15 "
-teams+="scout_viper14 "
-teams+="postsprint_13 "
 teams+="sprint_11 "
+teams+="felix15 "
 teams+="ttm_dense_pure_11 "
 teams+="ttm_dense_9 "
-teams+="more_soldier_into_turret16 "
-teams+="focused16 "
-teams+="supercowpowers_archonmove8 "
-teams+="supercowpowers7 "
 teams+="ttm_heal "
+teams+="focused16 "
 teams+="sodier "
 teams+="examplefuncsplayer "
 teams+="donothing "
+teams+="seeding_base18 "
+teams+="soldier_turret_retreat17 "
+teams+="soldier_into_turret16 "
+teams+="scout_viper14 "
+teams+="postsprint_13 "
+teams+="more_soldier_into_turret16 "
+teams+="supercowpowers_archonmove8 "
+teams+="supercowpowers7 "
 # teams+="team028 "
 # teams+="explore "
 # teams+="first "
@@ -56,7 +56,7 @@ simulate() {
         echo ---------------------------------------------------------------
         echo ---------------------------------------------------------------
         cat scripts/bc.conf.template | sed "s/TEAM-A/$team_a/" | sed "s/TEAM-B/$team_b/" >bc.conf
-        ant headless |& tee "$logtmp"
+        time ant headless |& tee "$logtmp"
         mv "$logtmp" "$log"
     fi
 }
