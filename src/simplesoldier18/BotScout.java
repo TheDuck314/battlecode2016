@@ -459,6 +459,16 @@ public class BotScout extends Globals {
 		return false;
 	}
 	
+	private static boolean squareIsAttackedByAZombie(MapLocation loc, RobotInfo[] zombies) {
+		for (RobotInfo zombie : zombies) {
+			if (!zombie.type.canAttack()) continue;
+			if (zombie.location.distanceSquaredTo(loc) <= zombie.type.attackRadiusSquared) {
+				return true;
+			}
+		}
+		return false;
+	}
+	
 	private static boolean tryLuringZombie() throws GameActionException {
 		RobotInfo[] visibleZombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
 		if (visibleZombies.length == 0) return false;
@@ -493,6 +503,9 @@ public class BotScout extends Globals {
 		MapLocation target = centerOfTheirInitialArchons;
 		Direction lureDir = closestZombie.location.directionTo(target);
 		MapLocation lureLoc = closestZombie.location.add(lureDir, 2);
+		while (squareIsAttackedByAZombie(lureLoc, visibleZombies) && !lureLoc.equals(target)) {
+			lureLoc = lureLoc.add(lureDir);
+		}
 		Nav.goToDirect(lureLoc);
 		Debug.indicate("lure", 2, "lureLoc = " + lureLoc);
 		Debug.indicateLine("lure", here, lureLoc, 255, 0, 0);

@@ -144,7 +144,7 @@ public class BotArchon extends Globals {
 		
 		trySpawn();	
 		
-		/*if (rc.isCoreReady()) {
+		if (rc.isCoreReady()) {
 			pickDestination();
 			
 			if (currentDestination != null) {
@@ -152,7 +152,7 @@ public class BotArchon extends Globals {
 			} else {
 				goToCenterOfMass();
 			}
-		}*/
+		}
 	}
 	
 	private static void trySendGlobalZombieDenBroadcast() throws GameActionException {		
@@ -294,13 +294,13 @@ public class BotArchon extends Globals {
 					|| spawnType == RobotType.SCOUT) {
 				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
 				//System.out.println("converted " + spawnType + " spawn into soldier");
-				spawnType = RobotType.SOLDIER;
+				spawnType = RobotType.GUARD;
 			}
 		} else if (rc.getRoundNum() - lastFleeOtherTeamRound < 100) {
 			if (spawnType == RobotType.TURRET) {
 				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
 				//System.out.println("converted " + spawnType + " spawn into soldier");
-				spawnType = RobotType.SOLDIER;
+				spawnType = RobotType.GUARD;
 			}
 		}
 		
@@ -450,7 +450,10 @@ public class BotArchon extends Globals {
 	}
 		
 	private static void pickDestination() throws GameActionException {
-		if (currentDestination != null) {
+		Direction fleeDir = centerOfTheirInitialArchons.directionTo(here);
+		currentDestination = centerOfTheirInitialArchons.add(fleeDir, 100);
+		
+		/*if (currentDestination != null) {
 			if (here.equals(currentDestination)) {
 				currentDestination = null;
 			} else if (rc.canSenseLocation(currentDestination)) {
@@ -514,7 +517,7 @@ public class BotArchon extends Globals {
 		Debug.indicate("regions", 2, "destination = " + currentDestination);
 		if (currentDestination != null) {
 			Debug.indicateLine("regions", here, currentDestination, 255, 0, 0);
-		}
+		}*/
 	}
 	
 	private static void goToDestination() throws GameActionException {
