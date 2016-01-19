@@ -43,7 +43,7 @@ public class BotScout extends Globals {
 			pullMode = true;
 		}*/
 		
-		Debug.init("lure");
+		Debug.init("bytecodes");
     	origin = here;
     	exploredGrid[50][50] = true;   
 //    	Debug.indicate("dens", 2, "dens received at birth: ");
@@ -69,10 +69,12 @@ public class BotScout extends Globals {
 		}
 	}
 	
-	private static void turn() throws GameActionException {		
+	private static void turn() throws GameActionException {	
+		Debug.indicate("bytecodes", 0, "start: " + Clock.getBytecodeNum());
 		Globals.updateRobotInfos();		
 				
 		processSignals(false);		
+		Debug.indicate("bytecodes", 0, "; after processSignals: " + Clock.getBytecodeNum());
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
 
 		/*if (pullMode && birthRound <= 500 && rc.getRoundNum() <= 700) {
@@ -89,25 +91,34 @@ public class BotScout extends Globals {
 		
 		tryBroadcastUnpairedScoutSignal();
 		
+		Debug.indicateAppend("bytecodes", 0, "; before radar: " + Clock.getBytecodeNum());
 		sendRadarInfo();
+		Debug.indicateAppend("bytecodes", 0, "; after radar: " + Clock.getBytecodeNum());
 		sendRobotInfo();
+		Debug.indicateAppend("bytecodes", 0, "; after sendRobotInfo: " + Clock.getBytecodeNum());
 		updateClosestEnemyTurretLocation();
+		Debug.indicateAppend("bytecodes", 0, "; after uCETL: " + Clock.getBytecodeNum());
 
 		trySendPartsOrNeutralLocation();
+		Debug.indicate("bytecodes", 1, "; after tSPONL: " + Clock.getBytecodeNum());
 		trySendZombieDenLocations();
+		Debug.indicateAppend("bytecodes", 1, "; after tSZDL: " + Clock.getBytecodeNum());
 		
 		if (rc.isCoreReady()) {
 			if (retreatIfNecessary()) {
 				return;
 			}		
+			Debug.indicateAppend("bytecodes", 1, "; after retreat: " + Clock.getBytecodeNum());
 			if (tryFollowTurret()) {
 				return;
 			}
+			Debug.indicateAppend("bytecodes", 1, "; after tryFollow: " + Clock.getBytecodeNum());
 			/*if (tryMicro()) {
 				return;
 			}*/
 
 			exploreTheMap();
+			Debug.indicateAppend("bytecodes", 1, "; after explore: " + Clock.getBytecodeNum());
 		}
 	}
 	
@@ -627,9 +638,9 @@ public class BotScout extends Globals {
 		boolean[] cmoves = new boolean[9];
 		MapLocation[] locs = new MapLocation[9];
 //		boolean[] oddPos = new boolean[9];
-		double[] rubbles = new double[9];
+		//double[] rubbles = new double[9];
 		double[] attacks = new double[9];
-		double[] nfriends = new double[9];
+		//double[] nfriends = new double[9];
 		double[] friends = new double[9];
 		double[] scouts  = new double[9];
 		double[] archons  = new double[9];
@@ -641,14 +652,17 @@ public class BotScout extends Globals {
 			locs[i] = here.add(dirs[i]);
 			cmoves[i] = rc.canMove(dirs[i]);
 		}
-		for (int i = 0; i < 9; ++i) {
+		/*for (int i = 0; i < 9; ++i) {
 //			oddPos[i] = !isGoodTurretLocation(locs[i]);
-			rubbles[i] = rc.senseRubble(locs[i]);
-		}
+			//rubbles[i] = rc.senseRubble(locs[i]);
+		}*/
 		RobotInfo[] infos;
 		infos = visibleHostiles;
 		for (RobotInfo e : infos) {
 			if (!e.type.canAttack()) continue;
+			if (e.location.distanceSquaredTo(here) > e.type.attackRadiusSquared * 3 + 10) {
+				continue; // enemy is too far away to worry about
+			}
 			for (int i = 0; i < 9; ++i) {
 				int distSq = e.location.distanceSquaredTo(locs[i]);
 				if (distSq <= e.type.attackRadiusSquared) {
@@ -675,11 +689,11 @@ public class BotScout extends Globals {
 				break;
 			// case SOLDIER:
 			case TURRET:
-				for (int i = 0; i < 9; ++i) {
+				/*for (int i = 0; i < 9; ++i) {
 					if (f.location.distanceSquaredTo(locs[i]) < 9) {
 						nfriends[i] += 1;
 					}
-				}
+				}*/
 				friendVec = friendVec.add(here.directionTo(f.location));
 				break;
 			case SCOUT:
@@ -746,24 +760,24 @@ public class BotScout extends Globals {
 		}
 		double bestScore = -100000;
 		Direction bestDir = null;
-		int bestI = 8;
+		//int bestI = 8;
 		int rdn = FastMath.rand256();
 		for (int i = 0; i < 9; ++i) {
 			if (bestScore < scores[(rdn + i) % 9]) {
 				bestDir = dirs[(rdn + i) % 9];
 				bestScore = scores[(rdn + i) % 9];
-				bestI = i;
+				//bestI = i;
 			}
 		}
-		nFriend = (int)nfriends[8];
+		//nFriend = (int)nfriends[8];
 		if (bestDir != null) {
 			if (rc.canMove(bestDir)) {
-				nFriend = (int)nfriends[bestI];
+				//nFriend = (int)nfriends[bestI];
 				rc.move(bestDir);
 			}
-		} else if (rubbles[8] >= GameConstants.RUBBLE_SLOW_THRESH) {
+		} /*else if (rubbles[8] >= GameConstants.RUBBLE_SLOW_THRESH) {
 			rc.clearRubble(Direction.NONE);
-		}
+		}*/
 		
 		if (lastDir == bestDir) {
 			sameDirectionSteps += 1;
