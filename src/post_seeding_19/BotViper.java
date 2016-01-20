@@ -36,8 +36,6 @@ public class BotViper extends Globals {
 	
 	private static int numTurnsBlocked = 0;
 	
-	private static MapLocation closestEnemyTurretLocation = null;
-	
 	private static MapLocationHashSet destroyedZombieDens = new MapLocationHashSet();
 	private static boolean isAttackingZombieDen = false;
 	
@@ -53,13 +51,7 @@ public class BotViper extends Globals {
 		}
 		
 		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
-		
-		FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
-		if (closestEnemyTurret != null) {
-			closestEnemyTurretLocation = closestEnemyTurret.location;
-		} else {
-			closestEnemyTurretLocation = null;
-		}
+		Radar.updateClosestEnemyTurretLocation();
 		
 		if (inHealingState) {
 			if (tryToHealAtArchon()) {
@@ -427,10 +419,10 @@ public class BotViper extends Globals {
 			mustRetreat = true;
 			retreatTarget = retreatTarget.add(hostile.location.directionTo(here));
 		}
-		if (closestEnemyTurretLocation != null) {
-			if (here.distanceSquaredTo(closestEnemyTurretLocation) <= RobotType.TURRET.attackRadiusSquared) {
+		if (Radar.closestEnemyTurretLocation != null) {
+			if (here.distanceSquaredTo(Radar.closestEnemyTurretLocation) <= RobotType.TURRET.attackRadiusSquared) {
 				mustRetreat = true;
-				retreatTarget = retreatTarget.add(closestEnemyTurretLocation.directionTo(here));
+				retreatTarget = retreatTarget.add(Radar.closestEnemyTurretLocation.directionTo(here));
 			}
 		}
 		if (mustRetreat) {
@@ -590,7 +582,7 @@ public class BotViper extends Globals {
 			return false;
 		}
 		
-		Nav.swarmToAvoidingArchonsAndTurret(lastKnownArchonLocation, closestEnemyTurretLocation);
+		Nav.swarmToAvoidingArchonsAndTurret(lastKnownArchonLocation, Radar.closestEnemyTurretLocation);
 		return true;
 	}
 	
@@ -632,7 +624,7 @@ public class BotViper extends Globals {
 		
 		if (attackTarget != null) {
 			//if (Nav.goToDirect(attackTarget)) {
-			if (Nav.goToDirectSafelyAvoidingTurret(attackTarget, closestEnemyTurretLocation)) {
+			if (Nav.goToDirectSafelyAvoidingTurret(attackTarget, Radar.closestEnemyTurretLocation)) {
 				numTurnsBlocked = 0;
 //				Debug.indicate("block", 0, "not blocked!");
 			} else {

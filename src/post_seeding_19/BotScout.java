@@ -28,8 +28,6 @@ public class BotScout extends Globals {
 	
 	private static boolean broadCastedWithinInterval = false;
 	
-	private static MapLocation closestEnemyTurretLocation = null;
-	
 	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
 	
 	private static int sameDirectionSteps = 0;
@@ -96,7 +94,10 @@ public class BotScout extends Globals {
 //		Debug.indicateAppend("bytecodes", 0, "; after radar: " + Clock.getBytecodeNum());
 		sendRobotInfo();
 //		Debug.indicateAppend("bytecodes", 0, "; after sendRobotInfo: " + Clock.getBytecodeNum());
-		updateClosestEnemyTurretLocation();
+		if (rc.isCoreReady()) {
+			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);			
+			Radar.updateClosestEnemyTurretLocation();
+		}
 //		Debug.indicateAppend("bytecodes", 0, "; after uCETL: " + Clock.getBytecodeNum());
 
 		trySendPartsOrNeutralLocation();
@@ -122,18 +123,6 @@ public class BotScout extends Globals {
 		}
 	}
 	
-	private static void updateClosestEnemyTurretLocation() {
-		if (rc.isCoreReady()) {
-			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
-			
-			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
-			if (closestEnemyTurret != null) {
-				closestEnemyTurretLocation = closestEnemyTurret.location;
-			} else {
-				closestEnemyTurretLocation = null;
-			}
-		}
-	}
 
 	private static void tryBroadcastUnpairedScoutSignal() throws GameActionException {
 		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == 0) {

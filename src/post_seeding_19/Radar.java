@@ -9,6 +9,9 @@ public class Radar extends Globals {
 	public static int[] enemyTurretIds = new int[1000];
 	public static int numEnemyTurrets = 0;
 	
+	public static MapLocation closestEnemyTurretLocation = null;
+	
+
 	public static void addEnemyTurret(int id, MapLocation loc) {
 		if (!haveSeenTurretId[id]) {
 			enemyTurretIds[numEnemyTurrets++] = id;
@@ -36,6 +39,22 @@ public class Radar extends Globals {
 			}
 		}
 		return ret;
+	}
+	
+	public static void updateClosestEnemyTurretLocation() {
+		closestEnemyTurretLocation = null;
+		int bestDistSq = Integer.MAX_VALUE;
+		for (int i = 0; i < numEnemyTurrets; ++i) {
+			int turretId = enemyTurretIds[i];
+			MapLocation turretLoc = enemyTurretLocationById[turretId];
+			if (turretLoc != null) {
+				int distSq = here.distanceSquaredTo(turretLoc);
+				if (distSq < bestDistSq) {
+					bestDistSq = distSq;
+					closestEnemyTurretLocation = turretLoc;
+				}
+			}
+		}		
 	}
 	
 	public static void removeDistantEnemyTurrets(int radiusSq) {

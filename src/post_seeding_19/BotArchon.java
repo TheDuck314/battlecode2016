@@ -22,8 +22,6 @@ public class BotArchon extends Globals {
 	private static MapLocation currentDestination = null;
 	private static DestinationType currentDestinationType;
 	
-	private static MapLocation closestEnemyTurretLocation = null;
-	
 	private static int lastUnpairedScoutCount = 0;
 	private static int nextUnpairedScoutCount = 0;
 	
@@ -132,13 +130,7 @@ public class BotArchon extends Globals {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
 			//Radar.removeOldEnemyTurrets(Radar.TURRET_MEMORY_ROUNDS);
 			
-			FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
-			if (closestEnemyTurret != null) {
-				closestEnemyTurretLocation = closestEnemyTurret.location;
-				//Debug.indicateLine("turret", here, closestEnemyTurretLocation, 0, 0, 255);
-			} else {
-				closestEnemyTurretLocation = null;
-			}
+			Radar.updateClosestEnemyTurretLocation();
 			
 			if (fleeOverwhelmingEnemies()) {
 				return;
@@ -561,7 +553,7 @@ public class BotArchon extends Globals {
 	private static void goToDestination() throws GameActionException {
 //		Debug.indicate("parts", 1, "destination = " + currentDestination);
 		if (currentDestination != null) {
-			Nav.goToDirectSafelyAvoidingTurret(currentDestination, closestEnemyTurretLocation);
+			Nav.goToDirectSafelyAvoidingTurret(currentDestination, Radar.closestEnemyTurretLocation);
 		}
 	}
 	
@@ -582,7 +574,7 @@ public class BotArchon extends Globals {
 		if (N != 0) {
 			avgX /= N;
 			avgY /= N;
-			Nav.goToDirectSafelyAvoidingTurret(new MapLocation(avgX, avgY), closestEnemyTurretLocation);
+			Nav.goToDirectSafelyAvoidingTurret(new MapLocation(avgX, avgY), Radar.closestEnemyTurretLocation);
 		}
 	}
 	
@@ -595,10 +587,10 @@ public class BotArchon extends Globals {
 			mustRetreat = true;
 			retreatTarget = retreatTarget.add(hostile.location.directionTo(here));
 		}
-		if (closestEnemyTurretLocation != null) {
-			if (here.distanceSquaredTo(closestEnemyTurretLocation) <= RobotType.TURRET.attackRadiusSquared) {
+		if (Radar.closestEnemyTurretLocation != null) {
+			if (here.distanceSquaredTo(Radar.closestEnemyTurretLocation) <= RobotType.TURRET.attackRadiusSquared) {
 				mustRetreat = true;
-				retreatTarget = retreatTarget.add(closestEnemyTurretLocation.directionTo(here));
+				retreatTarget = retreatTarget.add(Radar.closestEnemyTurretLocation.directionTo(here));
 			}
 		}
 		if (mustRetreat) {
