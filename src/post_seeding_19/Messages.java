@@ -328,11 +328,14 @@ public class Messages extends Globals {
 		long data = (((long)(CHANNEL_RADAR ^ intData[0])) << 32) 
 				| (((long)intData[1]) & 0x00000000ffffffffL);
 		
+		//int DEBUG_bytecodesStart = Clock.getBytecodeNum();
+		//int DEBUG_numHits = 0;
 		int round = rc.getRoundNum();
 		RobotType[] types = RobotType.values();		
 		MapLocation closestHit = null;
 		int closestDistSq = Integer.MAX_VALUE;
 		while (data != 0) {
+			//DEBUG_numHits += 1;
 			int y = origin.y - 8 + (int)(data & 0xfL);
 			int x = origin.x - 8 + (int)((data >> 4) & 0xfL);
 			MapLocation loc = new MapLocation(x, y);
@@ -349,6 +352,8 @@ public class Messages extends Globals {
 			}
 			data >>= 12;
 		}
+		//int DEBUG_bytecodesEnd = Clock.getBytecodeNum();
+		//Debug.println("bytecodes", "processed " + DEBUG_numHits + "hits in " + (DEBUG_bytecodesEnd - DEBUG_bytecodesStart) + " bytecodes.");
 		return closestHit;
 	}
 	

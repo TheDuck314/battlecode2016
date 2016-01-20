@@ -4,9 +4,11 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-//		Debug.init("archon");		
+		Debug.init("bytecodes");		
 		FastMath.initRand(rc);
 		rc.emptySignalQueue(); // flush signal backlog
+		int maxBytecodesUsed = 0;
+		int maxBytecodeUsedTurn = 0;
 		while (true) {
 			int startTurn = rc.getRoundNum();
 			try {
@@ -20,6 +22,13 @@ public class BotSoldier extends Globals {
 			int endTurn = rc.getRoundNum();
 			if (startTurn != endTurn) {
 				System.out.println("OVER BYTECODE LIMIT");
+			} else {
+				int bytecodesUsed = Clock.getBytecodeNum();
+				if (bytecodesUsed > maxBytecodesUsed) {
+					maxBytecodesUsed = bytecodesUsed;
+					maxBytecodeUsedTurn = rc.getRoundNum();
+					Debug.println("bytecodes", "new max bytecode use = " + maxBytecodesUsed + " on turn " + maxBytecodeUsedTurn);
+				}
 			}
 			Clock.yield();
 		}
@@ -42,26 +51,36 @@ public class BotSoldier extends Globals {
 	
 
 	private static void turn() throws GameActionException {
+		Debug.indicate("bytecodes", 0, "start: " + Clock.getBytecodeNum());
+		attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
+		visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		
 		processSignals();
+		Debug.indicateAppend("bytecodes", 0, "; after processSignals: " + Clock.getBytecodeNum());
 
 		manageHealingState();
 		
 		if (tryToMicro()) {
+			Debug.indicateAppend("bytecodes", 0, "; after tryToMicro: " + Clock.getBytecodeNum());
 			return;
 		}
+		Debug.indicateAppend("bytecodes", 0, "; after tryToMicro: " + Clock.getBytecodeNum());
 
 		if (rc.isCoreReady()) {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
 			Radar.updateClosestEnemyTurretLocation();
+			Debug.indicateAppend("bytecodes", 0, "; after turrets: " + Clock.getBytecodeNum());
 
 			//		Debug.indicate("micro", 2, "inHealingState = " + inHealingState);
 			if (inHealingState) {
 				if (tryToHealAtArchon()) {
+					Debug.indicateAppend("bytecodes", 0, "; after tTHAA: " + Clock.getBytecodeNum());
 					return;
 				}
 			}
 
 			lookForAttackTarget();
+			Debug.indicateAppend("bytecodes", 0, "; after lFAT: " + Clock.getBytecodeNum());
 		}
 	}
 	
@@ -107,6 +126,7 @@ public class BotSoldier extends Globals {
 
 	private static void processSignals() throws GameActionException {
 		Radar.clearEnemyCache();
+		boolean processRadar = (attackableHostiles.length == 0);
 
 		Signal[] signals = rc.emptySignalQueue();
 		for (Signal sig : signals) {
@@ -115,16 +135,11 @@ public class BotSoldier extends Globals {
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
-				/*case Messages.CHANNEL_ATTACK_TARGET:
-					MapLocation suggestedTarget = Messages.parseAttackTarget(data);
-					if (attackTarget == null || here.distanceSquaredTo(suggestedTarget) < here.distanceSquaredTo(attackTarget)) {
-						attackTarget = suggestedTarget;
-						attackTargetReceivedRound = rc.getRoundNum();
-					}
-					break;*/
 				case Messages.CHANNEL_RADAR:
-					MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
-					addAttackTarget(closest, false);
+					if (processRadar) {
+						MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
+						addAttackTarget(closest, false);
+					}
 					break;
 					
 				case Messages.CHANNEL_DEN_ATTACK_COMMAND:
@@ -168,7 +183,6 @@ public class BotSoldier extends Globals {
 	}
 
 	private static boolean tryToMicro() throws GameActionException {		
-		RobotInfo[] visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		if (visibleHostiles.length == 0) return false;
 
 		if (rc.isCoreReady()) {
@@ -203,7 +217,6 @@ public class BotSoldier extends Globals {
 				}
 			}
 			if (rc.isWeaponReady() && rc.getCoreDelay() >= myType.cooldownDelay) {
-				RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 				if (attackableHostiles.length > 0) {
 //					Debug.indicate("micro", 0, "attacking in healing state");
 					chooseTargetAndAttack(attackableHostiles);
@@ -213,8 +226,6 @@ public class BotSoldier extends Globals {
 			return false;
 		}
 
-		RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
-		
 		if (rc.isCoreReady()) {
 			if (retreatIfOutnumbered(visibleHostiles)) {
 //				Debug.indicate("micro", 0, "retreating because outnumbered");
@@ -753,7 +764,7 @@ public class BotSoldier extends Globals {
 	private static void lookForAttackTarget() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 		
-		if (attackTarget == null) {
+		/*if (attackTarget == null) {
 //			Debug.indicate("radar", 0, "lookForAttackTarget: attackTarget == null, numCachedEnemies = " + Radar.numCachedEnemies);
 			MapLocation closest = null;
 			int bestDistSq = Integer.MAX_VALUE;
@@ -768,7 +779,7 @@ public class BotSoldier extends Globals {
 			}
 			attackTarget = closest;
 //			Debug.indicate("radar", 1, "now attackTarget = " + attackTarget);
-		}
+		}*/
 
 		// Not very good against felix
 //		if (attackTarget == null) {
