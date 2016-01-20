@@ -155,7 +155,7 @@ public class BotScout extends Globals {
 		if (rc.canSenseRobot(turretFollowId)) {
 			MapLocation turretLoc = rc.senseRobot(turretFollowId).location;
 			if (here.isAdjacentTo(turretLoc)) {
-				Nav.goToDirectSafelyAvoidingTurret(turretLoc, closestEnemyTurretLocation);
+				Nav.goToDirectSafelyAvoidingTurret(turretLoc, Radar.closestEnemyTurretLocation);
 				if (rc.getRoundNum() - lastTurretOwnershipBroadcastRound > 40) {
 					Messages.sendTurretOwnershipClaim(turretFollowId, 2*mySensorRadiusSquared);
 					lastTurretOwnershipBroadcastRound = rc.getRoundNum();
@@ -182,7 +182,7 @@ public class BotScout extends Globals {
 			if (rc.canSenseRobot(archonFollowId)) {
 				MapLocation archonLoc = rc.senseRobot(archonFollowId).location;
 				if (here.isAdjacentTo(archonLoc)) {
-					Nav.goToDirectSafelyAvoidingTurret(archonLoc, closestEnemyTurretLocation);
+					Nav.goToDirectSafelyAvoidingTurret(archonLoc, Radar.closestEnemyTurretLocation);
 					if (rc.getRoundNum() - lastTurretOwnershipBroadcastRound > 40) {
 						Messages.sendTurretOwnershipClaim(archonFollowId, 2*mySensorRadiusSquared);
 						lastTurretOwnershipBroadcastRound = rc.getRoundNum();
