@@ -304,6 +304,7 @@ public class BotScout extends Globals {
 		if (rc.getRoundNum() - lastLongRangeRadarBroadcastRound > 50) {
 			radarRangeSq = 30 * mySensorRadiusSquared;
 			lastLongRangeRadarBroadcastRound = rc.getRoundNum();
+			Radar.clearEnemyCache();
 //			Debug.indicate("radar", 1, "setting range to medium = " + radarRangeSq);
 		}
 		
@@ -311,6 +312,7 @@ public class BotScout extends Globals {
 			radarRangeSq = MapEdges.maxBroadcastDistSq();
 			lastGlobalRadarBroadcastRound = rc.getRoundNum();
 			lastLongRangeRadarBroadcastRound = rc.getRoundNum();
+			Radar.clearEnemyCache();
 //			Debug.indicate("radar", 1, "setting range to global = " + radarRangeSq);
 		}
 		
