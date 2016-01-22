@@ -122,7 +122,6 @@ public class BotScout extends Globals {
 //			Debug.indicateAppend("bytecodes", 1, "; after explore: " + Clock.getBytecodeNum());
 		}
 	}
-	
 
 	private static void tryBroadcastUnpairedScoutSignal() throws GameActionException {
 		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == 0) {

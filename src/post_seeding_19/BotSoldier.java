@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("bytecodes");		
+		Debug.init("archon");		
 		FastMath.initRand(rc);
 		rc.emptySignalQueue(); // flush signal backlog
 		int maxBytecodesUsed = 0;

@@ -244,9 +244,9 @@ public class BotTurret extends Globals {
 					Messages.processEnemyTurretWarning(data);
 					break;
 					
-				/*case Messages.CHANNEL_ROBOT_LOCATION:
+				case Messages.CHANNEL_ROBOT_LOCATION:
 					Messages.processRobotLocation(sig, data);
-					break;*/
+					break;
 					
 				default:
 				}
