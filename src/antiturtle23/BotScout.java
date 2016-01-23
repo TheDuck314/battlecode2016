@@ -92,15 +92,15 @@ public class BotScout extends Globals {
 		if (rc.isCoreReady()) {
 			if (retreatIfNecessary()) {
 				return;
-			}		
+			}
 			if (tryFollowTurret()) {
 				return;
 			} else {
 				tryBroadcastUnpairedScoutSignal();
 			}
 
-			exploreTheMap();
 		}
+		exploreTheMap();
 	}
 	
 	private static void tryProposeAntiTurtleCharge() throws GameActionException {
@@ -705,7 +705,6 @@ public class BotScout extends Globals {
 		if (rc.getHealth() < myHealth) {
 			dangerousLoc = here;
 			dangerousTurn = 0;
-			myHealth = rc.getHealth();
 		} else if (dangerousLoc != null) {
 			if (dangerousTurn >= 200) {
 				dangerousLoc = null;
@@ -713,6 +712,7 @@ public class BotScout extends Globals {
 			}
 			dangerousTurn += 1;
 		}
+		myHealth = rc.getHealth();
 	}
 
 	private static void moveAround() throws GameActionException {
@@ -1019,6 +1019,7 @@ public class BotScout extends Globals {
 		if (bestDir != null) {
 //			Debug.indicate("safety", 0, "retreating!");
 			rc.move(bestDir);
+			lastDir = bestDir;
 			return true;
 		}
 		return false;
