@@ -52,17 +52,38 @@ public class BotViper extends Globals {
 		
 		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
 		Radar.updateClosestEnemyTurretLocation();
-		
-		if (inHealingState) {
-			if (tryToHealAtArchon()) {
+
+		if (rc.isCoreReady()) {
+			if (tryDoAntiTurtleCharge()) {
 				return;
 			}
+
+			if (inHealingState) {
+				if (tryToHealAtArchon()) {
+					return;
+				}
+			}
+
+			//		if (attackTarget != null) Debug.indicateLine("target", here, attackTarget, 100, 0, 0);
+			lookForAttackTarget();
 		}
-		
-//		if (attackTarget != null) Debug.indicateLine("target", here, attackTarget, 100, 0, 0);
-		lookForAttackTarget();
 	}
-	
+
+	private static boolean tryDoAntiTurtleCharge() throws GameActionException {
+		Debug.indicate("charge", 0, "center = " + AntiTurtleCharge.chargeCenter + ", gatherRound = " + AntiTurtleCharge.gatherRound + ", chargeRound = " + AntiTurtleCharge.chargeRound + ", endRound = " + AntiTurtleCharge.endRound);
+		if (AntiTurtleCharge.chargeCenter != null && rc.getRoundNum() < AntiTurtleCharge.endRound) {
+			if (rc.getRoundNum() > AntiTurtleCharge.chargeRound) {
+				Debug.indicate("charge", 1, "charging!!!");
+				Nav.goToDirect(AntiTurtleCharge.chargeCenter);
+				return true;
+			} else if (rc.getRoundNum() > AntiTurtleCharge.gatherRound) {
+				Debug.indicate("charge", 1, "gathering for charge");
+				Nav.goToDirectSafelyAvoidingTurret(AntiTurtleCharge.chargeCenter, Radar.closestEnemyTurretLocation);
+				return true;
+			} 
+		}
+		return false;
+	}
 
 	private static void addAttackTarget(MapLocation targetNew, boolean isZombieDen) {
 		if (attackTarget == null 
@@ -99,7 +120,11 @@ public class BotViper extends Globals {
 				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
 					Messages.processEnemyTurretWarning(data);
 					break;
-					
+	
+				case Messages.CHANNEL_ANTI_TURTLE_CHARGE:
+					AntiTurtleCharge.processAntiTurtleChargeMessage(data);
+					break;
+
 				default:
 				}
 			}
@@ -130,7 +155,11 @@ public class BotViper extends Globals {
 			}
 		}
 		
-		if (inHealingState) {
+		boolean currentlyChargingTurtle = (AntiTurtleCharge.chargeCenter != null)
+				&& (rc.getRoundNum() > AntiTurtleCharge.chargeRound) 
+				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
+		
+		if (inHealingState && !currentlyChargingTurtle) {
 			// if we are in the healing state, then if we are under attack we should retreat.
 			// but if coreDelay >= cooldown delay, then we can optionally attack			
 			if (rc.isCoreReady()) {
@@ -179,7 +208,7 @@ public class BotViper extends Globals {
 			// turn our weapon will be ready again and we can attack them
 			// from a safer distance
 			if (attackableHostiles.length > 0) {
-				if (tryToBackUpToMaintainMaxRange(attackableHostiles)) {
+				if (!currentlyChargingTurtle && tryToBackUpToMaintainMaxRange(attackableHostiles)) {
 					return true;
 				}
 				return true; // we are fighting, don't move

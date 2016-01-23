@@ -38,6 +38,7 @@ public class BotScout extends Globals {
 	//private static boolean pullMode = false;
 	//private static int birthRound;
 	
+<<<<<<< HEAD
 	public static void loop() {
 		/*birthRound = rc.getRoundNum();
 		if (calculateSpawnScheduleScaryness() > ZOMBIE_SCHEDULE_SCARYNESS_THRESHOLD) {
@@ -45,9 +46,12 @@ public class BotScout extends Globals {
 		}*/
 		
 		Debug.init("chaseArchon");
+=======
+	public static void loop() {		
+		Debug.init("charge");
+>>>>>>> antiturtle23: implement anti-turtle charge
     	origin = here;
     	exploredGrid[50][50] = true;   
-//    	Debug.indicate("dens", 2, "dens received at birth: ");
     	try {
     		processSignals(true);
     	} catch (Exception e) {
@@ -80,7 +84,8 @@ public class BotScout extends Globals {
 		
 		sendRadarInfo();
 		sendRobotInfo();
-		Radar.indicateEnemyArchonLocation(0, 200, 200);
+		manageAntiTurtleChargeProposals();		
+		//Radar.indicateEnemyArchonLocation(0, 200, 200);
 		if (rc.isCoreReady()) {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);			
 			Radar.updateClosestEnemyTurretLocation();
@@ -106,20 +111,21 @@ public class BotScout extends Globals {
 		exploreTheMap();
 	}
 	
-	private static void tryProposeAntiTurtleCharge() throws GameActionException {
-		// wait to build up enough units before breaking turtles
-		if (rc.getRoundNum() > 500 && rc.getRobotCount() > 40 && rc.getRoundNum() % 10 == 0) {
-			// need to have lots of allies gathered with us
-			if (visibleAllies.length >= 10) {
-				// don't propose charges too often
-				if (AntiTurtleCharge.chargeCenter == null 
-						&& rc.getRoundNum() > AntiTurtleCharge.lastProposalRound + 100) {
+	private static void manageAntiTurtleChargeProposals() throws GameActionException {
+		// consider proposing a charge
+		// don't propose charges too often
+		if (AntiTurtleCharge.chargeCenter == null 
+				&& rc.getRoundNum() > AntiTurtleCharge.lastProposalRound + 100) {
+			// wait to build up enough units before breaking turtles
+			if (rc.getRoundNum() > 500 && rc.getRobotCount() > 40 && rc.getRoundNum() % 10 == 0) {
+				// need to have lots of allies gathered with us
+				if (visibleAllies.length >= 10) {
 					// only a scout that can actually see the enemy should propose a charge
 					if (Radar.closestEnemyTurretLocation != null 
 							&& rc.canSenseLocation(Radar.closestEnemyTurretLocation)) {
 						MapLocation proposalCenter = Radar.closestEnemyTurretLocation.add(
 								here.directionTo(Radar.closestEnemyTurretLocation), 3);
-						
+
 						// don't propose a charge if we have seen enemy turrets in several
 						// distinct locations, because then we are not facing a turtle
 						boolean haveSeenDistantTurret = false;
@@ -133,13 +139,40 @@ public class BotScout extends Globals {
 						}
 						if (!haveSeenDistantTurret) {
 							// propose a charge
-							Messages.proposeAntiTurtleCharge(proposalCenter, MapEdges.maxBroadcastDistSq());
+							AntiTurtleCharge.proposeCharge(proposalCenter);
+							Debug.indicate("charge", 2, "proposed anti turtle charge at " + proposalCenter);
+						} else {
+							Debug.indicate("charge", 1, "have seen distant turret");
 						}
+					} else {
+						Debug.indicate("charge", 1, "no enemy turret visible");
 					}
+				} else {
+					Debug.indicate("charge", 1, "not enough friends near");
+				}
+			} else {
+				Debug.indicate("charge", 1, "too early, or not enough gathered, or not %10");
+			}
+		} else {
+			Debug.indicate("charge", 1, "last proposal too recent");
+		}
+		
+		// veto a charge if we see a turret too far away from the charge center
+		if (AntiTurtleCharge.chargeCenter != null && rc.getRoundNum() < AntiTurtleCharge.gatherRound) {
+			for (int i = 0; i < Radar.numEnemyTurrets; ++i) {
+				MapLocation enemyTurretLocation = Radar.enemyTurretLocationById[Radar.enemyTurretIds[i]];
+				if (enemyTurretLocation != null 
+						&& AntiTurtleCharge.chargeCenter.distanceSquaredTo(enemyTurretLocation) > 150) {
+					AntiTurtleCharge.vetoCharge();
+					Debug.indicate("charge", 2, "vetoed anti turtle charge b/c of turret at " + enemyTurretLocation);
+					break;
 				}
 			}
 		}
-		Radar.indicateEnemyArchonLocation(120, 120, 120);
+		
+		if (AntiTurtleCharge.chargeCenter != null) {
+			Debug.indicateLine("charge", here, AntiTurtleCharge.chargeCenter, 0, 255, 0);
+		}
 	}
 
 	private static void tryBroadcastUnpairedScoutSignal() throws GameActionException {
@@ -477,17 +510,9 @@ public class BotScout extends Globals {
 				case Messages.CHANNEL_ZOMBIE_DEN:
 					MapLocation denLoc = Messages.parseZombieDenLocation(data);
 					if (Messages.parseZombieDenWasDestroyed(data)) {
-						if (knownZombieDens.remove(denLoc)) {
-//						    Debug.indicate("dens", 1, "heard that the den at " + denLoc + " was destroyed");
-						} else {
-//						    Debug.indicate("dens", 1, "heard that den at " + denLoc + " was destroyed, but it wasn't in my list");							
-						}
+						knownZombieDens.remove(denLoc);
 					} else {
-						if (knownZombieDens.add(denLoc)) {
-//						    Debug.indicate("dens", 1, "heard about a new den at " + denLoc);
-						} else {
-//							Debug.indicate("dense", 1, "heard about a new den at " + denLoc + ", but I already knew about it");
-						}
+						knownZombieDens.add(denLoc);
 					}
 					break;
 
@@ -515,6 +540,10 @@ public class BotScout extends Globals {
 							Debug.indicate("archons", 1, "heard about a neutral archon at " + neutral.location);
 						}
 					}
+					break;
+					
+				case Messages.CHANNEL_ANTI_TURTLE_CHARGE:
+					AntiTurtleCharge.processAntiTurtleChargeMessage(data);
 					break;
 					
 				default:
