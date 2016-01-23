@@ -36,12 +36,11 @@ public class BotScout extends Globals {
 	//private static int birthRound;\
 	
 	public static void loop() {
+//		Debug.init("rebroadcast");
 		/*birthRound = rc.getRoundNum();
 		if (calculateSpawnScheduleScaryness() > ZOMBIE_SCHEDULE_SCARYNESS_THRESHOLD) {
 			pullMode = true;
 		}*/
-		
-//		Debug.init("radar");
     	origin = here;
     	exploredGrid[50][50] = true;   
 //    	Debug.indicate("dens", 2, "dens received at birth: ");
@@ -346,7 +345,7 @@ public class BotScout extends Globals {
 					Radar.addEnemyTurret(hostile.ID, hostile.location);
 					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, turretWarningRangeSq);
 				}
-			} /*else if (hostile.type == RobotType.ARCHON) {
+			} else if (Globals.isSendingEnemyArchonLocation && hostile.type == RobotType.ARCHON) {
 				boolean isNewID = Radar.bigRobotInfoById[hostile.ID] == null;
 				int rangeSq = 4*mySensorRadiusSquared;
 				if (isNewID) rangeSq = MapEdges.maxBroadcastDistSq();
@@ -355,7 +354,7 @@ public class BotScout extends Globals {
 					Messages.sendRobotLocation(bri, rangeSq);
 					Debug.indicate("archon", 0, "sent archon discover message");
 				}
-			}*/
+			}
 		}
 		
 		// Check to see whether the closest turret to us has moved or gone missing.
@@ -385,16 +384,24 @@ public class BotScout extends Globals {
 	}
 
 	private static void processSignals(boolean justBorn) throws GameActionException {
+		if (justBorn) {
+			processSignalsJustBorn();
+			return;
+		}
+		
 		Radar.clearEnemyCache();
 		
 //		Debug.indicate("archon", 2, "");
 		
 		Signal[] signals = rc.emptySignalQueue();
-		for (Signal sig : signals) {
+		int length = signals.length;
+		for (int i = length - 1; i >= 0; --i) {
+			Signal sig = signals[i];
+			
 			if (sig.getTeam() != us) {
-				/*if (Radar.bigRobotInfoById[sig.getID()] != null) {
+				if (Globals.isSendingEnemyArchonLocation && Radar.bigRobotInfoById[sig.getID()] != null) {
 					Messages.processRobotLocation(sig);
-				}*/
+				}
 				continue;
 			}
 			
@@ -431,10 +438,6 @@ public class BotScout extends Globals {
 						}
 					}
 					break;
-					
-				case Messages.CHANNEL_ZOMBIE_DEN_LIST:
-					receiveZombieDenList(data, sig.getLocation());
-					break;
 
 				case Messages.CHANNEL_RADAR:
 					Messages.addRadarDataToEnemyCacheAndReturnClosestHit(data, sig.getLocation(), mySensorRadiusSquared);
@@ -447,12 +450,6 @@ public class BotScout extends Globals {
 					
 				case Messages.CHANNEL_ROBOT_LOCATION:
 					Messages.processRobotLocation(sig, data);
-					break;
-					
-				case Messages.CHANNEL_FLUSH_SIGNAL_QUEUE:
-					if (justBorn) {
-						return;
-					}
 					break;
 					
 				default:
@@ -473,6 +470,44 @@ public class BotScout extends Globals {
 		}
 //		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
+
+	private static void processSignalsJustBorn() throws GameActionException {
+		Radar.clearEnemyCache();
+		
+//		Debug.indicate("archon", 2, "");
+		
+		Signal[] signals = rc.emptySignalQueue();
+		int length = signals.length;
+		for (int i = 0; i < length; ++i) {
+			Signal sig = signals[i];
+
+			if (sig.getTeam() != us) continue;
+			
+			int[] data = sig.getMessage();
+			if (data != null) {
+				switch(data[0] & Messages.CHANNEL_MASK) {
+				case Messages.CHANNEL_MAP_EDGES:
+					Messages.processMapEdges(data);
+					break;
+					
+				case Messages.CHANNEL_ZOMBIE_DEN_LIST:
+					receiveZombieDenList(data, sig.getLocation());
+					break;
+					
+				case Messages.CHANNEL_ROBOT_LOCATION:
+					Messages.processRobotLocation(sig, data);
+					break;
+					
+				case Messages.CHANNEL_FLUSH_SIGNAL_QUEUE:
+					return;
+					
+				default:
+				}
+			}
+		}
+//		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
+	}
+	
 	
 	private static void receiveZombieDenList(int[] data, MapLocation origin) {
 		MapLocation[] denList = new MapLocation[3];
