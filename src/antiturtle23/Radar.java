@@ -177,11 +177,13 @@ public class Radar extends Globals {
 	}
 	
 	public static void indicateEnemyArchonLocation(int red, int green, int blue) {
+		Debug.indicate("robotinfo", 2, "");
 		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
 			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
 			if (bri.location == null) continue;
 			if (bri.round <= Globals.roundNum - Globals.infoOutOfDateInterval) continue;
 			Debug.indicateLine("robotinfo", here, bri.location, red, green, blue);
+			Debug.indicateAppend("robotinfo", 2, " id=" + bri.id + " loc=" + bri.location);
 		}
 	}
 	
