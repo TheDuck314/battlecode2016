@@ -163,6 +163,7 @@ public class Nav extends Globals {
 	
 	public static boolean enemyAttacksLocation(MapLocation loc, RobotInfo[] hostiles) {
 		for (RobotInfo hostile : hostiles) {
+			if (!hostile.type.canAttack()) continue;
 			int distSq = hostile.location.distanceSquaredTo(loc);
 			if (distSq <= hostile.type.attackRadiusSquared) {
 				return true;
@@ -174,6 +175,7 @@ public class Nav extends Globals {
 	public static boolean enemyOrTurretAttacksLocation(MapLocation loc, RobotInfo[] hostiles,
 			MapLocation turretLocation) {
 		for (RobotInfo hostile : hostiles) {
+			if (!hostile.type.canAttack()) continue;
 			int distSq = hostile.location.distanceSquaredTo(loc);
 			if (distSq <= hostile.type.attackRadiusSquared) {
 				return true;

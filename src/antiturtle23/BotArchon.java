@@ -32,7 +32,7 @@ public class BotArchon extends Globals {
 	//private static boolean pullMode = false;
 	
 	public static void loop() throws GameActionException {
-		Debug.init("robotinfo");
+		// Debug.init("robotinfo");
 		
 		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
 		

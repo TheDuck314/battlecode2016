@@ -121,7 +121,6 @@ public class Radar extends Globals {
 			return bri;
 		} else {
 			if (bri.round > round - Globals.rebroadCastUpdateInterval && loc.equals(bri.location)) {
-				bri.round = round; // update but do not broadcast
 				return null;
 			}
 			bri.location = loc;

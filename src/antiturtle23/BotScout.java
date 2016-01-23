@@ -44,7 +44,7 @@ public class BotScout extends Globals {
 			pullMode = true;
 		}*/
 		
-		Debug.init("robotinfo");
+		Debug.init("chaseArchon");
     	origin = here;
     	exploredGrid[50][50] = true;   
 //    	Debug.indicate("dens", 2, "dens received at birth: ");
@@ -91,6 +91,9 @@ public class BotScout extends Globals {
 		
 		if (rc.isCoreReady()) {
 			if (retreatIfNecessary()) {
+				return;
+			}
+			if (tryFollowHelplessEnemyArchon()) {
 				return;
 			}
 			if (tryFollowTurret()) {
@@ -379,12 +382,12 @@ public class BotScout extends Globals {
 					Radar.addEnemyTurret(hostile.ID, hostile.location);
 					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, turretWarningRangeSq);
 				}
-			} else if (Globals.isSendingEnemyArchonLocation && hostile.type == RobotType.ARCHON) {
+			} else if (hostile.type == RobotType.ARCHON) {
 				boolean isNewID = Radar.bigRobotInfoById[hostile.ID] == null;
-				int rangeSq = Globals.broadCastRangeSqWhenSeen;
-				if (isNewID) rangeSq = MapEdges.maxBroadcastDistSq();
 				BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, Globals.roundNum);
-				if (bri != null) {
+				if (Globals.isSendingEnemyArchonLocation && bri != null) {
+					int rangeSq = Globals.broadCastRangeSqWhenSeen;
+					if (isNewID) rangeSq = MapEdges.maxBroadcastDistSq();
 					Messages.sendRobotLocation(bri, rangeSq);
 					Debug.indicate("archon", 0, "sent archon discover message");
 				}
@@ -419,12 +422,15 @@ public class BotScout extends Globals {
 		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
 			int id = Radar.theirArchonIdList[i];
 			BigRobotInfo bri = Radar.bigRobotInfoById[id];
-			if (bri.round == Globals.roundNum || bri.location == null) continue;
+			if (bri.location == null) continue;
 			if (bri.location.distanceSquaredTo(here) <= mySensorRadiusSquared) {
+				if (rc.canSenseRobot(id)) continue;
 				bri.location = null;
 				// bri.round is the round we learned the original location
 				bri.round += 1;
-				Messages.sendRobotLocation(bri, Globals.broadCastRangeSqWhenDisappear);
+				if (Globals.isSendingEnemyArchonLocation) {
+					Messages.sendRobotLocation(bri, Globals.broadCastRangeSqWhenDisappear);
+				}
 			}
 		}
 	}
@@ -687,6 +693,91 @@ public class BotScout extends Globals {
 		}
 		// couldn't circle
 		Nav.goToDirect(dest);
+	}
+
+	public static int numberOfVisialCanAttackEnemies = 0;
+	
+	private static boolean retreatIfNecessary() throws GameActionException {
+		numberOfVisialCanAttackEnemies = 0;
+		
+		// if any enemy is too close, try to get farther away
+		if (visibleHostiles.length == 0) return false;
+		
+		boolean mustRetreat = false;
+		int bestClosestDistSq = 999999;
+		for (RobotInfo hostile : visibleHostiles) {			
+			if (hostile.type.canAttack()) {
+				if (hostile.team == them) numberOfVisialCanAttackEnemies += 1;
+				int distSq = here.distanceSquaredTo(hostile.location);
+				if (distSq <= 24) {
+					mustRetreat = true;
+					if (distSq < bestClosestDistSq) {
+						bestClosestDistSq = distSq;
+					}
+				}
+			}
+		}
+		if (!mustRetreat) return false;
+		
+		Direction bestDir = null;
+		Direction[] dirs = Direction.values();
+		for (int i = 0; i < 8; ++i) {
+			Direction dir = dirs[i];
+			if (!rc.canMove(dir)) continue;
+			MapLocation dirLoc = here.add(dir);
+			int dirClosestDistSq = 999999;
+			for (RobotInfo hostile : visibleHostiles) {
+				if (hostile.type.canAttack()) {
+					int distSq = dirLoc.distanceSquaredTo(hostile.location);
+					if (distSq < dirClosestDistSq) {
+						dirClosestDistSq = distSq;						
+						if (dirClosestDistSq <= bestClosestDistSq) break;
+					}
+				}
+			}
+			if (dirClosestDistSq > bestClosestDistSq) {
+				bestClosestDistSq = dirClosestDistSq;
+				bestDir = dir;
+			}
+		}
+		
+		if (bestDir != null) {
+//			Debug.indicate("safety", 0, "retreating!");
+			rc.move(bestDir);
+			lastDir = bestDir;
+			return true;
+		}
+		return false;
+	}
+	
+	private static boolean tryFollowHelplessEnemyArchon() throws GameActionException {
+		// Check if there are too many enemies
+		if (numberOfVisialCanAttackEnemies > 2) return false;
+
+		// Check if there is enemy archon nearby
+		MapLocation loc = Radar.closestEnemyArchonLocation();
+		if (loc == null) return false;
+		int distSq = loc.distanceSquaredTo(here);
+		if (distSq > mySensorRadiusSquared) return false;
+		
+		// Check if there is already scout following it
+		RobotInfo[] allies = rc.senseNearbyRobots(distSq, us);
+		for (RobotInfo ally : allies) {
+			if (ally.type == RobotType.SCOUT) {
+				return false;
+			}
+		}
+		
+		// Follow it
+		if (Nav.goToDirectSafely(loc)) {
+			Debug.indicateLine("chaseArchon", here, loc, 30, 30, 30);
+			Debug.indicate("chaseArchon", 0, "chasing from=" + here + " to loc=" + loc);
+			Debug.println("chaseArchon", "chasing from=" + here + " to loc=" + loc);
+			return true;
+		} else {
+			// If it is too far away, maybe we are not yet following it?
+			return here.distanceSquaredTo(loc) <= 24;
+		}
 	}
 	
 	private static void exploreTheMap() throws GameActionException {
@@ -975,56 +1066,6 @@ public class BotScout extends Globals {
 		finishedExploring = true;
 	}
 
-	private static boolean retreatIfNecessary() throws GameActionException {
-		// if any enemy is too close, try to get farther away
-		if (visibleHostiles.length == 0) return false;
-		
-		boolean mustRetreat = false;
-		int bestClosestDistSq = 999999;
-		for (RobotInfo hostile : visibleHostiles) {			
-			if (hostile.type.canAttack()) {
-				int distSq = here.distanceSquaredTo(hostile.location);
-				if (distSq <= 24) {
-					mustRetreat = true;
-					if (distSq < bestClosestDistSq) {
-						bestClosestDistSq = distSq;
-					}
-				}
-			}
-		}
-		if (!mustRetreat) return false;
-		
-		Direction bestDir = null;
-		Direction[] dirs = Direction.values();
-		for (int i = 0; i < 8; ++i) {
-			Direction dir = dirs[i];
-			if (!rc.canMove(dir)) continue;
-			MapLocation dirLoc = here.add(dir);
-			int dirClosestDistSq = 999999;
-			for (RobotInfo hostile : visibleHostiles) {
-				if (hostile.type.canAttack()) {
-					int distSq = dirLoc.distanceSquaredTo(hostile.location);
-					if (distSq < dirClosestDistSq) {
-						dirClosestDistSq = distSq;						
-						if (dirClosestDistSq <= bestClosestDistSq) break;
-					}
-				}
-			}
-			if (dirClosestDistSq > bestClosestDistSq) {
-				bestClosestDistSq = dirClosestDistSq;
-				bestDir = dir;
-			}
-		}
-		
-		if (bestDir != null) {
-//			Debug.indicate("safety", 0, "retreating!");
-			rc.move(bestDir);
-			lastDir = bestDir;
-			return true;
-		}
-		return false;
-	}
-	
 	private static void explore() throws GameActionException {
 		if (finishedExploring) return;
 		
