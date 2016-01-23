@@ -28,6 +28,7 @@ public class Messages extends Globals {
 	public static final int CHANNEL_FOUND_NEUTRAL = 0xc0000000;
 	public static final int CHANNEL_TURRET_OWNERSHIP = 0xd0000000;
 	public static final int CHANNEL_MAP_EDGES = 0xe0000000;
+	public static final int CHANNEL_ANTI_TURTLE_CHARGE = 0xf0000000;
 	
 	// used by CHANNEL_ENEMY_TURRET_WARNING
 	public static final int ENEMY_TURRET_MISSING_VALUE = 0xffffffff;
@@ -37,6 +38,9 @@ public class Messages extends Globals {
 	
 	// used by CHANNEL_FOUND_NEUTRAL
 	public static final int NEUTRAL_WAS_ACTIVATED_FLAG = 0x00100000;
+
+	// used by CHANNEL_ANTI_TURTLE_CHARGE
+	public static final int ANTI_TURTLE_CHARGE_VETO_FLAG = 0x00100000;
 	
 	public static int intFromMapLocation(MapLocation loc) {
 		return (loc.x << 10) | (loc.y);
@@ -426,5 +430,22 @@ public class Messages extends Globals {
 		int locInt = data[1] & 0x000fffff;
 		int avgTurnsToUncover = (data[1] & 0xfff00000) >>> 20;
 		return new PartRegion(totalParts, avgTurnsToUncover, mapLocationFromInt(locInt));
+	}
+	
+	public static void proposeAntiTurtleCharge(MapLocation chargeCenter, int radiusSq) throws GameActionException {
+		int data1 = intFromMapLocation(chargeCenter);
+		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE, data1, radiusSq);
+	}
+	
+	public static void vetoAntiTurtleCharge(int radiusSq) throws GameActionException {
+		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | ANTI_TURTLE_CHARGE_VETO_FLAG, 0, radiusSq);
+	}
+	
+	public static MapLocation parseAntiTurtleChargeCenter(int[] data) {
+		return mapLocationFromInt(data[1]);
+	}
+	
+	public static boolean parseAntiTurtleChargeVeto(int[] data) {
+		return (data[0] & ANTI_TURTLE_CHARGE_VETO_FLAG) != 0;
 	}
 }

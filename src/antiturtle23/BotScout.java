@@ -71,61 +71,69 @@ public class BotScout extends Globals {
 	}
 	
 	private static void turn() throws GameActionException {	
-//		Debug.indicate("bytecodes", 0, "start: " + Clock.getBytecodeNum());
 		Globals.updateRobotInfos();		
 				
 		processSignals(false);		
-//		Debug.indicate("bytecodes", 0, "; after processSignals: " + Clock.getBytecodeNum());
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
 
-		/*if (pullMode && birthRound <= 500 && rc.getRoundNum() <= 700) {
-			if (rc.isCoreReady()) {
-				if (tryLuringZombie()) {
-					return;
-				}
-				exploreTheMap();
-			}
-			return;
-		}*/
-				
 		trySuicide();
 		
-		//Debug.indicate("unpaired", 0, "last follow round = " + lastFollowRound);
-				
-//		Debug.indicateAppend("bytecodes", 0, "; before radar: " + Clock.getBytecodeNum());
 		sendRadarInfo();
-//		Debug.indicateAppend("bytecodes", 0, "; after radar: " + Clock.getBytecodeNum());
 		sendRobotInfo();
-//		Debug.indicateAppend("bytecodes", 0, "; after sendRobotInfo: " + Clock.getBytecodeNum());
 		if (rc.isCoreReady()) {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);			
 			Radar.updateClosestEnemyTurretLocation();
 		}
-//		Debug.indicateAppend("bytecodes", 0, "; after uCETL: " + Clock.getBytecodeNum());
 
 		trySendPartsOrNeutralLocation();
-//		Debug.indicate("bytecodes", 1, "; after tSPONL: " + Clock.getBytecodeNum());
 		trySendZombieDenLocations();
-//		Debug.indicateAppend("bytecodes", 1, "; after tSZDL: " + Clock.getBytecodeNum());
 		
 		if (rc.isCoreReady()) {
 			if (retreatIfNecessary()) {
 				return;
 			}		
-//			Debug.indicateAppend("bytecodes", 1, "; after retreat: " + Clock.getBytecodeNum());
 			if (tryFollowTurret()) {
-				//lastFollowRound = rc.getRoundNum();
 				return;
 			} else {
 				tryBroadcastUnpairedScoutSignal();
 			}
-//			Debug.indicateAppend("bytecodes", 1, "; after tryFollow: " + Clock.getBytecodeNum());
-			/*if (tryMicro()) {
-				return;
-			}*/
 
 			exploreTheMap();
-//			Debug.indicateAppend("bytecodes", 1, "; after explore: " + Clock.getBytecodeNum());
+		}
+	}
+	
+	private static void tryProposeAntiTurtleCharge() throws GameActionException {
+		// wait to build up enough units before breaking turtles
+		if (rc.getRoundNum() > 500 && rc.getRobotCount() > 40 && rc.getRoundNum() % 10 == 0) {
+			// need to have lots of allies gathered with us
+			if (visibleAllies.length >= 10) {
+				// don't propose charges too often
+				if (AntiTurtleCharge.chargeCenter == null 
+						&& rc.getRoundNum() > AntiTurtleCharge.lastProposalRound + 100) {
+					// only a scout that can actually see the enemy should propose a charge
+					if (Radar.closestEnemyTurretLocation != null 
+							&& rc.canSenseLocation(Radar.closestEnemyTurretLocation)) {
+						MapLocation proposalCenter = Radar.closestEnemyTurretLocation.add(
+								here.directionTo(Radar.closestEnemyTurretLocation), 3);
+						
+						// don't propose a charge if we have seen enemy turrets in several
+						// distinct locations, because then we are not facing a turtle
+						boolean haveSeenDistantTurret = false;
+						for (int i = 0; i < Radar.numEnemyTurrets; ++i) {
+							MapLocation enemyTurretLocation = Radar.enemyTurretLocationById[Radar.enemyTurretIds[i]];
+							if (enemyTurretLocation != null 
+									&& proposalCenter.distanceSquaredTo(enemyTurretLocation) > 100) {
+								haveSeenDistantTurret = true;
+								break;
+							}
+						}
+						if (!haveSeenDistantTurret) {
+							// propose a charge
+							Messages.proposeAntiTurtleCharge(proposalCenter, MapEdges.maxBroadcastDistSq());
+						}
+					}
+				}
+			}
 		}
 	}
 
@@ -133,7 +141,6 @@ public class BotScout extends Globals {
 		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == 0) {
 			broadCastedWithinInterval = false;
 		} else if (!rc.canSenseRobot(turretFollowId)) {
-		//} else if (rc.getRoundNum() - lastTurretFollowRound > Globals.checkUnpairedScoutInterval) {
 			if (!broadCastedWithinInterval && visibleHostiles.length == 0) {
 				Messages.sendUnpairedScoutReport(30 * mySensorRadiusSquared);
 				broadCastedWithinInterval = true;
