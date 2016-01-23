@@ -92,6 +92,8 @@ public class Globals {
 	public static final int broadCastRangeSqWhenHeard = 477;
 	public static final int broadCastRangeSqWhenDisappear = 477;
 	public static final int rebroadCastRangeSq = 106;
+	public static final int rebroadCastUpdateInterval = 50;
+	public static final int infoOutOfDateInterval = 100;
 	
 	public static int zombieScarinessMultiplier(RobotType type) {
 		switch (type) {

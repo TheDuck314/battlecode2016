@@ -120,7 +120,7 @@ public class Radar extends Globals {
 			bri.round = round;
 			return bri;
 		} else {
-			if (bri.round > round - 100 && loc.equals(bri.location)) {
+			if (bri.round > round - Globals.rebroadCastUpdateInterval && loc.equals(bri.location)) {
 				bri.round = round; // update but do not broadcast
 				return null;
 			}
@@ -139,7 +139,7 @@ public class Radar extends Globals {
 			return null;
 		}
 		BigRobotInfo bri = bigRobotInfoById[id];
-		if (loc.equals(bri.location) && bri.round > round - 100 || bri.round >= round) {
+		if (loc.equals(bri.location) && bri.round > round - Globals.rebroadCastUpdateInterval || bri.round >= round) {
 			return null;
 		}
 		bri.location = loc;
@@ -152,12 +152,12 @@ public class Radar extends Globals {
 		MapLocation bestLoc = null;
 		double bestDistSq = Double.MAX_VALUE;
 		int roundDelay = Int.MaxValue();
-		int round = rc.getRoundNum();
+		int round = Globals.roundNum;
 		for (int i = 0; i < theirArchonIdListLength; ++i) {
 			BigRobotInfo bri = bigRobotInfoById[theirArchonIdList[i]];
 			if (bri.location == null) continue;
 			if (roundDelay <= 200) {
-				if (round - bri.round <= 200) {
+				if (round - bri.round <= Globals.infoOutOfDateInterval) {
 					int distSq = bri.location.distanceSquaredTo(here);
 					if (distSq < bestDistSq) {
 						bestLoc = bri.location;
@@ -180,6 +180,7 @@ public class Radar extends Globals {
 		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
 			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
 			if (bri.location == null) continue;
+			if (bri.round <= Globals.roundNum - Globals.infoOutOfDateInterval) continue;
 			Debug.indicateLine("robotinfo", here, bri.location, red, green, blue);
 		}
 	}
