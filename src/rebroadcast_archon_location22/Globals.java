@@ -16,6 +16,8 @@ public class Globals {
 	public static int myAttackRadiusSquared;
 	public static int mySensorRadiusSquared;
 	
+	public static int roundNum;
+	
 	public static int numberOfInitialArchon;
 	
 	public static MapLocation[] ourInitialArchonLocations;
@@ -73,6 +75,7 @@ public class Globals {
 	
 	public static void update() {
 		here = rc.getLocation();
+		roundNum = rc.getRoundNum();
 	}
 	
 	public static void updateRobotInfos() {
@@ -87,6 +90,7 @@ public class Globals {
 	public static final boolean isRebroadcasting = true;
 	public static final int broadCastRangeSqWhenSeen = 477;
 	public static final int broadCastRangeSqWhenHeard = 477;
+	public static final int broadCastRangeSqWhenDisappear = 477;
 	public static final int rebroadCastRangeSq = 106;
 	
 	public static int zombieScarinessMultiplier(RobotType type) {

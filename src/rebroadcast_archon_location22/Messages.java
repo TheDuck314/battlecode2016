@@ -36,10 +36,12 @@ public class Messages extends Globals {
 	public static final int ZOMBIE_DEN_DESTROYED_FLAG = 0x00000001;
 	
 	public static int intFromMapLocation(MapLocation loc) {
+		if (loc == null) return 0xfffff;
 		return (loc.x << 10) | (loc.y);
 	}
 	
 	public static MapLocation mapLocationFromInt(int data) {
+		if ((data & 0xfffff) == 0xfffff) return null;
 		int x = ((data & 0xffc00) >>> 10);
 		int y = (data & 0x003ff);
 		return new MapLocation(x, y);
@@ -269,14 +271,14 @@ public class Messages extends Globals {
 		MapLocation loc = mapLocationFromInt(locInt & 0xfffff);
 		BigRobotInfo bri = Radar.addRobot(id, type, team, loc, round);
 		if (Globals.isRebroadcasting && myType == RobotType.SCOUT && bri != null && sig.getLocation().distanceSquaredTo(here) >= 24) {
-			return sendRobotLocation(bri,  + Globals.rebroadCastRangeSq);
+			return sendRobotLocation(bri, Globals.rebroadCastRangeSq);
 		} else {
 			return null;
 		}
 	}
 	
 	public static BigRobotInfo processRobotLocation(Signal sig) throws GameActionException {
-		BigRobotInfo bri = Radar.addRobot(sig.getID(), sig.getTeam(), sig.getLocation(), rc.getRoundNum() - 5);
+		BigRobotInfo bri = Radar.addRobot(sig.getID(), sig.getTeam(), sig.getLocation(), Globals.roundNum - 1);
 		if (myType == RobotType.SCOUT) {
 			return sendRobotLocation(bri, Globals.broadCastRangeSqWhenHeard);
 		} else {

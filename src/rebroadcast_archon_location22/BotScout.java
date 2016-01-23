@@ -347,9 +347,9 @@ public class BotScout extends Globals {
 				}
 			} else if (Globals.isSendingEnemyArchonLocation && hostile.type == RobotType.ARCHON) {
 				boolean isNewID = Radar.bigRobotInfoById[hostile.ID] == null;
-				int rangeSq = 4*mySensorRadiusSquared;
+				int rangeSq = Globals.broadCastRangeSqWhenSeen;
 				if (isNewID) rangeSq = MapEdges.maxBroadcastDistSq();
-				BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, rc.getRoundNum());
+				BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, Globals.roundNum);
 				if (bri != null) {
 					Messages.sendRobotLocation(bri, rangeSq);
 					Debug.indicate("archon", 0, "sent archon discover message");
@@ -379,6 +379,18 @@ public class BotScout extends Globals {
 					Radar.removeEnemyTurret(closestTurretId);
 					Messages.sendEnemyTurretMissing(closestTurretId, turretWarningRangeSq);
 				}
+			}
+		}
+		
+		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
+			int id = Radar.theirArchonIdList[i];
+			BigRobotInfo bri = Radar.bigRobotInfoById[id];
+			if (bri.round == Globals.roundNum || bri.location == null) continue;
+			if (bri.location.distanceSquaredTo(here) <= mySensorRadiusSquared) {
+				bri.location = null;
+				// bri.round is the round we learned the original location
+				bri.round += 1;
+				Messages.sendRobotLocation(bri, Globals.broadCastRangeSqWhenDisappear);
 			}
 		}
 	}
@@ -507,7 +519,6 @@ public class BotScout extends Globals {
 		}
 //		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
-	
 	
 	private static void receiveZombieDenList(int[] data, MapLocation origin) {
 		MapLocation[] denList = new MapLocation[3];

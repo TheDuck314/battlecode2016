@@ -107,12 +107,28 @@ public class Radar extends Globals {
 //			Debug.println("archon", "theirArchonIdListLength=" + theirArchonIdListLength + " Radar.addRobot id=" + id + " type=" + type + " team=" + team + " loc=" + loc + " round=" + round);
 		}
 		BigRobotInfo bri = bigRobotInfoById[id];
-		if (bri != null && (loc.distanceSquaredTo(bri.location) <= 2 && bri.round > round - 100 || bri.round >= round)) {
+		if (bri == null) {
+			bigRobotInfoById[id] = new BigRobotInfo(id, type, team, loc, round);
+			return bigRobotInfoById[id];
+		}
+		if (bri.round >= round) {
 			return null;
 		}
-		bigRobotInfoById[id] = new BigRobotInfo(id, type, team, loc, round);
-//		Debug.indicateAppend("archon", 2, "f");
-		return bigRobotInfoById[id];
+		if (loc == null) {
+			if (bri.location == null) return null;
+			bri.location = null;
+			bri.round = round;
+			return bri;
+		} else {
+			if (bri.round > round - 100 && loc.equals(bri.location)) {
+				bri.round = round; // update but do not broadcast
+				return null;
+			}
+			bri.location = loc;
+			bri.round = round;
+			// Debug.indicateAppend("archon", 2, "f");
+			return bri;
+		}
 	}
 	
 	public static BigRobotInfo addRobot(int id, Team team, MapLocation loc, int round) {
@@ -123,7 +139,7 @@ public class Radar extends Globals {
 			return null;
 		}
 		BigRobotInfo bri = bigRobotInfoById[id];
-		if (loc.distanceSquaredTo(bri.location) <= 2 && bri.round > round - 100 || bri.round >= round) {
+		if (loc.equals(bri.location) && bri.round > round - 100 || bri.round >= round) {
 			return null;
 		}
 		bri.location = loc;

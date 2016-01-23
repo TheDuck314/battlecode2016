@@ -36,12 +36,14 @@ public class BotArchon extends Globals {
 	//private static boolean pullMode = false;
 	
 	public static void loop() throws GameActionException {	
+		Debug.init("robotinfo");
+		
 		/*if (calculateSpawnScheduleScaryness() > ZOMBIE_SCHEDULE_SCARYNESS_THRESHOLD) {
 			pullMode = true;
 		}*/
 		
 		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
-//		Debug.init("heal");
+
 		FastMath.initRand(rc);
 		
 		// nArchons = rc.getRobotCount();
@@ -123,8 +125,8 @@ public class BotArchon extends Globals {
 		tryRepairAlly();
 		tryConvertNeutrals();		
 		
-		
-		sendRadarInfo();		
+		sendRadarInfo();
+		indicateEnemyArchonLocation();
 
 		if (rc.isCoreReady()) {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
@@ -480,6 +482,14 @@ public class BotArchon extends Globals {
 			}
 		}
 //		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
+	}
+	
+	private static void indicateEnemyArchonLocation() {
+		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
+			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
+			if (bri.location == null) continue;
+			Debug.indicateLine("robotinfo", here, bri.location, 0, 255, 0);
+		}
 	}
 		
 	private static void pickDestination() throws GameActionException {
