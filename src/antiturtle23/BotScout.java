@@ -38,18 +38,9 @@ public class BotScout extends Globals {
 	//private static boolean pullMode = false;
 	//private static int birthRound;
 	
-<<<<<<< HEAD
 	public static void loop() {
-		/*birthRound = rc.getRoundNum();
-		if (calculateSpawnScheduleScaryness() > ZOMBIE_SCHEDULE_SCARYNESS_THRESHOLD) {
-			pullMode = true;
-		}*/
-		
 		Debug.init("chaseArchon");
-=======
-	public static void loop() {		
-		Debug.init("charge");
->>>>>>> antiturtle23: implement anti-turtle charge
+
     	origin = here;
     	exploredGrid[50][50] = true;   
     	try {
