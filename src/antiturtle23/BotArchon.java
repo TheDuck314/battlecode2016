@@ -349,6 +349,9 @@ public class BotArchon extends Globals {
 		case TURRET: 
 			return 1000000.0 + ally.health;
 			
+		case VIPER:
+			return 10000.0 + ally.health;
+			
 		default:
 			return ally.health;
 		}
