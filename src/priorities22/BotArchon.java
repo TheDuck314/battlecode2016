@@ -33,7 +33,7 @@ public class BotArchon extends Globals {
 	
 	public static void loop() throws GameActionException {	
 		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
-		Debug.init("archons");
+		Debug.init("unpaired");
 		FastMath.initRand(rc);
 		
 		// nArchons = rc.getRobotCount();
@@ -93,13 +93,6 @@ public class BotArchon extends Globals {
 	private static void turn() throws GameActionException {
 		processSignals();
 		
-		/*for (int i = 0; i < PartMemory.MEMORY_LENGTH; ++i) {
-			if (PartMemory.regions[i] != null) {
-				Debug.indicateLine("regions", here, PartMemory.regions[i].centralLocation, 0, 0, 255);
-				Debug.indicateDot("regions", PartMemory.regions[i].centralLocation, 0, 0, 255);
-			}
-		}*/
-		
 		if (rc.getRoundNum() >= 40) {
 			MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
 		}
@@ -107,7 +100,11 @@ public class BotArchon extends Globals {
 		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == Globals.checkUnpairedScoutInterval - 1) {
 			lastUnpairedScoutCount = nextUnpairedScoutCount;
 			nextUnpairedScoutCount = 0;
+			Debug.indicate("unpaired", 2, "unpaired scout ids: ");
 		}
+		
+		Debug.indicate("unpaired", 0, "lastUnpairedScoutCount = " + lastUnpairedScoutCount);
+		Debug.indicate("unpaired", 1, "nextUnpairedScoutCount = " + nextUnpairedScoutCount);
 
 		visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		visibleAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
@@ -470,6 +467,8 @@ public class BotArchon extends Globals {
 					
 				case Messages.CHANNEL_UNPAIRED_SCOUT_REPORT:
 					nextUnpairedScoutCount += 1;
+					Debug.indicateAppend("unpaired", 2, ", " + sig.getID());
+					Debug.indicateLine("unpaired", here, sig.getLocation(), 0, 255, 0);
 					break;
 					
 				case Messages.CHANNEL_ZOMBIE_DEN:

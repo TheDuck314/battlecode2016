@@ -25,6 +25,7 @@ public class BotScout extends Globals {
 	private static final boolean enableArchonFollowing = true;
 	private static int lastTurretOwnershipBroadcastRound = -999999;
 	private static int[] turretOwnershipReceiveRoundById = new int[32001];
+	//private static int lastFollowRound = -999999;
 	
 	private static boolean broadCastedWithinInterval = false;
 	
@@ -35,7 +36,7 @@ public class BotScout extends Globals {
 	private static int sameDirectionSteps = 0;
 	
 	//private static boolean pullMode = false;
-	//private static int birthRound;\
+	//private static int birthRound;
 	
 	public static void loop() {
 		/*birthRound = rc.getRoundNum();
@@ -43,7 +44,7 @@ public class BotScout extends Globals {
 			pullMode = true;
 		}*/
 		
-		Debug.init("archons");
+		Debug.init("unpaired");
     	origin = here;
     	exploredGrid[50][50] = true;   
 //    	Debug.indicate("dens", 2, "dens received at birth: ");
@@ -89,8 +90,8 @@ public class BotScout extends Globals {
 				
 		trySuicide();
 		
-		tryBroadcastUnpairedScoutSignal();
-		
+		//Debug.indicate("unpaired", 0, "last follow round = " + lastFollowRound);
+				
 //		Debug.indicateAppend("bytecodes", 0, "; before radar: " + Clock.getBytecodeNum());
 		sendRadarInfo();
 //		Debug.indicateAppend("bytecodes", 0, "; after radar: " + Clock.getBytecodeNum());
@@ -113,7 +114,10 @@ public class BotScout extends Globals {
 			}		
 //			Debug.indicateAppend("bytecodes", 1, "; after retreat: " + Clock.getBytecodeNum());
 			if (tryFollowTurret()) {
+				//lastFollowRound = rc.getRoundNum();
 				return;
+			} else {
+				tryBroadcastUnpairedScoutSignal();
 			}
 //			Debug.indicateAppend("bytecodes", 1, "; after tryFollow: " + Clock.getBytecodeNum());
 			/*if (tryMicro()) {
@@ -129,6 +133,7 @@ public class BotScout extends Globals {
 		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == 0) {
 			broadCastedWithinInterval = false;
 		} else if (!rc.canSenseRobot(turretFollowId)) {
+		//} else if (rc.getRoundNum() - lastTurretFollowRound > Globals.checkUnpairedScoutInterval) {
 			if (!broadCastedWithinInterval && visibleHostiles.length == 0) {
 				Messages.sendUnpairedScoutReport(30 * mySensorRadiusSquared);
 				broadCastedWithinInterval = true;
