@@ -30,6 +30,8 @@ public class BotScout extends Globals {
 	
 	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
 	
+	private static MapLocationHashSet knownNeutralArchons = new MapLocationHashSet();
+	
 	private static int sameDirectionSteps = 0;
 	
 	//private static boolean pullMode = false;
@@ -41,7 +43,7 @@ public class BotScout extends Globals {
 			pullMode = true;
 		}*/
 		
-//		Debug.init("radar");
+		Debug.init("archons");
     	origin = here;
     	exploredGrid[50][50] = true;   
 //    	Debug.indicate("dens", 2, "dens received at birth: ");
@@ -212,6 +214,31 @@ public class BotScout extends Globals {
 		
 		int rangeSq = 9*mySensorRadiusSquared;
 
+		RobotInfo[] nearbyNeutrals = rc.senseNearbyRobots(mySensorRadiusSquared, Team.NEUTRAL);
+		// look for neutral archons
+		for (RobotInfo neutral : nearbyNeutrals) {
+			if (neutral.type == RobotType.ARCHON) {
+				if (!knownNeutralArchons.contains(neutral.location)) {
+					Debug.indicate("archons", 0, "found new neutral archon at " + neutral.location);
+					rangeSq = MapEdges.maxBroadcastDistSq();
+					Messages.sendNeutralLocation(neutral.location, neutral.type, rangeSq);
+					knownNeutralArchons.add(neutral.location);
+					lastPartsOrNeutralSignalRound = rc.getRoundNum();
+					return;				
+				} else {
+					Debug.indicate("archons", 0, "already know about neutral archon at " + neutral.location);
+				}
+			}
+		}
+		
+		if (nearbyNeutrals.length > 0) {
+			RobotInfo neutralToSend = nearbyNeutrals[0];
+			Messages.sendNeutralLocation(neutralToSend.location, neutralToSend.type, rangeSq);
+			lastPartsOrNeutralSignalRound = rc.getRoundNum();
+			return;
+		}	
+		
+
 		MapLocation[] partLocs = rc.sensePartLocations(mySensorRadiusSquared);
 		if (partLocs.length > 0) {
 			MapLocation sentPartLoc = partLocs[0];
@@ -248,14 +275,6 @@ public class BotScout extends Globals {
 			
 			return;
 		}
-		
-		RobotInfo[] nearbyNeutrals = rc.senseNearbyRobots(mySensorRadiusSquared, Team.NEUTRAL);
-		if (nearbyNeutrals.length > 0) {
-			MapLocation neutralLoc = nearbyNeutrals[0].location;
-			Messages.sendNeutralLocation(neutralLoc, rangeSq);
-			lastPartsOrNeutralSignalRound = rc.getRoundNum();
-			return;
-		}	
 	}
 	
 	private static void trySendZombieDenLocations() throws GameActionException {
@@ -447,6 +466,19 @@ public class BotScout extends Globals {
 					
 				case Messages.CHANNEL_ROBOT_LOCATION:
 					Messages.processRobotLocation(sig, data);
+					break;
+					
+				case Messages.CHANNEL_FOUND_NEUTRAL:
+					NeutralRobotInfo neutral = Messages.parseNeutralLocation(data);
+					if (neutral.type == RobotType.ARCHON) {
+						if (Messages.parseNeutralWasActivated(data)) {
+							Debug.indicate("archons",  1, "heard that " + neutral.type + " at " + neutral.location + " was activated");
+							knownNeutralArchons.remove(neutral.location);
+						} else {
+							knownNeutralArchons.add(neutral.location);
+							Debug.indicate("archons", 1, "heard about a neutral archon at " + neutral.location);
+						}
+					}
 					break;
 					
 				case Messages.CHANNEL_FLUSH_SIGNAL_QUEUE:

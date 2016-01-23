@@ -3,7 +3,7 @@ package priorities22;
 import battlecode.common.*;
 
 enum DestinationType {
-	PARTS, PARTREGION, NEUTRAL
+	PARTS, PARTREGION, NEUTRAL, NEUTRALARCHON
 }
 
 public class BotArchon extends Globals {
@@ -11,16 +11,12 @@ public class BotArchon extends Globals {
 
 	private static int lastArchonLocationMessageRound = 0;
 
-//	private static int nArchons = 0;
-//	private static MapLocation[] archonsLoc = new MapLocation[10];
-//	private static int[] archonsId = new int[10];
-//	private static int archonOrder = 0;
-//	private static MapLocation rallyPoint = null;
-	
 	private static MapLocation startingLocation = null;
 	
 	private static MapLocation currentDestination = null;
 	private static DestinationType currentDestinationType;
+	
+	private static MapLocationHashSet knownNeutralArchons = new MapLocationHashSet();
 	
 	private static int lastUnpairedScoutCount = 0;
 	private static int nextUnpairedScoutCount = 0;
@@ -36,12 +32,8 @@ public class BotArchon extends Globals {
 	//private static boolean pullMode = false;
 	
 	public static void loop() throws GameActionException {	
-		/*if (calculateSpawnScheduleScaryness() > ZOMBIE_SCHEDULE_SCARYNESS_THRESHOLD) {
-			pullMode = true;
-		}*/
-		
 		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
-//		Debug.init("heal");
+		Debug.init("archons");
 		FastMath.initRand(rc);
 		
 		// nArchons = rc.getRobotCount();
@@ -387,11 +379,44 @@ public class BotArchon extends Globals {
 		RobotInfo[] adjacentNeutrals = rc.senseNearbyRobots(2, Team.NEUTRAL);
 		for (RobotInfo neutral : adjacentNeutrals) {
 			rc.activate(neutral.location);
+			if (neutral.type == RobotType.ARCHON) {
+				int rangeSq = MapEdges.maxBroadcastDistSq();
+				if (rc.senseHostileRobots(here, mySensorRadiusSquared).length > 0) {
+					rangeSq = 30 * mySensorRadiusSquared;
+				}
+				Messages.sendNeutralWasActivated(neutral.location, neutral.type, rangeSq);
+				Debug.indicate("archons", 2, "sending message that I activated a neutral archon! rangeSq = " + rangeSq);
+			}
 			return;
 		}
 	}
 	
+	private static boolean pathToLocationIsFreeOfRubble(MapLocation dest) {
+		MapLocation loc = dest.add(dest.directionTo(here));
+		while (!loc.equals(here)) {
+			if (rc.senseRubble(loc) >= GameConstants.RUBBLE_OBSTRUCTION_THRESH) {
+				return false;
+			}
+			loc = loc.add(loc.directionTo(here));
+		}
+		return true;
+	}
+	
 	private static void considerDestination(MapLocation loc, DestinationType type) {
+		if (currentDestination != null) {
+			if (currentDestinationType == DestinationType.NEUTRALARCHON) {
+				return; // neutral archon has priority
+			}
+			if (currentDestinationType == DestinationType.NEUTRAL) {
+				if (rc.canSenseLocation(currentDestination)) {
+					if (type == DestinationType.PARTREGION || type == DestinationType.PARTS) {
+						if (pathToLocationIsFreeOfRubble(currentDestination)) {
+							return; // prefer neutrals to parts
+						}
+					}
+				}
+			}
+		}
 		if (!loc.equals(here)) {
 			if (currentDestination == null || here.distanceSquaredTo(loc) < here.distanceSquaredTo(currentDestination)) {
 				currentDestination = loc;
@@ -423,8 +448,20 @@ public class BotArchon extends Globals {
 					break;
 					
 				case Messages.CHANNEL_FOUND_NEUTRAL:
-					MapLocation neutralLoc = Messages.parseNeutralLocation(data);
-					considerDestination(neutralLoc, DestinationType.NEUTRAL);
+					NeutralRobotInfo neutral = Messages.parseNeutralLocation(data);
+					if (Messages.parseNeutralWasActivated(data)) {
+						Debug.indicate("archons",  1, "heard that " + neutral.type + " at " + neutral.location + " was activated");
+						knownNeutralArchons.remove(neutral.location);
+						if (neutral.location.equals(currentDestination)) {
+							currentDestination = null;
+						}
+					} else {
+						Debug.indicate("archons", 1, "heard about " + neutral.type + " at " + neutral.location);
+						considerDestination(neutral.location, DestinationType.NEUTRAL);
+						if (neutral.type == RobotType.ARCHON) {
+							knownNeutralArchons.add(neutral.location);
+						}
+					}
 					break;
 					
 				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
@@ -483,6 +520,7 @@ public class BotArchon extends Globals {
 	}
 		
 	private static void pickDestination() throws GameActionException {
+		// check if the thing we are going for is gone
 		if (currentDestination != null) {
 			if (here.equals(currentDestination)) {
 				currentDestination = null;
@@ -492,6 +530,44 @@ public class BotArchon extends Globals {
 					if (robot == null || robot.team != Team.NEUTRAL) {
 						currentDestination = null;
 					}
+				}
+			}
+		}
+		
+		// prioritize neutral archons
+		if (knownNeutralArchons.size > 0) {
+			MapLocation closestNeutralArchon = knownNeutralArchons.findClosestMemberToLocation(here);
+			boolean stillExists = true;
+			if (rc.canSense(closestNeutralArchon)) {
+				RobotInfo robot = rc.senseRobotAtLocation(closestNeutralArchon);
+				if (robot == null || robot.team != Team.NEUTRAL) {
+					knownNeutralArchons.remove(closestNeutralArchon);
+					stillExists = false;
+					if (closestNeutralArchon.equals(currentDestination)) {
+						currentDestination = null;
+					}
+				}
+			}
+			if (stillExists) {
+				Debug.indicate("archons", 0, "dest = neutral archon at " + closestNeutralArchon);
+				currentDestination = closestNeutralArchon;
+				currentDestinationType = DestinationType.NEUTRALARCHON;
+				return;
+			}
+		}
+		
+		RobotInfo[] nearbyNeutrals = rc.senseNearbyRobots(mySensorRadiusSquared, Team.NEUTRAL);
+		for (RobotInfo neutral : nearbyNeutrals) {
+			if (!neutral.location.equals(here)) {
+				considerDestination(neutral.location, DestinationType.NEUTRAL);
+			}
+		}	
+		if (currentDestination != null && currentDestinationType == DestinationType.NEUTRAL) {
+			if (rc.canSenseLocation(currentDestination)) {
+				// prefer to go for neutrals when they are in sight and the path to
+				// them is clear
+				if (pathToLocationIsFreeOfRubble(currentDestination)) {
+					return;
 				}
 			}
 		}
@@ -536,13 +612,6 @@ public class BotArchon extends Globals {
 				}
 			}
 		}
-			
-		RobotInfo[] nearbyNeutrals = rc.senseNearbyRobots(mySensorRadiusSquared, Team.NEUTRAL);
-		for (RobotInfo neutral : nearbyNeutrals) {
-			if (!neutral.location.equals(here)) {
-				considerDestination(neutral.location, DestinationType.NEUTRAL);
-			}
-		}	
 		
 //		Debug.indicate("regions", 2, "destination = " + currentDestination);
 		if (currentDestination != null) {

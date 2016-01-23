@@ -35,6 +35,9 @@ public class Messages extends Globals {
 	// used by CHANNEL_ZOMBIE_DEN
 	public static final int ZOMBIE_DEN_DESTROYED_FLAG = 0x00000001;
 	
+	// used by CHANNEL_FOUND_NEUTRAL
+	public static final int NEUTRAL_WAS_ACTIVATED_FLAG = 0x00100000;
+	
 	public static int intFromMapLocation(MapLocation loc) {
 		return (loc.x << 10) | (loc.y);
 	}
@@ -160,13 +163,29 @@ public class Messages extends Globals {
 		return new PartsLocation(loc, numParts);
 	}
 	
-	public static void sendNeutralLocation(MapLocation loc, int radiusSq) throws GameActionException {
-		sendMapLocation(CHANNEL_FOUND_NEUTRAL, loc, radiusSq);
+	public static void sendNeutralLocation(MapLocation loc, RobotType type, int radiusSq) throws GameActionException {
+		int data0 = type.ordinal();
+		int data1 = intFromMapLocation(loc);
+		rc.broadcastMessageSignal(CHANNEL_FOUND_NEUTRAL | data0, data1, radiusSq);
 //		Debug.indicate("msg", msgDILN(), "sendNeutralLocation " + radiusSq);
 	}
 	
-	public static MapLocation parseNeutralLocation(int[] data) {
-		return parseMapLocation(data);
+	public static void sendNeutralWasActivated(MapLocation loc, RobotType type, int radiusSq) throws GameActionException {
+		int data0 = type.ordinal() | NEUTRAL_WAS_ACTIVATED_FLAG;
+		int data1 = intFromMapLocation(loc);
+		rc.broadcastMessageSignal(CHANNEL_FOUND_NEUTRAL | data0, data1, radiusSq);
+//		Debug.indicate("msg", msgDILN(), "sendNeutralWasActivated " + radiusSq);
+	}
+	
+	public static NeutralRobotInfo parseNeutralLocation(int[] data) {
+		int typeOrdinal = (data[0] ^ CHANNEL_FOUND_NEUTRAL) & (~NEUTRAL_WAS_ACTIVATED_FLAG);
+		RobotType type = RobotType.values()[typeOrdinal];
+		MapLocation loc = mapLocationFromInt(data[1]);
+		return new NeutralRobotInfo(loc, type);
+	}
+	
+	public static boolean parseNeutralWasActivated(int[] data) {
+		return (data[0] & NEUTRAL_WAS_ACTIVATED_FLAG) != 0;
 	}
 	
 	private static int compressMapEdges(int original) {
