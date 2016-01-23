@@ -115,6 +115,7 @@ public class BotArchon extends Globals {
 		tryConvertNeutrals();		
 		
 		sendRadarInfo();
+		Radar.indicateEnemyArchonLocation(0, 200, 200);
 
 		if (rc.isCoreReady()) {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
@@ -148,7 +149,6 @@ public class BotArchon extends Globals {
 				goToCenterOfMass();
 			}
 		}
-		Radar.indicateEnemyArchonLocation(0, 200, 200);
 	}
 	
 	private static void trySendGlobalZombieDenBroadcast() throws GameActionException {		

@@ -80,6 +80,7 @@ public class BotScout extends Globals {
 		
 		sendRadarInfo();
 		sendRobotInfo();
+		Radar.indicateEnemyArchonLocation(0, 200, 200);
 		if (rc.isCoreReady()) {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);			
 			Radar.updateClosestEnemyTurretLocation();
