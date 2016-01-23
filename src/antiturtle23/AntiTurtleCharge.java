@@ -26,7 +26,14 @@ public class AntiTurtleCharge extends Globals {
 		}
 	}
 	
-	public static void proposeCharge(MapLocation chargeCenter) {
-		
+	public static void proposeCharge(MapLocation proposalCenter) throws GameActionException {
+		Messages.proposeAntiTurtleCharge(proposalCenter, MapEdges.maxBroadcastDistSq());
+		chargeCenter = proposalCenter;
+		gatherRound = rc.getRoundNum() + ANTI_TURTLE_CHARGE_VETO_WAIT_ROUNDS;
+		chargeRound = rc.getRoundNum() + ANTI_TURTLE_CHARGE_ROUND_DELAY;
+	}
+	
+	public static void vetoCharge() throws GameActionException {
+		Messages.vetoAntiTurtleCharge(MapEdges.maxBroadcastDistSq());
 	}
 }
