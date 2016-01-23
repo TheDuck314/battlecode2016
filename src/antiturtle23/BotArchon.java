@@ -31,9 +31,11 @@ public class BotArchon extends Globals {
 
 	//private static boolean pullMode = false;
 	
-	public static void loop() throws GameActionException {	
+	public static void loop() throws GameActionException {
+		Debug.init("robotinfo");
+		
 		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
-		Debug.init("unpaired");
+		
 		FastMath.initRand(rc);
 		
 		// nArchons = rc.getRobotCount();
@@ -112,8 +114,7 @@ public class BotArchon extends Globals {
 		tryRepairAlly();
 		tryConvertNeutrals();		
 		
-		
-		sendRadarInfo();		
+		sendRadarInfo();
 
 		if (rc.isCoreReady()) {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
@@ -147,6 +148,7 @@ public class BotArchon extends Globals {
 				goToCenterOfMass();
 			}
 		}
+		Radar.indicateEnemyArchonLocation(0, 200, 200);
 	}
 	
 	private static void trySendGlobalZombieDenBroadcast() throws GameActionException {		
