@@ -781,7 +781,7 @@ public class BotScout extends Globals {
 		if (distSq > mySensorRadiusSquared) return false;
 		
 		// Check if there is already scout following it
-		RobotInfo[] allies = rc.senseNearbyRobots(distSq, us);
+		RobotInfo[] allies = rc.senseNearbyRobots(loc, distSq, us);
 		for (RobotInfo ally : allies) {
 			if (ally.type == RobotType.SCOUT) {
 				return false;
