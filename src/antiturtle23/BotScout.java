@@ -715,10 +715,10 @@ public class BotScout extends Globals {
 		Nav.goToDirect(dest);
 	}
 
-	public static int numberOfVisialCanAttackEnemies = 0;
+	public static int numberOfVisibleCanAttackEnemies = 0;
 	
 	private static boolean retreatIfNecessary() throws GameActionException {
-		numberOfVisialCanAttackEnemies = 0;
+		numberOfVisibleCanAttackEnemies = 0;
 		
 		// if any enemy is too close, try to get farther away
 		if (visibleHostiles.length == 0) return false;
@@ -727,7 +727,7 @@ public class BotScout extends Globals {
 		int bestClosestDistSq = 999999;
 		for (RobotInfo hostile : visibleHostiles) {			
 			if (hostile.type.canAttack()) {
-				if (hostile.team == them) numberOfVisialCanAttackEnemies += 1;
+				if (hostile.team == them) numberOfVisibleCanAttackEnemies += 1;
 				int distSq = here.distanceSquaredTo(hostile.location);
 				if (distSq <= 24) {
 					mustRetreat = true;
@@ -772,7 +772,7 @@ public class BotScout extends Globals {
 	
 	private static boolean tryFollowHelplessEnemyArchon() throws GameActionException {
 		// Check if there are too many enemies
-		if (numberOfVisialCanAttackEnemies > 2) return false;
+		if (numberOfVisibleCanAttackEnemies > 3) return false;
 
 		// Check if there is enemy archon nearby
 		MapLocation loc = Radar.closestEnemyArchonLocation();
@@ -796,7 +796,7 @@ public class BotScout extends Globals {
 			return true;
 		} else {
 			// If it is too far away, maybe we are not yet following it?
-			return here.distanceSquaredTo(loc) <= 24;
+			return true; //here.distanceSquaredTo(loc) <= 24;
 		}
 	}
 	
