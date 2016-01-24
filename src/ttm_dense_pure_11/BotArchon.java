@@ -66,6 +66,7 @@ public class BotArchon extends Globals {
 			rallyPoint = FastMath.addVec(rallyPoint, archonsLoc[i]);
 		}
 		rallyPoint = FastMath.multiplyVec(1.0/(double)nArchons, rallyPoint);
+		rallyPoint = rc.getInitialArchonLocations(us)[0];
 		rc.setIndicatorDot(rallyPoint, 255, 0, 0);
 		for (int i = 0; i < nArchons; ++i) {
 			if (archonsId[i] < myID) {
