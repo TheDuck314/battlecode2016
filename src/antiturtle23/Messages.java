@@ -13,7 +13,7 @@ public class Messages extends Globals {
 	
 	public static final int CHANNEL_MASK = 0xf0000000;
 	public static final int CHANNEL_MASK_INVERSE = ~CHANNEL_MASK;
-	public static final int CHANNEL_FLUSH_SIGNAL_QUEUE = 0x00000000;
+	public static final int CHANNEL_BEGIN_EDUCATION = 0x00000000;
 	public static final int CHANNEL_TURRET_TARGET = 0x10000000;
 	public static final int CHANNEL_ZOMBIE_DEN = 0x20000000;
 	public static final int CHANNEL_FOUND_PARTS = 0x30000000;
@@ -71,8 +71,8 @@ public class Messages extends Globals {
 		return data[1];
 	}
 	
-	public static void sendFlushSignalQueue(int radiusSq) throws GameActionException {
-		rc.broadcastMessageSignal(CHANNEL_FLUSH_SIGNAL_QUEUE, 0, radiusSq);
+	public static void sendBeginEducation(int radiusSq) throws GameActionException {
+		rc.broadcastMessageSignal(CHANNEL_BEGIN_EDUCATION, 0, radiusSq);
 	}
 	
 	public static void sendTurretTarget(MapLocation loc, int radiusSq) throws GameActionException {

@@ -28,11 +28,14 @@ public class BotArchon extends Globals {
 	
 	private static int lastFleeZombiesRound = -99999;
 	private static int lastFleeOtherTeamRound = -99999;
+	
+	private static int scheduledEducationRound = 999999;
+	private static RobotType scheduledEducationType = null;
 
 	//private static boolean pullMode = false;
 	
 	public static void loop() throws GameActionException {
-		// Debug.init("robotinfo");
+		Debug.init("education");
 		
 		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
 		
@@ -94,6 +97,12 @@ public class BotArchon extends Globals {
 	
 	private static void turn() throws GameActionException {
 		processSignals();
+		
+		if (rc.getRoundNum() >= scheduledEducationRound) {
+			educateBaby(scheduledEducationType);
+			Debug.indicate("education", 0, "educated a " + scheduledEducationType + " as scheduled");
+			scheduledEducationRound = 999999;
+		}
 		
 		if (rc.getRoundNum() >= 40) {
 			MapEdges.detectAndBroadcastMapEdges(5); // visionRange = 5
@@ -309,18 +318,17 @@ public class BotArchon extends Globals {
 		for (int i = 0; i < 8; ++i) {
 			if (rc.canBuild(dir, spawnType)) {
 				rc.build(dir, spawnType);
+				scheduledEducationRound = rc.getRoundNum() + spawnType.buildTurns;
+				scheduledEducationType = spawnType;
+				Debug.indicate("education", 1, "scheduling education of " + scheduledEducationType + " for " + scheduledEducationRound);
 				++spawnCount;
-				if (spawnType == RobotType.SCOUT) {
-					sendInfoToBabyScout();
-					lastUnpairedScoutCount += numberOfInitialArchon;
-				}
 				return;
 			}
 			dir = dir.rotateRight();
 		}
 	}
 	
-	private static void sendInfoToBabyScout() throws GameActionException {
+	private static void educateBabyScoutOrArchon() throws GameActionException {
 		// tell scout known map edges
 		Messages.sendKnownMapEdges(2); 
 		
@@ -344,8 +352,30 @@ public class BotArchon extends Globals {
 		if (!AntiTurtleCharge.enemyMightBeATurtle) {
 			Messages.sendNotATurtle(2);
 		}
+	}
+	
+	private static void educateBabySoldierOrViper() throws GameActionException {
+		if (!AntiTurtleCharge.enemyMightBeATurtle) {
+			Messages.sendNotATurtle(2);
+		}	
+	}
+	
+	private static void educateBaby(RobotType babyType) throws GameActionException {
+		Messages.sendBeginEducation(2);
 		
-		Messages.sendFlushSignalQueue(2);
+		switch (babyType) {
+		case SCOUT:
+		case ARCHON:
+			educateBabyScoutOrArchon();
+			break;
+			
+		case SOLDIER:
+		case VIPER:
+			educateBabySoldierOrViper();
+			break;
+			
+		default:
+		}
 	}
 	
 	private static double repairScore(RobotInfo ally) {
@@ -385,6 +415,8 @@ public class BotArchon extends Globals {
 		RobotInfo[] adjacentNeutrals = rc.senseNearbyRobots(2, Team.NEUTRAL);
 		for (RobotInfo neutral : adjacentNeutrals) {
 			rc.activate(neutral.location);
+			educateBaby(neutral.type);
+
 			if (neutral.type == RobotType.ARCHON) {
 				int rangeSq = MapEdges.maxBroadcastDistSq();
 				if (rc.senseHostileRobots(here, mySensorRadiusSquared).length > 0) {

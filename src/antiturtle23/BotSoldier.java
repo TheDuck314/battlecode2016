@@ -4,18 +4,22 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("charge");		
+		Debug.init("education");		
 		FastMath.initRand(rc);
-		rc.emptySignalQueue(); // flush signal backlog
+    	try {
+    		processSignals(true);
+    	} catch (Exception e) {
+    		System.out.println("EXCEPTION IN INITIAL PROCESSSIGNALS:");
+			e.printStackTrace();    		
+    	}
 		int maxBytecodesUsed = 0;
 		int maxBytecodeUsedTurn = 0;
-		while (true) {
+    	while (true) {
 			int startTurn = rc.getRoundNum();
 			try {
 				Globals.update();
 				turn();
 				setIndicator();
-
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -56,7 +60,7 @@ public class BotSoldier extends Globals {
 		visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		
 		detectIfAttackTargetIsGone();
-		processSignals();
+		processSignals(false);
 		Debug.indicateAppend("bytecodes", 0, "; after processSignals: " + Clock.getBytecodeNum());
 
 		Debug.indicate("bug", 1, "attackTarget = " + attackTarget);
@@ -153,12 +157,14 @@ public class BotSoldier extends Globals {
 		}
 	}
 
-	private static void processSignals() throws GameActionException {
+	private static void processSignals(boolean justBorn) throws GameActionException {
 		Radar.clearEnemyCache();
-		boolean processRadar = (attackableHostiles.length == 0);
+		boolean processRadar = justBorn || (attackableHostiles.length == 0);
 
 		Signal[] signals = rc.emptySignalQueue();
-		for (Signal sig : signals) {
+		for (int i = signals.length; i --> 0; ) {
+			Signal sig = signals[i];
+
 			if (sig.getTeam() != us) continue;
 
 			int[] data = sig.getMessage();
@@ -208,6 +214,12 @@ public class BotSoldier extends Globals {
 				case Messages.CHANNEL_ANTI_TURTLE_CHARGE:
 					AntiTurtleCharge.processAntiTurtleChargeMessage(data);
 					break;
+					
+				case Messages.CHANNEL_BEGIN_EDUCATION:
+					if (justBorn) {
+						Debug.indicate("education", 0, "reached begin education signal!");
+					}
+					return;
 					
 				default:
 				}

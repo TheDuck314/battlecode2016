@@ -5,9 +5,14 @@ import battlecode.common.*;
 public class BotViper extends Globals {
 	public static void loop() {
 		FastMath.initRand(rc);
-		Debug.init("charge");
-		rc.emptySignalQueue(); // flush signal backlog
-		while (true) {
+		Debug.init("education");
+    	try {
+    		processSignals(true);
+    	} catch (Exception e) {
+    		System.out.println("EXCEPTION IN INITIAL PROCESSSIGNALS:");
+			e.printStackTrace();    		
+    	}
+    	while (true) {
 			int startTurn = rc.getRoundNum();
 			try {
 				Globals.update();
@@ -42,7 +47,9 @@ public class BotViper extends Globals {
 
 	
 	private static void turn() throws GameActionException {
-		processSignals();
+		attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
+
+		processSignals(false);
 
 		manageHealingState();
 		
@@ -92,19 +99,24 @@ public class BotViper extends Globals {
 		}
 	}
 
-	private static void processSignals() {
+	private static void processSignals(boolean justBorn) {
 		Radar.clearEnemyCache();
+		boolean processRadar = justBorn || (attackableHostiles.length == 0);
 
 		Signal[] signals = rc.emptySignalQueue();
-		for (Signal sig : signals) {
+		for (int i = signals.length; i --> 0; ) {
+			Signal sig = signals[i];
+
 			if (sig.getTeam() != us) continue;
 
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
 				case Messages.CHANNEL_RADAR:
-					MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
-					addAttackTarget(closest, false);
+					if (processRadar) {
+						MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
+						addAttackTarget(closest, false);
+					}
 					break;
 					
 				case Messages.CHANNEL_ARCHON_LOCATION:
@@ -124,6 +136,12 @@ public class BotViper extends Globals {
 				case Messages.CHANNEL_ANTI_TURTLE_CHARGE:
 					AntiTurtleCharge.processAntiTurtleChargeMessage(data);
 					break;
+
+				case Messages.CHANNEL_BEGIN_EDUCATION:
+					if (justBorn) {
+						Debug.indicate("education", 0, "reached begin education signal!");
+					}
+					return;
 
 				default:
 				}
@@ -178,8 +196,6 @@ public class BotViper extends Globals {
 			}
 			return false;
 		}
-
-		RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 
 		if (rc.isWeaponReady()) {
 			if (attackableHostiles.length > 0) { // we can shoot someone

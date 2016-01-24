@@ -39,14 +39,14 @@ public class BotScout extends Globals {
 	//private static int birthRound;
 	
 	public static void loop() {
-		Debug.init("detector");
+		Debug.init("education");
 
     	origin = here;
     	exploredGrid[50][50] = true;   
     	try {
     		processSignals(true);
     	} catch (Exception e) {
-    		System.out.println("SCOUT EXCEPTION IN INITIAL PROCESSSIGNALS:");
+    		System.out.println("EXCEPTION IN INITIAL PROCESSSIGNALS:");
 			e.printStackTrace();    		
     	}
 		while (true) {
@@ -451,18 +451,12 @@ public class BotScout extends Globals {
 	}
 
 	private static void processSignals(boolean justBorn) throws GameActionException {
-		if (justBorn) {
-			processSignalsJustBorn();
-			return;
-		}
-		
 		Radar.clearEnemyCache();
 		
 //		Debug.indicate("archon", 2, "");
 		
 		Signal[] signals = rc.emptySignalQueue();
-		int length = signals.length;
-		for (int i = length - 1; i >= 0; --i) {
+		for (int i = signals.length; i --> 0; ) {
 			Signal sig = signals[i];
 			
 			if (sig.getTeam() != us) {
@@ -528,6 +522,19 @@ public class BotScout extends Globals {
 					AntiTurtleCharge.processAntiTurtleChargeMessage(data);
 					break;
 					
+				case Messages.CHANNEL_ZOMBIE_DEN_LIST:
+					receiveZombieDenList(data, sig.getLocation());
+					break;
+
+				case Messages.CHANNEL_BEGIN_EDUCATION:
+					if (justBorn) {
+						Debug.indicate("education", 0, "got begin education signal!");
+						// we read our education backwards, and we are finished
+						// when we reach the BEGIN_EDUCATION signal
+						return;
+					}
+					break;
+					
 				default:
 				}
 			} else {
@@ -547,47 +554,7 @@ public class BotScout extends Globals {
 //		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
 
-	private static void processSignalsJustBorn() throws GameActionException {
-		Radar.clearEnemyCache();
-		
-//		Debug.indicate("archon", 2, "");
-		
-		Signal[] signals = rc.emptySignalQueue();
-		int length = signals.length;
-		for (int i = 0; i < length; ++i) {
-			Signal sig = signals[i];
 
-			if (sig.getTeam() != us) continue;
-			
-			int[] data = sig.getMessage();
-			if (data != null) {
-				switch(data[0] & Messages.CHANNEL_MASK) {
-				case Messages.CHANNEL_MAP_EDGES:
-					Messages.processMapEdges(data);
-					break;
-					
-				case Messages.CHANNEL_ZOMBIE_DEN_LIST:
-					receiveZombieDenList(data, sig.getLocation());
-					break;
-					
-				case Messages.CHANNEL_ROBOT_LOCATION:
-					Messages.processRobotLocation(sig, data);
-					break;
-					
-				case Messages.CHANNEL_ANTI_TURTLE_CHARGE:
-					AntiTurtleCharge.processAntiTurtleChargeMessage(data);
-					break;
-
-				case Messages.CHANNEL_FLUSH_SIGNAL_QUEUE:
-					return;
-					
-				default:
-				}
-			}
-		}
-//		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
-	}
-	
 	private static void receiveZombieDenList(int[] data, MapLocation origin) {
 		MapLocation[] denList = new MapLocation[3];
 		int numDens = Messages.parseUpToThreeZombieDens(data, origin, denList);
