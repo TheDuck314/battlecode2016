@@ -39,7 +39,7 @@ public class BotScout extends Globals {
 	//private static int birthRound;
 	
 	public static void loop() {
-		Debug.init("chaseArchon");
+		Debug.init("detector");
 
     	origin = here;
     	exploredGrid[50][50] = true;   
@@ -70,12 +70,13 @@ public class BotScout extends Globals {
 				
 		processSignals(false);		
 		MapEdges.detectAndBroadcastMapEdges(7); // visionRange = 7
-
+		
 		trySuicide();
 		
 		sendRadarInfo();
 		sendRobotInfo();
 		manageAntiTurtleChargeProposals();		
+		Debug.indicate("detector", 2, "AntiTurtleCharge.enemyMightBeATurtle = " + AntiTurtleCharge.enemyMightBeATurtle);
 		//Radar.indicateEnemyArchonLocation(0, 200, 200);
 		if (rc.isCoreReady()) {
 			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);			
@@ -103,6 +104,9 @@ public class BotScout extends Globals {
 	}
 	
 	private static void manageAntiTurtleChargeProposals() throws GameActionException {
+		AntiTurtleCharge.runTurtleDetector(visibleEnemies, visibleHostiles);
+		if (!AntiTurtleCharge.enemyMightBeATurtle) return;
+		
 		// consider proposing a charge
 		// don't propose charges too often
 		if (AntiTurtleCharge.chargeCenter == null 
@@ -146,19 +150,6 @@ public class BotScout extends Globals {
 			}
 		} else {
 			Debug.indicate("charge", 1, "last proposal too recent");
-		}
-		
-		// veto a charge if we see a turret too far away from the charge center
-		if (AntiTurtleCharge.chargeCenter != null && rc.getRoundNum() < AntiTurtleCharge.gatherRound) {
-			for (int i = 0; i < Radar.numEnemyTurrets; ++i) {
-				MapLocation enemyTurretLocation = Radar.enemyTurretLocationById[Radar.enemyTurretIds[i]];
-				if (enemyTurretLocation != null 
-						&& AntiTurtleCharge.chargeCenter.distanceSquaredTo(enemyTurretLocation) > 150) {
-					AntiTurtleCharge.vetoCharge();
-					Debug.indicate("charge", 2, "vetoed anti turtle charge b/c of turret at " + enemyTurretLocation);
-					break;
-				}
-			}
 		}
 		
 		if (AntiTurtleCharge.chargeCenter != null) {
@@ -583,6 +574,10 @@ public class BotScout extends Globals {
 					Messages.processRobotLocation(sig, data);
 					break;
 					
+				case Messages.CHANNEL_ANTI_TURTLE_CHARGE:
+					AntiTurtleCharge.processAntiTurtleChargeMessage(data);
+					break;
+
 				case Messages.CHANNEL_FLUSH_SIGNAL_QUEUE:
 					return;
 					

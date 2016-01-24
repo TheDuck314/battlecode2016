@@ -55,12 +55,19 @@ public class BotSoldier extends Globals {
 		attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 		visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		
+		detectIfAttackTargetIsGone();
 		processSignals();
 		Debug.indicateAppend("bytecodes", 0, "; after processSignals: " + Clock.getBytecodeNum());
+
+		Debug.indicate("bug", 1, "attackTarget = " + attackTarget);
+		if (attackTarget != null) {
+			Debug.indicateLine("bug", here, attackTarget, 0, 255, 0);
+		}
 
 		manageHealingState();
 		
 		if (tryToMicro()) {
+			Debug.indicate("bug", 2, "microed");
 			Debug.indicateAppend("bytecodes", 0, "; after tryToMicro: " + Clock.getBytecodeNum());
 			return;
 		}
@@ -72,12 +79,14 @@ public class BotSoldier extends Globals {
 			Debug.indicateAppend("bytecodes", 0, "; after turrets: " + Clock.getBytecodeNum());
 
 			if (tryDoAntiTurtleCharge()) {
+				Debug.indicate("bug", 2, "doing charge");
 				return;
 			}
 			
 			//		Debug.indicate("micro", 2, "inHealingState = " + inHealingState);
 			if (inHealingState) {
 				if (tryToHealAtArchon()) {
+					Debug.indicate("bug", 2, "healing");
 					Debug.indicateAppend("bytecodes", 0, "; after tTHAA: " + Clock.getBytecodeNum());
 					return;
 				}
@@ -89,13 +98,13 @@ public class BotSoldier extends Globals {
 	}
 	
 	private static boolean tryDoAntiTurtleCharge() throws GameActionException {
-		Debug.indicate("charge", 0, "center = " + AntiTurtleCharge.chargeCenter + ", gatherRound = " + AntiTurtleCharge.gatherRound + ", chargeRound = " + AntiTurtleCharge.chargeRound + ", endRound = " + AntiTurtleCharge.endRound);
+		Debug.indicate("charge", 0, "center = " + AntiTurtleCharge.chargeCenter + ", chargeRound = " + AntiTurtleCharge.chargeRound + ", endRound = " + AntiTurtleCharge.endRound);
 		if (AntiTurtleCharge.chargeCenter != null && rc.getRoundNum() < AntiTurtleCharge.endRound) {
 			if (rc.getRoundNum() > AntiTurtleCharge.chargeRound) {
 				Debug.indicate("charge", 1, "charging!!!");
 				Nav.goToDirect(AntiTurtleCharge.chargeCenter);
 				return true;
-			} else if (rc.getRoundNum() > AntiTurtleCharge.gatherRound) {
+			} else {
 				Debug.indicate("charge", 1, "gathering for charge");
 				Nav.goToDirectSafelyAvoidingTurret(AntiTurtleCharge.chargeCenter, Radar.closestEnemyTurretLocation);
 				return true;
@@ -789,82 +798,51 @@ public class BotSoldier extends Globals {
 		return true;
 	}
 	
-	private static void lookForAttackTarget() throws GameActionException {
-		if (!rc.isCoreReady()) return;
-		
-		/*if (attackTarget == null) {
-//			Debug.indicate("radar", 0, "lookForAttackTarget: attackTarget == null, numCachedEnemies = " + Radar.numCachedEnemies);
-			MapLocation closest = null;
-			int bestDistSq = Integer.MAX_VALUE;
-			for (int i = 0; i < Radar.numCachedEnemies; ++i) {
-				FastRobotInfo hostile = Radar.enemyCache[i];
-				int distSq = here.distanceSquaredTo(hostile.location);
-				if (distSq < bestDistSq) {
-					bestDistSq = distSq;
-					closest = hostile.location;
-					isAttackingZombieDen = hostile.type == RobotType.ZOMBIEDEN;
-				}
-			}
-			attackTarget = closest;
-//			Debug.indicate("radar", 1, "now attackTarget = " + attackTarget);
-		}*/
-
-		// Not very good against felix
-//		if (attackTarget == null) {
-//			attackTarget = Radar.closestEnemyArchonLocation();
-//			if (attackTarget != null) {
-//				Debug.indicate("archon", 2, "No target, going to attack enemy archon at " + attackTarget);
-//				// Debug.println("archon", "attackTarget=" + attackTarget);
-//			}
-//		}
-		
+	private static void detectIfAttackTargetIsGone() throws GameActionException {
 		if (attackTarget != null) {
-			if (rc.canSenseLocation(attackTarget)) {
-				RobotInfo targetInfo = rc.senseRobotAtLocation(attackTarget);
+			//if (rc.canSenseLocation(attackTarget)) {
+			if (here.distanceSquaredTo(attackTarget) <= 10
+					|| (isAttackingZombieDen && rc.canSenseLocation(attackTarget))) {
+			    RobotInfo targetInfo = rc.senseRobotAtLocation(attackTarget);
 				if (targetInfo == null || targetInfo.team == us) {
 					if (isAttackingZombieDen) {
 						destroyedZombieDens.add(attackTarget);
 					}
+					Debug.indicate("bug", 0, "deleting old target since it is gone");
+					//RobotInfo[] closeTargets = rc.senseHostileRobots(attackTarget, 2);
 					attackTarget = null;
 					isAttackingZombieDen = false;
+					//if (closeTargets.length > 0) {
+					//	attackTarget = Util.closest(closeTargets).location;
+					//	Debug.indicateAppend("bug", 0, "found new adjacent target at " + attackTarget);
+					//}
 				} else if (targetInfo.type != RobotType.ZOMBIEDEN) {
 					isAttackingZombieDen = false;
 				}
 			}
 		}
+	}
+	
+	private static void lookForAttackTarget() throws GameActionException {
+		if (!rc.isCoreReady()) return;
+		
 		
 		if (attackTarget != null) {
-			//if (Nav.goToDirect(attackTarget)) {
 			if (Nav.goToDirectSafelyAvoidingTurret(attackTarget, Radar.closestEnemyTurretLocation)) {
 				numTurnsBlocked = 0;
-//				Debug.indicate("block", 0, "not blocked!");
 			} else {
 				numTurnsBlocked += 1;
-//				Debug.indicate("block", 0, "blocked! numTurnsBlocked = " + numTurnsBlocked);
 				if (numTurnsBlocked >= 40) {
-//					Debug.indicate("block", 1, "waited too long. setting attackTarget = null");
 					attackTarget = null;
 					isAttackingZombieDen = false;
 					numTurnsBlocked = 0;
 				}
 			}
+			Debug.indicate("bug", 2, "went toward target at " + attackTarget);
 			return;
 		}
 		
-		/*if (wanderDirection == null) {
-			wanderDirection = Direction.values()[FastMath.rand256() % 8];
-		}
-		
-		MapLocation fakeTarget = here.add(wanderDirection, 10);
-		
-//		Debug.indicateDot("micro", here, 0, 100, 0);
-		
-		if (Nav.goToDirectSafelyAvoidingTurret(fakeTarget, closestEnemyTurretLocation)) {
-//			Debug.indicate("micro", 0, "wandering");
-//			Debug.indicateLine("micro", here, fakeTarget, 100, 100, 0);
-		} else {
-			wanderDirection = Direction.values()[FastMath.rand256() % 8];
-		}*/
+		Debug.indicate("bug", 2, "no attack target, going to heal");
 		tryToHealAtArchon();
 	}
 }

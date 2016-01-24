@@ -41,6 +41,7 @@ public class Messages extends Globals {
 
 	// used by CHANNEL_ANTI_TURTLE_CHARGE
 	public static final int ANTI_TURTLE_CHARGE_VETO_FLAG = 0x00100000;
+	public static final int ANTI_TURTLE_CHARGE_NOT_A_TURTLE_FLAG = 0x00300000;
 	
 	public static int intFromMapLocation(MapLocation loc) {
 		if (loc == null) return 0xfffff;
@@ -435,20 +436,31 @@ public class Messages extends Globals {
 		return new PartRegion(totalParts, avgTurnsToUncover, mapLocationFromInt(locInt));
 	}
 	
-	public static void proposeAntiTurtleCharge(MapLocation chargeCenter, int radiusSq) throws GameActionException {
+	public static void proposeAntiTurtleChargePlan(MapLocation chargeCenter, int chargeRound, int radiusSq) throws GameActionException {
+		int data0 = chargeRound;
 		int data1 = intFromMapLocation(chargeCenter);
-		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE, data1, radiusSq);
+		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | data0, data1, radiusSq);
 	}
 	
 	public static void vetoAntiTurtleCharge(int radiusSq) throws GameActionException {
 		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | ANTI_TURTLE_CHARGE_VETO_FLAG, 0, radiusSq);
 	}
+
+	public static void sendNotATurtle(int radiusSq) throws GameActionException {
+		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | ANTI_TURTLE_CHARGE_NOT_A_TURTLE_FLAG, 0, radiusSq);
+	}
 	
-	public static MapLocation parseAntiTurtleChargeCenter(int[] data) {
-		return mapLocationFromInt(data[1]);
+	public static AntiTurtleChargePlan parseAntiTurtleChargePlan(int[] data) {
+		int chargeRound = data[0] ^ CHANNEL_ANTI_TURTLE_CHARGE;
+		MapLocation chargeCenter = mapLocationFromInt(data[1]);
+		return new AntiTurtleChargePlan(chargeCenter, chargeRound);
 	}
 	
 	public static boolean parseAntiTurtleChargeVeto(int[] data) {
 		return (data[0] & ANTI_TURTLE_CHARGE_VETO_FLAG) != 0;
+	}
+	
+	public static boolean parseNotATurtle(int[] data) {
+		return (data[0] & ANTI_TURTLE_CHARGE_NOT_A_TURTLE_FLAG) != 0;
 	}
 }

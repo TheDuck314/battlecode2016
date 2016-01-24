@@ -341,6 +341,10 @@ public class BotArchon extends Globals {
 			Messages.sendRobotLocation(bri, 2);
 		}
 		
+		if (!AntiTurtleCharge.enemyMightBeATurtle) {
+			Messages.sendNotATurtle(2);
+		}
+		
 		Messages.sendFlushSignalQueue(2);
 	}
 	
@@ -501,6 +505,10 @@ public class BotArchon extends Globals {
 					Messages.processRobotLocation(sig, data);
 					break;
 					
+				case Messages.CHANNEL_ANTI_TURTLE_CHARGE:
+					AntiTurtleCharge.processAntiTurtleChargeMessage(data);
+					break;
+
 				default:
 				}
 			} else {

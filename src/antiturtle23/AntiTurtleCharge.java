@@ -5,50 +5,97 @@ import battlecode.common.*;
 public class AntiTurtleCharge extends Globals {
 	public static MapLocation chargeCenter = null;
 	
-	public static int gatherRound = 0; // what round to gather for the charge
     public static int chargeRound = 0; // what round to begin the charge
     public static int endRound = 0; // what round to end the charge
 	public static int lastProposalRound = 0; // time last proposal was made
     
-	// how many turns after the proposal we will gather
-	public static final int VETO_WAIT_ROUNDS = 50;
-
 	// how long we will spend gathering after the veto wait period is over
-	public static final int GATHER_WAIT_ROUNDS = 100;
+	public static final int GATHER_WAIT_ROUNDS = 75;
 	
 	// how long the charge itself will last once it begins
-	public static final int CHARGE_LENGTH = 200;
+	public static final int CHARGE_LENGTH = 75;
 	
-	private static void scheduleCharge() {
-		gatherRound = rc.getRoundNum() + VETO_WAIT_ROUNDS;
-		chargeRound = gatherRound + GATHER_WAIT_ROUNDS;
+	private static void planCharge(MapLocation center, int round) {
+		chargeCenter = center;
+		chargeRound = round;
 		endRound = chargeRound + CHARGE_LENGTH;
 	}
 
 	public static void processAntiTurtleChargeMessage(int[] data) {
-		// ignore proposals and vetos sent during a valid charge.
-		// probably these are from ignorant newborns
-		if (chargeCenter != null && rc.getRoundNum() >= gatherRound && rc.getRoundNum() <= endRound) {
-			return;
+		if (Messages.parseNotATurtle(data)) {
+			enemyMightBeATurtle = false;
+			haveBroadcastedNotATurtle = true;
+			chargeCenter = null;
 		}
+		if (!enemyMightBeATurtle) return;
 		
 		if (Messages.parseAntiTurtleChargeVeto(data)) {
 			Debug.indicate("charge", 0, "received a charge veto!!");
 			chargeCenter = null;
 		} else {
-			chargeCenter = Messages.parseAntiTurtleChargeCenter(data);
-			scheduleCharge();
-			Debug.indicate("charge", 0, "received a charge proposal! center = " + chargeCenter + ", gatherRound = " + gatherRound + ", chargeRound = " + chargeRound);
+			AntiTurtleChargePlan plan = Messages.parseAntiTurtleChargePlan(data);
+			planCharge(plan.chargeCenter, plan.chargeRound);
+			Debug.indicate("charge", 0, "received a charge proposal! center = " + chargeCenter + ", chargeRound = " + chargeRound);
 		}
 	}
 	
 	public static void proposeCharge(MapLocation proposalCenter) throws GameActionException {
-		Messages.proposeAntiTurtleCharge(proposalCenter, MapEdges.maxBroadcastDistSq());
-		chargeCenter = proposalCenter;
-		scheduleCharge();
+		planCharge(proposalCenter, rc.getRoundNum() + GATHER_WAIT_ROUNDS);
+		Messages.proposeAntiTurtleChargePlan(proposalCenter, chargeRound, MapEdges.maxBroadcastDistSq());
 	}
 	
-	public static void vetoCharge() throws GameActionException {
-		Messages.vetoAntiTurtleCharge(MapEdges.maxBroadcastDistSq());
+	public static boolean enemyMightBeATurtle = true;
+	public static boolean haveBroadcastedNotATurtle = false;
+	private static MapLocation centerOfMassOfSeenEnemies = new MapLocation(0, 0);
+	private static int numSeenEnemies = 0;
+	
+	public static void runTurtleDetector(RobotInfo[] enemies, RobotInfo[] hostiles) throws GameActionException {
+		if (enemyMightBeATurtle) {
+			if (enemies.length > 0) {
+				int newCenterX = centerOfMassOfSeenEnemies.x * numSeenEnemies;
+				int newCenterY = centerOfMassOfSeenEnemies.y * numSeenEnemies;
+				int numNewEnemies = 0;
+				for (RobotInfo enemy : enemies) {
+					if (enemy.type == RobotType.ARCHON || enemy.type == RobotType.SCOUT) continue;
+					if (numSeenEnemies > 0 
+							&& enemy.location.distanceSquaredTo(centerOfMassOfSeenEnemies) >= 150) {
+						enemyMightBeATurtle = false;
+						Debug.indicate("detector", 0, "enemy at " + enemy.location + " is too far from COM at " + centerOfMassOfSeenEnemies + " so NOT A TURTLE!");
+						return;
+					}
+					newCenterX += enemy.location.x;
+					newCenterY += enemy.location.y;
+					numNewEnemies += 1;
+				}
+				if (numNewEnemies > 0) {
+					numSeenEnemies += numNewEnemies;
+					newCenterX /= numSeenEnemies;
+					newCenterY /= numSeenEnemies;
+					centerOfMassOfSeenEnemies = new MapLocation(newCenterX, newCenterY);
+					Debug.indicate("detector", 1, "saw " + numNewEnemies + " new enemies, new com at " + centerOfMassOfSeenEnemies);
+					Debug.indicateLine("detector", here, centerOfMassOfSeenEnemies, 0, 255, 0);
+				} else {
+					Debug.indicate("detector", 0, "only scouts and archons are visible");
+				}
+			} else {
+				Debug.indicate("detector", 0, "no enemies");
+			}
+
+		} else {
+			if (!haveBroadcastedNotATurtle) {
+				boolean dangerousHostileNearby = false;
+				for (RobotInfo hostile : hostiles) {
+					if (hostile.type.canAttack()) {
+						dangerousHostileNearby = true;
+						break;
+					}
+				}
+				if (!dangerousHostileNearby) {
+					Messages.sendNotATurtle(MapEdges.maxBroadcastDistSq());
+					chargeCenter = null;
+					haveBroadcastedNotATurtle = true;
+				}
+			}
+		}
 	}
 }

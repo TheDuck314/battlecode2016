@@ -70,13 +70,13 @@ public class BotViper extends Globals {
 	}
 
 	private static boolean tryDoAntiTurtleCharge() throws GameActionException {
-		Debug.indicate("charge", 0, "center = " + AntiTurtleCharge.chargeCenter + ", gatherRound = " + AntiTurtleCharge.gatherRound + ", chargeRound = " + AntiTurtleCharge.chargeRound + ", endRound = " + AntiTurtleCharge.endRound);
+		Debug.indicate("charge", 0, "center = " + AntiTurtleCharge.chargeCenter + ", chargeRound = " + AntiTurtleCharge.chargeRound + ", endRound = " + AntiTurtleCharge.endRound);
 		if (AntiTurtleCharge.chargeCenter != null && rc.getRoundNum() < AntiTurtleCharge.endRound) {
 			if (rc.getRoundNum() > AntiTurtleCharge.chargeRound) {
 				Debug.indicate("charge", 1, "charging!!!");
 				Nav.goToDirect(AntiTurtleCharge.chargeCenter);
 				return true;
-			} else if (rc.getRoundNum() > AntiTurtleCharge.gatherRound) {
+			} else  {
 				Debug.indicate("charge", 1, "gathering for charge");
 				Nav.goToDirectSafelyAvoidingTurret(AntiTurtleCharge.chargeCenter, Radar.closestEnemyTurretLocation);
 				return true;
@@ -195,6 +195,11 @@ public class BotViper extends Globals {
 			}
 			// we can't shoot anyone. try to help an ally or attack a helpless target
 			if (rc.isCoreReady()) {
+				if (currentlyChargingTurtle) {
+					if (tryChargeToEnemy()) {
+						return true;
+					}
+				}
 				if (tryMoveToHelpAlly(visibleHostiles)) {
 					return true;
 				}
@@ -207,6 +212,11 @@ public class BotViper extends Globals {
 			// ANYONE who can attack and is closer than max attack range. Next
 			// turn our weapon will be ready again and we can attack them
 			// from a safer distance
+			if (currentlyChargingTurtle) {
+				if (tryChargeToEnemy()) {
+					return true;
+				}
+			}
 			if (attackableHostiles.length > 0) {
 				if (!currentlyChargingTurtle && tryToBackUpToMaintainMaxRange(attackableHostiles)) {
 					return true;
