@@ -328,6 +328,16 @@ public class BotArchon extends Globals {
 		}
 	}
 	
+	private static void educateBabyAboutAntiTurtleCharge() throws GameActionException {
+		if (AntiTurtleCharge.enemyMightBeATurtle) {
+			if (AntiTurtleCharge.chargeCenter != null && rc.getRoundNum() < AntiTurtleCharge.endRound) {
+				Messages.proposeAntiTurtleChargePlan(AntiTurtleCharge.chargeCenter, AntiTurtleCharge.chargeRound, 2);
+			}
+		} else {
+			Messages.sendNotATurtle(2);
+		}
+	}
+	
 	private static void educateBabyScoutOrArchon() throws GameActionException {
 		// tell scout known map edges
 		Messages.sendKnownMapEdges(2); 
@@ -349,15 +359,11 @@ public class BotArchon extends Globals {
 			Messages.sendRobotLocation(bri, 2);
 		}
 		
-		if (!AntiTurtleCharge.enemyMightBeATurtle) {
-			Messages.sendNotATurtle(2);
-		}
+		educateBabyAboutAntiTurtleCharge();
 	}
 	
 	private static void educateBabySoldierOrViper() throws GameActionException {
-		if (!AntiTurtleCharge.enemyMightBeATurtle) {
-			Messages.sendNotATurtle(2);
-		}	
+		educateBabyAboutAntiTurtleCharge();
 	}
 	
 	private static void educateBaby(RobotType babyType) throws GameActionException {

@@ -5,7 +5,7 @@ import battlecode.common.*;
 public class BotViper extends Globals {
 	public static void loop() {
 		FastMath.initRand(rc);
-		Debug.init("education");
+		Debug.init("charge");
     	try {
     		processSignals(true);
     	} catch (Exception e) {

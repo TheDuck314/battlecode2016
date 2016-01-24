@@ -39,7 +39,7 @@ public class BotScout extends Globals {
 	//private static int birthRound;
 	
 	public static void loop() {
-		Debug.init("education");
+		Debug.init("detector");
 
     	origin = here;
     	exploredGrid[50][50] = true;   
@@ -112,7 +112,7 @@ public class BotScout extends Globals {
 		if (AntiTurtleCharge.chargeCenter == null 
 				&& rc.getRoundNum() > AntiTurtleCharge.lastProposalRound + 100) {
 			// wait to build up enough units before breaking turtles
-			if (rc.getRoundNum() > 500 && rc.getRobotCount() > 40 && rc.getRoundNum() % 10 == 0) {
+			if (rc.getRoundNum() > 800 && rc.getRobotCount() > 55 && rc.getRoundNum() % 10 == 0) {
 				// need to have lots of allies gathered with us
 				if (visibleAllies.length >= 10) {
 					// only a scout that can actually see the enemy should propose a charge
