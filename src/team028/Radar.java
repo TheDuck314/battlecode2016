@@ -9,6 +9,9 @@ public class Radar extends Globals {
 	public static int[] enemyTurretIds = new int[1000];
 	public static int numEnemyTurrets = 0;
 	
+	public static MapLocation closestEnemyTurretLocation = null;
+	
+
 	public static void addEnemyTurret(int id, MapLocation loc) {
 		if (!haveSeenTurretId[id]) {
 			enemyTurretIds[numEnemyTurrets++] = id;
@@ -36,6 +39,22 @@ public class Radar extends Globals {
 			}
 		}
 		return ret;
+	}
+	
+	public static void updateClosestEnemyTurretLocation() {
+		closestEnemyTurretLocation = null;
+		int bestDistSq = Integer.MAX_VALUE;
+		for (int i = 0; i < numEnemyTurrets; ++i) {
+			int turretId = enemyTurretIds[i];
+			MapLocation turretLoc = enemyTurretLocationById[turretId];
+			if (turretLoc != null) {
+				int distSq = here.distanceSquaredTo(turretLoc);
+				if (distSq < bestDistSq) {
+					bestDistSq = distSq;
+					closestEnemyTurretLocation = turretLoc;
+				}
+			}
+		}		
 	}
 	
 	public static void removeDistantEnemyTurrets(int radiusSq) {
@@ -88,12 +107,27 @@ public class Radar extends Globals {
 //			Debug.println("archon", "theirArchonIdListLength=" + theirArchonIdListLength + " Radar.addRobot id=" + id + " type=" + type + " team=" + team + " loc=" + loc + " round=" + round);
 		}
 		BigRobotInfo bri = bigRobotInfoById[id];
-		if (bri != null && (loc.distanceSquaredTo(bri.location) <= 2 && bri.round > round - 100 || bri.round >= round)) {
+		if (bri == null) {
+			bigRobotInfoById[id] = new BigRobotInfo(id, type, team, loc, round);
+			return bigRobotInfoById[id];
+		}
+		if (bri.round >= round) {
 			return null;
 		}
-		bigRobotInfoById[id] = new BigRobotInfo(id, type, team, loc, round);
-//		Debug.indicateAppend("archon", 2, "f");
-		return bigRobotInfoById[id];
+		if (loc == null) {
+			if (bri.location == null) return null;
+			bri.location = null;
+			bri.round = round;
+			return bri;
+		} else {
+			if (bri.round > round - Globals.rebroadCastUpdateInterval && loc.equals(bri.location)) {
+				return null;
+			}
+			bri.location = loc;
+			bri.round = round;
+			// Debug.indicateAppend("archon", 2, "f");
+			return bri;
+		}
 	}
 	
 	public static BigRobotInfo addRobot(int id, Team team, MapLocation loc, int round) {
@@ -104,7 +138,7 @@ public class Radar extends Globals {
 			return null;
 		}
 		BigRobotInfo bri = bigRobotInfoById[id];
-		if (loc.distanceSquaredTo(bri.location) <= 2 && bri.round > round - 100 || bri.round >= round) {
+		if (loc.equals(bri.location) && bri.round > round - Globals.rebroadCastUpdateInterval || bri.round >= round) {
 			return null;
 		}
 		bri.location = loc;
@@ -117,11 +151,12 @@ public class Radar extends Globals {
 		MapLocation bestLoc = null;
 		double bestDistSq = Double.MAX_VALUE;
 		int roundDelay = Int.MaxValue();
-		int round = rc.getRoundNum();
+		int round = Globals.roundNum;
 		for (int i = 0; i < theirArchonIdListLength; ++i) {
 			BigRobotInfo bri = bigRobotInfoById[theirArchonIdList[i]];
+			if (bri.location == null) continue;
 			if (roundDelay <= 200) {
-				if (round - bri.round <= 200) {
+				if (round - bri.round <= Globals.infoOutOfDateInterval) {
 					int distSq = bri.location.distanceSquaredTo(here);
 					if (distSq < bestDistSq) {
 						bestLoc = bri.location;
@@ -138,6 +173,17 @@ public class Radar extends Globals {
 			}
 		}
 		return bestLoc;
+	}
+	
+	public static void indicateEnemyArchonLocation(int red, int green, int blue) {
+		Debug.indicate("robotinfo", 2, "");
+		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
+			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
+			if (bri.location == null) continue;
+			if (bri.round <= Globals.roundNum - Globals.infoOutOfDateInterval) continue;
+			Debug.indicateLine("robotinfo", here, bri.location, red, green, blue);
+			Debug.indicateAppend("robotinfo", 2, " id=" + bri.id + " loc=" + bri.location);
+		}
 	}
 	
 	// store the index in enemyCache, but plus one

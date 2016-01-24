@@ -13,7 +13,7 @@ public class Messages extends Globals {
 	
 	public static final int CHANNEL_MASK = 0xf0000000;
 	public static final int CHANNEL_MASK_INVERSE = ~CHANNEL_MASK;
-	public static final int CHANNEL_FLUSH_SIGNAL_QUEUE = 0x00000000;
+	public static final int CHANNEL_BEGIN_EDUCATION = 0x00000000;
 	public static final int CHANNEL_TURRET_TARGET = 0x10000000;
 	public static final int CHANNEL_ZOMBIE_DEN = 0x20000000;
 	public static final int CHANNEL_FOUND_PARTS = 0x30000000;
@@ -28,6 +28,7 @@ public class Messages extends Globals {
 	public static final int CHANNEL_FOUND_NEUTRAL = 0xc0000000;
 	public static final int CHANNEL_TURRET_OWNERSHIP = 0xd0000000;
 	public static final int CHANNEL_MAP_EDGES = 0xe0000000;
+	public static final int CHANNEL_ANTI_TURTLE_CHARGE = 0xf0000000;
 	
 	// used by CHANNEL_ENEMY_TURRET_WARNING
 	public static final int ENEMY_TURRET_MISSING_VALUE = 0xffffffff;
@@ -35,11 +36,20 @@ public class Messages extends Globals {
 	// used by CHANNEL_ZOMBIE_DEN
 	public static final int ZOMBIE_DEN_DESTROYED_FLAG = 0x00000001;
 	
+	// used by CHANNEL_FOUND_NEUTRAL
+	public static final int NEUTRAL_WAS_ACTIVATED_FLAG = 0x00100000;
+
+	// used by CHANNEL_ANTI_TURTLE_CHARGE
+	public static final int ANTI_TURTLE_CHARGE_VETO_FLAG = 0x00100000;
+	public static final int ANTI_TURTLE_CHARGE_NOT_A_TURTLE_FLAG = 0x00300000;
+	
 	public static int intFromMapLocation(MapLocation loc) {
+		if (loc == null) return 0xfffff;
 		return (loc.x << 10) | (loc.y);
 	}
 	
 	public static MapLocation mapLocationFromInt(int data) {
+		if ((data & 0xfffff) == 0xfffff) return null;
 		int x = ((data & 0xffc00) >>> 10);
 		int y = (data & 0x003ff);
 		return new MapLocation(x, y);
@@ -61,8 +71,8 @@ public class Messages extends Globals {
 		return data[1];
 	}
 	
-	public static void sendFlushSignalQueue(int radiusSq) throws GameActionException {
-		rc.broadcastMessageSignal(CHANNEL_FLUSH_SIGNAL_QUEUE, 0, radiusSq);
+	public static void sendBeginEducation(int radiusSq) throws GameActionException {
+		rc.broadcastMessageSignal(CHANNEL_BEGIN_EDUCATION, 0, radiusSq);
 	}
 	
 	public static void sendTurretTarget(MapLocation loc, int radiusSq) throws GameActionException {
@@ -160,13 +170,29 @@ public class Messages extends Globals {
 		return new PartsLocation(loc, numParts);
 	}
 	
-	public static void sendNeutralLocation(MapLocation loc, int radiusSq) throws GameActionException {
-		sendMapLocation(CHANNEL_FOUND_NEUTRAL, loc, radiusSq);
+	public static void sendNeutralLocation(MapLocation loc, RobotType type, int radiusSq) throws GameActionException {
+		int data0 = type.ordinal();
+		int data1 = intFromMapLocation(loc);
+		rc.broadcastMessageSignal(CHANNEL_FOUND_NEUTRAL | data0, data1, radiusSq);
 //		Debug.indicate("msg", msgDILN(), "sendNeutralLocation " + radiusSq);
 	}
 	
-	public static MapLocation parseNeutralLocation(int[] data) {
-		return parseMapLocation(data);
+	public static void sendNeutralWasActivated(MapLocation loc, RobotType type, int radiusSq) throws GameActionException {
+		int data0 = type.ordinal() | NEUTRAL_WAS_ACTIVATED_FLAG;
+		int data1 = intFromMapLocation(loc);
+		rc.broadcastMessageSignal(CHANNEL_FOUND_NEUTRAL | data0, data1, radiusSq);
+//		Debug.indicate("msg", msgDILN(), "sendNeutralWasActivated " + radiusSq);
+	}
+	
+	public static NeutralRobotInfo parseNeutralLocation(int[] data) {
+		int typeOrdinal = (data[0] ^ CHANNEL_FOUND_NEUTRAL) & (~NEUTRAL_WAS_ACTIVATED_FLAG);
+		RobotType type = RobotType.values()[typeOrdinal];
+		MapLocation loc = mapLocationFromInt(data[1]);
+		return new NeutralRobotInfo(loc, type);
+	}
+	
+	public static boolean parseNeutralWasActivated(int[] data) {
+		return (data[0] & NEUTRAL_WAS_ACTIVATED_FLAG) != 0;
 	}
 	
 	private static int compressMapEdges(int original) {
@@ -254,6 +280,7 @@ public class Messages extends Globals {
 		int data0 = (bri.id & 0xffff | ((bri.round & 0xfff) << 16)) & CHANNEL_MASK_INVERSE;
 		int data1 = intFromMapLocation(bri.location) | (bri.type.ordinal() & 0xf) << 20 | (bri.team.ordinal() & 0xf) << 24;
 		rc.broadcastMessageSignal(CHANNEL_ROBOT_LOCATION | data0, data1, radiusSq);
+//		Debug.println("rebroadcast", "sendRobotLocation " + radiusSq + " enemyId=" + bri.id + " enemyLoc=" + bri.location + " round=" + bri.round);
 //		Debug.indicate("msg", msgDILN(), "sendRobotLocation " + radiusSq);
 		return bri;
 	}
@@ -267,17 +294,17 @@ public class Messages extends Globals {
 		Team team = Team.values()[(locInt >>> 24) & 0xf];
 		MapLocation loc = mapLocationFromInt(locInt & 0xfffff);
 		BigRobotInfo bri = Radar.addRobot(id, type, team, loc, round);
-		if (myType == RobotType.SCOUT && sig.getLocation().distanceSquaredTo(here) >= 24) {
-			return sendRobotLocation(bri, 2*mySensorRadiusSquared);
+		if (Globals.isRebroadcasting && myType == RobotType.SCOUT && bri != null && sig.getLocation().distanceSquaredTo(here) >= 24) {
+			return sendRobotLocation(bri, Globals.rebroadCastRangeSq);
 		} else {
 			return null;
 		}
 	}
 	
 	public static BigRobotInfo processRobotLocation(Signal sig) throws GameActionException {
-		BigRobotInfo bri = Radar.addRobot(sig.getID(), sig.getTeam(), sig.getLocation(), rc.getRoundNum() - 1);
+		BigRobotInfo bri = Radar.addRobot(sig.getID(), sig.getTeam(), sig.getLocation(), Globals.roundNum - 1);
 		if (myType == RobotType.SCOUT) {
-			return sendRobotLocation(bri, 9*mySensorRadiusSquared);
+			return sendRobotLocation(bri, Globals.broadCastRangeSqWhenHeard);
 		} else {
 			return null;
 		}
@@ -328,11 +355,14 @@ public class Messages extends Globals {
 		long data = (((long)(CHANNEL_RADAR ^ intData[0])) << 32) 
 				| (((long)intData[1]) & 0x00000000ffffffffL);
 		
+		//int DEBUG_bytecodesStart = Clock.getBytecodeNum();
+		//int DEBUG_numHits = 0;
 		int round = rc.getRoundNum();
 		RobotType[] types = RobotType.values();		
 		MapLocation closestHit = null;
 		int closestDistSq = Integer.MAX_VALUE;
 		while (data != 0) {
+			//DEBUG_numHits += 1;
 			int y = origin.y - 8 + (int)(data & 0xfL);
 			int x = origin.x - 8 + (int)((data >> 4) & 0xfL);
 			MapLocation loc = new MapLocation(x, y);
@@ -349,6 +379,8 @@ public class Messages extends Globals {
 			}
 			data >>= 12;
 		}
+		//int DEBUG_bytecodesEnd = Clock.getBytecodeNum();
+		//Debug.println("bytecodes", "processed " + DEBUG_numHits + "hits in " + (DEBUG_bytecodesEnd - DEBUG_bytecodesStart) + " bytecodes.");
 		return closestHit;
 	}
 	
@@ -402,5 +434,33 @@ public class Messages extends Globals {
 		int locInt = data[1] & 0x000fffff;
 		int avgTurnsToUncover = (data[1] & 0xfff00000) >>> 20;
 		return new PartRegion(totalParts, avgTurnsToUncover, mapLocationFromInt(locInt));
+	}
+	
+	public static void proposeAntiTurtleChargePlan(MapLocation chargeCenter, int chargeRound, int radiusSq) throws GameActionException {
+		int data0 = chargeRound;
+		int data1 = intFromMapLocation(chargeCenter);
+		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | data0, data1, radiusSq);
+	}
+	
+	public static void vetoAntiTurtleCharge(int radiusSq) throws GameActionException {
+		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | ANTI_TURTLE_CHARGE_VETO_FLAG, 0, radiusSq);
+	}
+
+	public static void sendNotATurtle(int radiusSq) throws GameActionException {
+		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | ANTI_TURTLE_CHARGE_NOT_A_TURTLE_FLAG, 0, radiusSq);
+	}
+	
+	public static AntiTurtleChargePlan parseAntiTurtleChargePlan(int[] data) {
+		int chargeRound = data[0] ^ CHANNEL_ANTI_TURTLE_CHARGE;
+		MapLocation chargeCenter = mapLocationFromInt(data[1]);
+		return new AntiTurtleChargePlan(chargeCenter, chargeRound);
+	}
+	
+	public static boolean parseAntiTurtleChargeVeto(int[] data) {
+		return (data[0] & ANTI_TURTLE_CHARGE_VETO_FLAG) != 0;
+	}
+	
+	public static boolean parseNotATurtle(int[] data) {
+		return (data[0] & ANTI_TURTLE_CHARGE_NOT_A_TURTLE_FLAG) != 0;
 	}
 }

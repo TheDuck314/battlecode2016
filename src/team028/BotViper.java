@@ -5,9 +5,14 @@ import battlecode.common.*;
 public class BotViper extends Globals {
 	public static void loop() {
 		FastMath.initRand(rc);
-		//Debug.init("target");
-		rc.emptySignalQueue(); // flush signal backlog
-		while (true) {
+		Debug.init("charge");
+    	try {
+    		processSignals(true);
+    	} catch (Exception e) {
+    		System.out.println("EXCEPTION IN INITIAL PROCESSSIGNALS:");
+			e.printStackTrace();    		
+    	}
+    	while (true) {
 			int startTurn = rc.getRoundNum();
 			try {
 				Globals.update();
@@ -36,15 +41,15 @@ public class BotViper extends Globals {
 	
 	private static int numTurnsBlocked = 0;
 	
-	private static MapLocation closestEnemyTurretLocation = null;
-	
 	private static MapLocationHashSet destroyedZombieDens = new MapLocationHashSet();
 	private static boolean isAttackingZombieDen = false;
 	
 
 	
 	private static void turn() throws GameActionException {
-		processSignals();
+		attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
+
+		processSignals(false);
 
 		manageHealingState();
 		
@@ -53,24 +58,39 @@ public class BotViper extends Globals {
 		}
 		
 		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
-		
-		FastTurretInfo closestEnemyTurret = Radar.findClosestEnemyTurret();
-		if (closestEnemyTurret != null) {
-			closestEnemyTurretLocation = closestEnemyTurret.location;
-		} else {
-			closestEnemyTurretLocation = null;
-		}
-		
-		if (inHealingState) {
-			if (tryToHealAtArchon()) {
+		Radar.updateClosestEnemyTurretLocation();
+
+		if (rc.isCoreReady()) {
+			if (tryDoAntiTurtleCharge()) {
 				return;
 			}
+
+			if (inHealingState) {
+				if (tryToHealAtArchon()) {
+					return;
+				}
+			}
+
+			//		if (attackTarget != null) Debug.indicateLine("target", here, attackTarget, 100, 0, 0);
+			lookForAttackTarget();
 		}
-		
-//		if (attackTarget != null) Debug.indicateLine("target", here, attackTarget, 100, 0, 0);
-		lookForAttackTarget();
 	}
-	
+
+	private static boolean tryDoAntiTurtleCharge() throws GameActionException {
+		Debug.indicate("charge", 0, "center = " + AntiTurtleCharge.chargeCenter + ", chargeRound = " + AntiTurtleCharge.chargeRound + ", endRound = " + AntiTurtleCharge.endRound);
+		if (AntiTurtleCharge.chargeCenter != null && rc.getRoundNum() < AntiTurtleCharge.endRound) {
+			if (rc.getRoundNum() > AntiTurtleCharge.chargeRound) {
+				Debug.indicate("charge", 1, "charging!!!");
+				Nav.goToDirect(AntiTurtleCharge.chargeCenter);
+				return true;
+			} else  {
+				Debug.indicate("charge", 1, "gathering for charge");
+				Nav.goToDirectSafelyAvoidingTurret(AntiTurtleCharge.chargeCenter, Radar.closestEnemyTurretLocation);
+				return true;
+			} 
+		}
+		return false;
+	}
 
 	private static void addAttackTarget(MapLocation targetNew, boolean isZombieDen) {
 		if (attackTarget == null 
@@ -79,19 +99,24 @@ public class BotViper extends Globals {
 		}
 	}
 
-	private static void processSignals() {
+	private static void processSignals(boolean justBorn) {
 		Radar.clearEnemyCache();
+		boolean processRadar = justBorn || (attackableHostiles.length == 0);
 
 		Signal[] signals = rc.emptySignalQueue();
-		for (Signal sig : signals) {
+		for (int i = signals.length; i --> 0; ) {
+			Signal sig = signals[i];
+
 			if (sig.getTeam() != us) continue;
 
 			int[] data = sig.getMessage();
 			if (data != null) {
 				switch(data[0] & Messages.CHANNEL_MASK) {
 				case Messages.CHANNEL_RADAR:
-					MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
-					addAttackTarget(closest, false);
+					if (processRadar) {
+						MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
+						addAttackTarget(closest, false);
+					}
 					break;
 					
 				case Messages.CHANNEL_ARCHON_LOCATION:
@@ -107,7 +132,17 @@ public class BotViper extends Globals {
 				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
 					Messages.processEnemyTurretWarning(data);
 					break;
-					
+	
+				case Messages.CHANNEL_ANTI_TURTLE_CHARGE:
+					AntiTurtleCharge.processAntiTurtleChargeMessage(data);
+					break;
+
+				case Messages.CHANNEL_BEGIN_EDUCATION:
+					if (justBorn) {
+						Debug.indicate("education", 0, "reached begin education signal!");
+					}
+					return;
+
 				default:
 				}
 			}
@@ -138,7 +173,11 @@ public class BotViper extends Globals {
 			}
 		}
 		
-		if (inHealingState) {
+		boolean currentlyChargingTurtle = (AntiTurtleCharge.chargeCenter != null)
+				&& (rc.getRoundNum() > AntiTurtleCharge.chargeRound) 
+				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
+		
+		if (inHealingState && !currentlyChargingTurtle) {
 			// if we are in the healing state, then if we are under attack we should retreat.
 			// but if coreDelay >= cooldown delay, then we can optionally attack			
 			if (rc.isCoreReady()) {
@@ -158,8 +197,6 @@ public class BotViper extends Globals {
 			return false;
 		}
 
-		RobotInfo[] attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
-
 		if (rc.isWeaponReady()) {
 			if (attackableHostiles.length > 0) { // we can shoot someone
  			    // retreat if there is slow zombie adjacent to us
@@ -174,6 +211,11 @@ public class BotViper extends Globals {
 			}
 			// we can't shoot anyone. try to help an ally or attack a helpless target
 			if (rc.isCoreReady()) {
+				if (currentlyChargingTurtle) {
+					if (tryChargeToEnemy()) {
+						return true;
+					}
+				}
 				if (tryMoveToHelpAlly(visibleHostiles)) {
 					return true;
 				}
@@ -186,8 +228,13 @@ public class BotViper extends Globals {
 			// ANYONE who can attack and is closer than max attack range. Next
 			// turn our weapon will be ready again and we can attack them
 			// from a safer distance
+			if (currentlyChargingTurtle) {
+				if (tryChargeToEnemy()) {
+					return true;
+				}
+			}
 			if (attackableHostiles.length > 0) {
-				if (tryToBackUpToMaintainMaxRange(attackableHostiles)) {
+				if (!currentlyChargingTurtle && tryToBackUpToMaintainMaxRange(attackableHostiles)) {
 					return true;
 				}
 				return true; // we are fighting, don't move
@@ -427,10 +474,10 @@ public class BotViper extends Globals {
 			mustRetreat = true;
 			retreatTarget = retreatTarget.add(hostile.location.directionTo(here));
 		}
-		if (closestEnemyTurretLocation != null) {
-			if (here.distanceSquaredTo(closestEnemyTurretLocation) <= RobotType.TURRET.attackRadiusSquared) {
+		if (Radar.closestEnemyTurretLocation != null) {
+			if (here.distanceSquaredTo(Radar.closestEnemyTurretLocation) <= RobotType.TURRET.attackRadiusSquared) {
 				mustRetreat = true;
-				retreatTarget = retreatTarget.add(closestEnemyTurretLocation.directionTo(here));
+				retreatTarget = retreatTarget.add(Radar.closestEnemyTurretLocation.directionTo(here));
 			}
 		}
 		if (mustRetreat) {
@@ -590,7 +637,7 @@ public class BotViper extends Globals {
 			return false;
 		}
 		
-		Nav.swarmToAvoidingArchonsAndTurret(lastKnownArchonLocation, closestEnemyTurretLocation);
+		Nav.swarmToAvoidingArchonsAndTurret(lastKnownArchonLocation, Radar.closestEnemyTurretLocation);
 		return true;
 	}
 	
@@ -632,7 +679,7 @@ public class BotViper extends Globals {
 		
 		if (attackTarget != null) {
 			//if (Nav.goToDirect(attackTarget)) {
-			if (Nav.goToDirectSafelyAvoidingTurret(attackTarget, closestEnemyTurretLocation)) {
+			if (Nav.goToDirectSafelyAvoidingTurret(attackTarget, Radar.closestEnemyTurretLocation)) {
 				numTurnsBlocked = 0;
 //				Debug.indicate("block", 0, "not blocked!");
 			} else {

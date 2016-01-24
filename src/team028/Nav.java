@@ -4,6 +4,14 @@ import battlecode.common.*;
 
 public class Nav extends Globals {
 	
+	private static int getEffectiveEnemyTurretAttackRadiusSq() {
+		if (AntiTurtleCharge.enemyMightBeATurtle) {
+			return 64;
+		} else {
+			return RobotType.TURRET.attackRadiusSquared;
+		}
+	}
+	
 	public static boolean tryMoveInDirection(Direction dir) throws GameActionException {
 		if (rc.canMove(dir)) {
 			rc.move(dir);
@@ -163,6 +171,7 @@ public class Nav extends Globals {
 	
 	public static boolean enemyAttacksLocation(MapLocation loc, RobotInfo[] hostiles) {
 		for (RobotInfo hostile : hostiles) {
+			if (!hostile.type.canAttack()) continue;
 			int distSq = hostile.location.distanceSquaredTo(loc);
 			if (distSq <= hostile.type.attackRadiusSquared) {
 				return true;
@@ -174,13 +183,14 @@ public class Nav extends Globals {
 	public static boolean enemyOrTurretAttacksLocation(MapLocation loc, RobotInfo[] hostiles,
 			MapLocation turretLocation) {
 		for (RobotInfo hostile : hostiles) {
+			if (!hostile.type.canAttack()) continue;
 			int distSq = hostile.location.distanceSquaredTo(loc);
 			if (distSq <= hostile.type.attackRadiusSquared) {
 				return true;
 			}		
 		}
 		if (turretLocation != null) {
-			if (turretLocation.distanceSquaredTo(loc) <= RobotType.TURRET.attackRadiusSquared) {
+			if (turretLocation.distanceSquaredTo(loc) <= getEffectiveEnemyTurretAttackRadiusSq()) {
 				return true;
 			}
 		}
@@ -473,7 +483,7 @@ public class Nav extends Globals {
 					continue dirSearch;
 				}
 				if (turretLocation != null &&
-						dirLoc.distanceSquaredTo(turretLocation) <= RobotType.TURRET.attackRadiusSquared) {
+						dirLoc.distanceSquaredTo(turretLocation) <= getEffectiveEnemyTurretAttackRadiusSq()) {
 					continue dirSearch;
 				}
 			}
