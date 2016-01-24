@@ -238,8 +238,9 @@ public class BotSoldier extends Globals {
 			}
 		}
 		
-		boolean currentlyChargingTurtle = (AntiTurtleCharge.chargeCenter != null)
-				&& (rc.getRoundNum() > AntiTurtleCharge.chargeRound) 
+		boolean currentlyChargeTurtleOrGathering = (AntiTurtleCharge.chargeCenter != null)
+				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
+		boolean currentlyChargingTurtle = currentlyChargeTurtleOrGathering 
 				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
 				
 		if (inHealingState && !currentlyChargingTurtle) {
@@ -286,11 +287,11 @@ public class BotSoldier extends Globals {
 			}
 			// we can't shoot anyone. try to help an ally or attack a helpless target
 			if (rc.isCoreReady()) {
-				if (tryMoveToHelpAlly(visibleHostiles)) {
+				if (tryMoveToHelpAlly(visibleHostiles, currentlyChargingTurtle)) {
 					Debug.indicate("micro", 0, "moving to help ally");
 					return true;
 				}
-				if (tryMoveToAttackHelplessTarget(visibleHostiles)) {
+				if (tryMoveToAttackHelplessTarget(visibleHostiles, currentlyChargingTurtle)) {
 					Debug.indicate("micro", 0, "moving to attack helpless target");
 					return true;
 				}
@@ -309,28 +310,44 @@ public class BotSoldier extends Globals {
 					Debug.indicate("micro", 0, "moving to attack helpless non den target");
 					return true;
 				}
-				if (tryGetCloserToZombieDen(attackableHostiles)) {
+				if (!currentlyChargeTurtleOrGathering && tryGetCloserToZombieDen(attackableHostiles)) {
 					Debug.indicate("micro", 0, "getting closer to zombie den");
 					return true;
+				}
+				if (currentlyChargeTurtleOrGathering) {
+					// don't stay put fighting a zombie den
+					// during an anti-turtle charge
+					boolean onlyAttackingDen = true;
+					for (RobotInfo hostile : attackableHostiles) {
+						if (hostile.type != RobotType.ZOMBIEDEN) {
+							onlyAttackingDen = false;
+							break;
+						}
+					}
+					if (onlyAttackingDen) {
+						Debug.indicate("micro", 0, "returning false b/c charging and only attacking den");
+						return false;
+					}
 				}
 				return true; // we are fighting, don't move
 			}
 			
 			// otherwise try to help an ally or attack a helpless target
-			if (tryMoveToHelpAlly(visibleHostiles)) {
+			if (tryMoveToHelpAlly(visibleHostiles, currentlyChargeTurtleOrGathering)) {
 				Debug.indicate("micro", 0, "moving to help ally");
 				return true;
 			}
-			if (tryMoveToEngageOutnumberedEnemy(visibleHostiles)) {
+			if (tryMoveToEngageOutnumberedEnemy(visibleHostiles, currentlyChargeTurtleOrGathering)) {
 				Debug.indicate("micro", 0, "moving to engage outnumbered enemy");
 				return true;
 			}
-			if (tryMoveToAttackHelplessTarget(visibleHostiles)) {
+			if (tryMoveToAttackHelplessTarget(visibleHostiles, currentlyChargeTurtleOrGathering)) {
 				Debug.indicate("micro", 0, "moving to attack helpless target");
 				return true;
 			}
 		}
 		
+		Debug.indicate("micro", 0, "returnings false at end");
 		return false;
 	}
 	
@@ -465,9 +482,11 @@ public class BotSoldier extends Globals {
 		return false;
 	}
 	
-	private static boolean tryMoveToEngageOutnumberedEnemy(RobotInfo[] visibleHostiles) throws GameActionException {
+	private static boolean tryMoveToEngageOutnumberedEnemy(RobotInfo[] visibleHostiles,
+			boolean ignoreZombieDens) throws GameActionException {
 		RobotInfo closestHostile = Util.closest(visibleHostiles);
 		if (closestHostile == null) return false;
+		if (ignoreZombieDens && closestHostile.type == RobotType.ZOMBIEDEN) return false;
 		
 		int numNearbyHostiles = 0;
 		for (RobotInfo hostile : visibleHostiles) {
@@ -703,15 +722,18 @@ public class BotSoldier extends Globals {
 		return false;
 	}
 	
-	private static boolean tryMoveToHelpAlly(RobotInfo[] visibleHostiles) throws GameActionException {
-		MapLocation closestHostile = Util.closest(visibleHostiles).location;
+	private static boolean tryMoveToHelpAlly(RobotInfo[] visibleHostiles,
+			boolean ignoreZombieDens) throws GameActionException {
+		RobotInfo closestHostile = Util.closest(visibleHostiles);
+		if (ignoreZombieDens && closestHostile.type == RobotType.ZOMBIEDEN) return false;
+		MapLocation closestHostileLocation = closestHostile.location;
 		
 		boolean allyIsFighting = false;
 		RobotInfo[] alliesAroundHostile = 
-				rc.senseNearbyRobots(closestHostile, myAttackRadiusSquared, us);
+				rc.senseNearbyRobots(closestHostileLocation, myAttackRadiusSquared, us);
 		for (RobotInfo ally : alliesAroundHostile) {
 			if (ally.type.canAttack()) {
-				if (ally.location.distanceSquaredTo(closestHostile) <= ally.type.attackRadiusSquared) {
+				if (ally.location.distanceSquaredTo(closestHostileLocation) <= ally.type.attackRadiusSquared) {
 					allyIsFighting = true;
 					break;
 				}
@@ -719,7 +741,7 @@ public class BotSoldier extends Globals {
 		}
 		
 		if (allyIsFighting) {
-			if (Nav.tryMoveInDirection(here.directionTo(closestHostile))) {
+			if (Nav.tryMoveInDirection(here.directionTo(closestHostileLocation))) {
 //				Debug.indicate("micro", 0, "moving to help ally fight hostile at " + closestHostile);
 				return true;
 			}
@@ -727,11 +749,13 @@ public class BotSoldier extends Globals {
 		return false;
 	}
 	
-	private static boolean tryMoveToAttackHelplessTarget(RobotInfo[] visibleHostiles) throws GameActionException {
+	private static boolean tryMoveToAttackHelplessTarget(RobotInfo[] visibleHostiles,
+			boolean ignoreZombieDens) throws GameActionException {
 		RobotInfo closestHostile = Util.closest(visibleHostiles);
 		if (closestHostile.type.canAttack()) {
 			return false;
 		}
+		if (ignoreZombieDens && closestHostile.type == RobotType.ZOMBIEDEN) return false;
 		
 		if (Nav.tryMoveInDirection(here.directionTo(closestHostile.location))) {
 //			Debug.indicate("micro", 0, "moving to attack helpless " + closestHostile.type + " at " + closestHostile.location);

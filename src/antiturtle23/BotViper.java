@@ -5,7 +5,7 @@ import battlecode.common.*;
 public class BotViper extends Globals {
 	public static void loop() {
 		FastMath.initRand(rc);
-		//Debug.init("target");
+		Debug.init("charge");
 		rc.emptySignalQueue(); // flush signal backlog
 		while (true) {
 			int startTurn = rc.getRoundNum();
