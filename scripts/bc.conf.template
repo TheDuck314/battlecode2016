@@ -26,7 +26,7 @@ bc.client.viewer-delay=50
 bc.client.detail=true
 
 # Headless settings - for "ant headless"
-bc.game.maps=arena,barred,barricade,boxy,caverns,closequarters,collision,desert,diffusion,factory,farm,forts,goodies,helloworld,nexus,space,spiral,streets,swamp,zigzag
+bc.game.maps=6147,arena,backbencher,barred,barricade,boxy,castle,caverns,chairs,channel,checkers,closequarters,collision,crater,crumble,desert,diffusion,factory,farm,forest,fortifications,forts,frogger,goodies,helloworld,industrial,lockdown,molasses,needlestone,nexus,pants,placard,presents,prisons,quadrants,quarry,quartiles,river,scouting,seamed,slow,space,spaghetti,spiral,streets,swamp,treasure,tunnels,turtle,voluted,vortex,wormy,zigzag
 bc.game.team-a=TEAM-A
 bc.game.team-b=TEAM-B
 bc.server.save-file=match.rms
