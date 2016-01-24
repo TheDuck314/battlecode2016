@@ -836,16 +836,21 @@ public class BotScout extends Globals {
 		//double[] rubbles = new double[9];
 		double[] attacks = new double[9];
 		//double[] nfriends = new double[9];
-		double[] friends = new double[9];
+		//double[] friends = new double[9];
 		double[] scouts  = new double[9];
-		double[] archons  = new double[9];
-		dirs[8] = null;
-		cmoves[8] = true;
-		locs[8] = here;
+//		double[] archons  = new double[9];
+		double[] scores = new double[9];
+		dirs[0] = null;
+		cmoves[0] = true;
+		locs[0] = here;
+		int ndirs = 1;
 		for (int i = 0; i < 8; ++i) {
-			dirs[i] = Direction.values()[i];
-			locs[i] = here.add(dirs[i]);
-			cmoves[i] = rc.canMove(dirs[i]);
+			dirs[ndirs] = Direction.values()[i];
+			cmoves[ndirs] = rc.canMove(dirs[ndirs]);
+			if (cmoves[ndirs]) {
+				locs[ndirs] = here.add(dirs[ndirs]);
+				ndirs += 1;
+			}
 		}
 		/*for (int i = 0; i < 9; ++i) {
 //			oddPos[i] = !isGoodTurretLocation(locs[i]);
@@ -855,28 +860,50 @@ public class BotScout extends Globals {
 		infos = visibleHostiles;
 		for (RobotInfo e : infos) {
 			if (!e.type.canAttack()) continue;
-			if (e.location.distanceSquaredTo(here) > e.type.attackRadiusSquared * 3 + 10) {
-				continue; // enemy is too far away to worry about
+			int hereDistSq = e.location.distanceSquaredTo(here);
+			int safeDistSq = 0;
+			switch (e.type) {
+			case STANDARDZOMBIE:
+			case BIGZOMBIE:
+			case GUARD:
+				safeDistSq = 9;
+				break;
+			case FASTZOMBIE:
+				safeDistSq = 17; // larger because it is fast
+				break;
+			case RANGEDZOMBIE:
+			case SOLDIER:
+				safeDistSq = 26;
+				break;
+			case VIPER:
+				safeDistSq = 35;
+				break;
+			case TURRET:
+				safeDistSq = 54; // Cannot be safe from TURRET
+				break;
+			default:
 			}
-			for (int i = 0; i < 9; ++i) {
+			int attackRadiusSquared = e.type.attackRadiusSquared;
+			if (hereDistSq >= safeDistSq) continue;
+			for (int i = 0; i < ndirs; ++i) {
 				int distSq = e.location.distanceSquaredTo(locs[i]);
-				if (distSq <= e.type.attackRadiusSquared) {
+				if (distSq <= attackRadiusSquared) {
 					attacks[i] += e.attackPower;
-				} else if (distSq <= e.type.attackRadiusSquared * 2){
-					attacks[i] += e.attackPower / (5 * distSq / (e.type.attackRadiusSquared+1));
+				} else if (distSq <= attackRadiusSquared * 2){
+					attacks[i] += e.attackPower / (5 * distSq / (attackRadiusSquared+1));
 				}
 			}
 		}
 		infos = visibleAllies;
-		MapLocation friendVec = new MapLocation(0,0);
+		// MapLocation friendVec = new MapLocation(0,0);
 		MapLocation scoutVec = new MapLocation(0,0);
-		MapLocation archonVec = new MapLocation(0,0);
+		// MapLocation archonVec = new MapLocation(0,0);
 		for (RobotInfo f : infos) {
 			if (f.ID == myID) {
 				continue;
 			}
 			switch (f.type) {
-			case ARCHON:
+			/*case ARCHON:
 				archonVec = archonVec.add(here.directionTo(f.location));
 //				if (here.distanceSquaredTo(f.location) < 4) {
 //					archonVec = archonVec.add(here.directionTo(f.location));
@@ -884,13 +911,13 @@ public class BotScout extends Globals {
 				break;
 			// case SOLDIER:
 			case TURRET:
-				/*for (int i = 0; i < 9; ++i) {
+				for (int i = 0; i < 9; ++i) {
 					if (f.location.distanceSquaredTo(locs[i]) < 9) {
 						nfriends[i] += 1;
 					}
-				}*/
+				}
 				friendVec = friendVec.add(here.directionTo(f.location));
-				break;
+				break;*/
 			case SCOUT:
 				scoutVec = scoutVec.add(here.directionTo(f.location));
 				break;
@@ -898,13 +925,12 @@ public class BotScout extends Globals {
 			}
 		}
 //		Debug.indicateLine("explore", here, FastMath.addVec(friendVec, FastMath.addVec(here, FastMath.multiplyVec(-5,scoutVec))), 0, 255, 0);
-		for (int i = 0; i < 9; ++i) {
-			friends[i] = FastMath.dotVec(dirs[i], friendVec);
+		for (int i = 0; i < ndirs; ++i) {
+//			friends[i] = FastMath.dotVec(dirs[i], friendVec);
 			scouts[i] = FastMath.dotVec(dirs[i], scoutVec);
-			archons[i] = FastMath.dotVec(dirs[i], archonVec);
+//			archons[i] = FastMath.dotVec(dirs[i], archonVec);
 		}
-		double[] scores = new double[9];
-		for (int i = 0; i < 9; ++i) {
+		for (int i = 0; i < ndirs; ++i) {
 			scores[i] = -attacks[i] * 1000;
 			if (locs[i].equals(dangerousLoc)) {
 				scores[i] -= 2000;
@@ -917,8 +943,9 @@ public class BotScout extends Globals {
 //				scores[i] += 100;
 //			}
 //			scores[i] += nfriends[i] * 50;
-			scores[i] += friends[i] - scouts[i] * 50;
-			scores[i] += archons[i] * 10;
+//			scores[i] += friends[i];
+			scores[i] -= scouts[i] * 50;
+//			scores[i] += archons[i] * 10;
 			int disEdge = 100;
 			disEdge = Math.min(disEdge, Math.abs(locs[i].x - MapEdges.minX));
 			disEdge = Math.min(disEdge, Math.abs(locs[i].x - MapEdges.maxX));
@@ -928,43 +955,39 @@ public class BotScout extends Globals {
 				scores[i] -= (4-disEdge) * 1000;
 			}
 		}
-		double isDiagonalScore = FastMath.rand256() / 10 - 12;
+		/*double isDiagonalScore = FastMath.rand256() / 10 - 12;
 		for (int i = 0; i < 8; ++i) {
 			if (dirs[i].isDiagonal()) {
 				scores[i] += isDiagonalScore;
 			}
-		}
+		}*/
+
 		if (sameDirectionSteps > 25) {
 			sameDirectionSteps = 0;
 			lastDir = null;
 //			Debug.indicate("explore", 0, "Do not keep sameDirection");
-		} else  {
-			for (int i = 0; i < 8; ++i) {
+		} else if (Util.isGoodDirection(lastDir)) {
+			Direction lastDirLeft = lastDir.rotateLeft();
+			Direction lastDirRight = lastDir.rotateRight();
+			for (int i = 1; i < ndirs; ++i) {
 				if (dirs[i] == lastDir) {
 					scores[i] += 100;
-					scores[(i+1)%8] += 50;
-					scores[(i+7)%8] += 50;
+				} else if (dirs[i] == lastDirRight || dirs[i] == lastDirLeft) {
+					scores[i] += 50;
 				}
 			}
 		}
-		scores[8] -= 128;
-		for (int i = 0; i < 8; ++i) {
-			if (!cmoves[i]) {
-				scores[i] = -10000000;
-			}
-		}
+		scores[0] -= 128;
+
 		double bestScore = -100000;
 		Direction bestDir = null;
-		//int bestI = 8;
 		int rdn = FastMath.rand256();
-		for (int i = 0; i < 9; ++i) {
-			if (bestScore < scores[(rdn + i) % 9]) {
-				bestDir = dirs[(rdn + i) % 9];
-				bestScore = scores[(rdn + i) % 9];
-				//bestI = i;
+		for (int i = 0; i < ndirs; ++i) {
+			if (bestScore < scores[(rdn + i) % ndirs]) {
+				bestDir = dirs[(rdn + i) % ndirs];
+				bestScore = scores[(rdn + i) % ndirs];
 			}
 		}
-		//nFriend = (int)nfriends[8];
 		if (bestDir != null) {
 			if (rc.canMove(bestDir)) {
 				//nFriend = (int)nfriends[bestI];
