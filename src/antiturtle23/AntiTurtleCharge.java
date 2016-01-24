@@ -10,7 +10,7 @@ public class AntiTurtleCharge extends Globals {
 	public static int lastProposalRound = 0; // time last proposal was made
     
 	// how long we will spend gathering after the veto wait period is over
-	public static final int GATHER_WAIT_ROUNDS = 75;
+	public static final int GATHER_WAIT_ROUNDS = 100;
 	
 	// how long the charge itself will last once it begins
 	public static final int CHARGE_LENGTH = 75;
