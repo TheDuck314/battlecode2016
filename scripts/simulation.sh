@@ -1,12 +1,13 @@
 #!/bin/bash
 
 teams=""
-teams+="seeding_18 "
-teams+="sprint_11 "
-teams+="felix15 "
+teams+="antiturtle23 "
 teams+="ttm_dense_pure_11 "
 teams+="ttm_dense_9 "
 teams+="ttm_heal "
+teams+="seeding_18 "
+teams+="sprint_11 "
+teams+="felix15 "
 teams+="focused16 "
 teams+="simplesoldier18 "
 teams+="sodier "

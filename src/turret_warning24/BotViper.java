@@ -5,7 +5,7 @@ import battlecode.common.*;
 public class BotViper extends Globals {
 	public static void loop() {
 		FastMath.initRand(rc);
-		Debug.init("charge");
+		Debug.init("robotinfo");
     	try {
     		processSignals(true);
     	} catch (Exception e) {
@@ -44,12 +44,12 @@ public class BotViper extends Globals {
 	private static MapLocationHashSet destroyedZombieDens = new MapLocationHashSet();
 	private static boolean isAttackingZombieDen = false;
 	
-
-	
 	private static void turn() throws GameActionException {
 		attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 
 		processSignals(false);
+		
+		Radar.indicateEnemyTurretLocation(0, 200, 200);
 
 		manageHealingState();
 		
@@ -57,8 +57,8 @@ public class BotViper extends Globals {
 			return;
 		}
 		
-		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
-		Radar.updateClosestEnemyTurretLocation();
+//		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+		Radar.updateClosestEnemyTurretInfo();
 
 		if (rc.isCoreReady()) {
 			if (tryDoAntiTurtleCharge()) {
@@ -99,7 +99,7 @@ public class BotViper extends Globals {
 		}
 	}
 
-	private static void processSignals(boolean justBorn) {
+	private static void processSignals(boolean justBorn) throws GameActionException {
 		Radar.clearEnemyCache();
 		boolean processRadar = justBorn || (attackableHostiles.length == 0);
 
@@ -129,10 +129,14 @@ public class BotViper extends Globals {
 					}
 					break;
 					
-				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
-					Messages.processEnemyTurretWarning(data);
-					break;
+//				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
+//					Messages.processEnemyTurretWarning(data);
+//					break;
 	
+				case Messages.CHANNEL_ROBOT_LOCATION:
+					Messages.processRobotLocation(sig, data);
+					break;
+					
 				case Messages.CHANNEL_ANTI_TURTLE_CHARGE:
 					AntiTurtleCharge.processAntiTurtleChargeMessage(data);
 					break;

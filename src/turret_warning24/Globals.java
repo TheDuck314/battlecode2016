@@ -87,13 +87,16 @@ public class Globals {
 	}
 	
 	public static final boolean isSendingEnemyArchonLocation = true;
+	
 	public static final boolean isRebroadcasting = true;
 	public static final int broadCastRangeSqWhenSeen = 477;
+	public static final int broadCastRangeSqWhenSeenByArchon = 315;
 	public static final int broadCastRangeSqWhenHeard = 477;
 	public static final int broadCastRangeSqWhenDisappear = 477;
 	public static final int rebroadCastRangeSq = 106;
 	public static final int rebroadCastUpdateInterval = 50;
-	public static final int infoOutOfDateInterval = 100;
+	public static final int infoOutOfDateIntervalArchon = 100;
+	public static final int infoOutOfDateIntervalTurret = 300;
 	
 	public static int zombieScarinessMultiplier(RobotType type) {
 		switch (type) {

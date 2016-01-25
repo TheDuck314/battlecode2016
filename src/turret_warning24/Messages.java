@@ -17,7 +17,7 @@ public class Messages extends Globals {
 	public static final int CHANNEL_TURRET_TARGET = 0x10000000;
 	public static final int CHANNEL_ZOMBIE_DEN = 0x20000000;
 	public static final int CHANNEL_FOUND_PARTS = 0x30000000;
-	public static final int CHANNEL_ENEMY_TURRET_WARNING = 0x40000000;
+//	public static final int CHANNEL_ENEMY_TURRET_WARNING = 0x40000000;
 	public static final int CHANNEL_UNPAIRED_SCOUT_REPORT = 0x50000000;
 	public static final int CHANNEL_DEN_ATTACK_COMMAND = 0x60000000;
 	public static final int CHANNEL_ZOMBIE_DEN_LIST = 0x70000000;
@@ -249,30 +249,30 @@ public class Messages extends Globals {
 //		Debug.indicate("edges", 2, "receive: value=" + Integer.toHexString(parseInt(data)) + " MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
 	
-	public static void sendEnemyTurretWarning(int id, MapLocation loc, int radiusSq) throws GameActionException {
-		int data0 = id & CHANNEL_MASK_INVERSE;
-		int data1 = intFromMapLocation(loc);
-		rc.broadcastMessageSignal(CHANNEL_ENEMY_TURRET_WARNING | data0, data1, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendEnemyTurretWarning " + radiusSq);
-	}
-	
-	public static void sendEnemyTurretMissing(int id, int radiusSq) throws GameActionException {
-		int data0 = id & CHANNEL_MASK_INVERSE;
-		int data1 = ENEMY_TURRET_MISSING_VALUE;
-		rc.broadcastMessageSignal(CHANNEL_ENEMY_TURRET_WARNING | data0, data1, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendEnemyTurretMissing " + radiusSq);
-	}
-	
-	public static void processEnemyTurretWarning(int[] data) {
-		int id = data[0] ^ CHANNEL_ENEMY_TURRET_WARNING;
-		int locInt = data[1];
-		if (locInt == ENEMY_TURRET_MISSING_VALUE) {
-			Radar.removeEnemyTurret(id);
-		} else {
-			MapLocation loc = mapLocationFromInt(data[1]);
-			Radar.addEnemyTurret(id, loc);
-		}
-	}
+//	public static void sendEnemyTurretWarning(int id, MapLocation loc, int radiusSq) throws GameActionException {
+//		int data0 = id & CHANNEL_MASK_INVERSE;
+//		int data1 = intFromMapLocation(loc);
+//		rc.broadcastMessageSignal(CHANNEL_ENEMY_TURRET_WARNING | data0, data1, radiusSq);
+////		Debug.indicate("msg", msgDILN(), "sendEnemyTurretWarning " + radiusSq);
+//	}
+//	
+//	public static void sendEnemyTurretMissing(int id, int radiusSq) throws GameActionException {
+//		int data0 = id & CHANNEL_MASK_INVERSE;
+//		int data1 = ENEMY_TURRET_MISSING_VALUE;
+//		rc.broadcastMessageSignal(CHANNEL_ENEMY_TURRET_WARNING | data0, data1, radiusSq);
+////		Debug.indicate("msg", msgDILN(), "sendEnemyTurretMissing " + radiusSq);
+//	}
+//	
+//	public static void processEnemyTurretWarning(int[] data) {
+//		int id = data[0] ^ CHANNEL_ENEMY_TURRET_WARNING;
+//		int locInt = data[1];
+//		if (locInt == ENEMY_TURRET_MISSING_VALUE) {
+//			Radar.removeEnemyTurret(id);
+//		} else {
+//			MapLocation loc = mapLocationFromInt(data[1]);
+//			Radar.addEnemyTurret(id, loc);
+//		}
+//	}
 	
 	public static BigRobotInfo sendRobotLocation(BigRobotInfo bri, int radiusSq) throws GameActionException {
 		if (bri == null) return null;

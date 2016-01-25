@@ -35,7 +35,7 @@ public class BotArchon extends Globals {
 	//private static boolean pullMode = false;
 	
 	public static void loop() throws GameActionException {
-		Debug.init("education");
+		Debug.init("robotinfo");
 		
 		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
 		
@@ -124,13 +124,14 @@ public class BotArchon extends Globals {
 		tryConvertNeutrals();		
 		
 		sendRadarInfo();
-		Radar.indicateEnemyArchonLocation(0, 100, 100);
+//		Radar.indicateEnemyArchonLocation(0, 100, 100);
+		Radar.indicateEnemyTurretLocation(0, 200, 200);
 
 		if (rc.isCoreReady()) {
-			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+//			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
 			//Radar.removeOldEnemyTurrets(Radar.TURRET_MEMORY_ROUNDS);
 			
-			Radar.updateClosestEnemyTurretLocation();
+			Radar.updateClosestEnemyTurretInfo();
 			
 			if (fleeOverwhelmingEnemies()) {
 				return;
@@ -212,11 +213,17 @@ public class BotArchon extends Globals {
 		}
 		
 		for (RobotInfo hostile : visibleHostiles) {
-			if (hostile.type == RobotType.TURRET) {
-				if (!Radar.turretIsKnown(hostile.ID, hostile.location)) {
-					Radar.addEnemyTurret(hostile.ID, hostile.location);
-					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, 9*mySensorRadiusSquared);
-				}
+//			if (hostile.type == RobotType.TURRET) {
+//				if (!Radar.turretIsKnown(hostile.ID, hostile.location)) {
+//					Radar.addEnemyTurret(hostile.ID, hostile.location);
+//					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, 9*mySensorRadiusSquared);
+//				}
+//			}
+			boolean isNewID = Radar.bigRobotInfoById[hostile.ID] == null;
+			BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, Globals.roundNum);
+			if (bri != null) {
+				Messages.sendRobotLocation(bri, Globals.broadCastRangeSqWhenSeenByArchon);
+				Debug.indicate("turret", 0, "sent turret discover message");
 			}
 		}
 	}
@@ -340,7 +347,7 @@ public class BotArchon extends Globals {
 	
 	private static void educateBabyScoutOrArchon() throws GameActionException {
 		// tell scout known map edges
-		Messages.sendKnownMapEdges(2); 
+		Messages.sendKnownMapEdges(2);
 		
 		// tell scout known zombie dens
 		for (int i = 0; i < knownZombieDens.size; i += 3) {
@@ -358,11 +365,22 @@ public class BotArchon extends Globals {
 			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
 			Messages.sendRobotLocation(bri, 2);
 		}
+		// tell scout closest known enemy turret
+		Radar.updateClosestEnemyTurretInfo();
+		Messages.sendRobotLocation(Radar.closestEnemyTurretInfo, 2);
 		
 		educateBabyAboutAntiTurtleCharge();
 	}
 	
 	private static void educateBabySoldierOrViper() throws GameActionException {
+		// tell soldirs known enemy archon
+		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
+			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
+			Messages.sendRobotLocation(bri, 2);
+		}
+		// tell scout closest known enemy turret
+		Radar.updateClosestEnemyTurretInfo();
+		Messages.sendRobotLocation(Radar.closestEnemyTurretInfo, 2);
 		educateBabyAboutAntiTurtleCharge();
 	}
 	
@@ -508,9 +526,9 @@ public class BotArchon extends Globals {
 					}
 					break;
 					
-				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
-					Messages.processEnemyTurretWarning(data);
-					break;
+//				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
+//					Messages.processEnemyTurretWarning(data);
+//					break;
 					
 				case Messages.CHANNEL_UNPAIRED_SCOUT_REPORT:
 					nextUnpairedScoutCount += 1;
