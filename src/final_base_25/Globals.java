@@ -90,10 +90,13 @@ public class Globals {
 	public static final boolean isSendingEnemyArchonLocation = false;
 	
 	public static final boolean isRebroadcasting = false;
+	
+	// Doing global broadcast if enemy might be a turtle.
 	public static final int broadCastRangeSqWhenSeen = 477;
+	public static final int broadCastRangeSqWhenDisappear = 477;
+	
 	public static final int broadCastRangeSqWhenSeenByArchon = 315;
 	public static final int broadCastRangeSqWhenHeard = 477;
-	public static final int broadCastRangeSqWhenDisappear = 477;
 	public static final int rebroadCastRangeSq = 106;
 	public static final int rebroadCastUpdateInterval = 50;
 	public static final int infoOutOfDateIntervalArchon = 100;

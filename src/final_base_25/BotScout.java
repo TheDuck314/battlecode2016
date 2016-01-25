@@ -402,6 +402,9 @@ public class BotScout extends Globals {
 				BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, Globals.roundNum);
 				if (bri != null) {
 					int rangeSq = Math.min(MapEdges.maxRangeSq, Globals.broadCastRangeSqWhenSeen);
+					if (AntiTurtleCharge.enemyMightBeATurtle) {
+						rangeSq = MapEdges.maxRangeSq;
+					}
 					Messages.sendRobotLocation(bri, rangeSq);
 					Debug.indicate("turret", 0, "sent turret discover message");
 				}
@@ -469,6 +472,9 @@ public class BotScout extends Globals {
 				// bri.round is the round we learned the original location
 				bri.round += 1;
 				int rangeSq = Math.min(MapEdges.maxRangeSq, Globals.broadCastRangeSqWhenDisappear);
+				if (AntiTurtleCharge.enemyMightBeATurtle) {
+					rangeSq = MapEdges.maxRangeSq;
+				}
 				Messages.sendRobotLocation(bri, rangeSq);
 			}
 		}
