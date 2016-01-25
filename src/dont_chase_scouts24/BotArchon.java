@@ -35,7 +35,7 @@ public class BotArchon extends Globals {
 	//private static boolean pullMode = false;
 	
 	public static void loop() throws GameActionException {
-		Debug.init("baby");
+		Debug.init("archons");
 		
 		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
 		
@@ -339,10 +339,10 @@ public class BotArchon extends Globals {
 	}
 	
 	private static void educateBabyScoutOrArchon() throws GameActionException {
-		// tell scout known map edges
+		// tell baby known map edges
 		Messages.sendKnownMapEdges(2); 
 		
-		// tell scout known zombie dens
+		// tell baby known zombie dens
 		for (int i = 0; i < knownZombieDens.size; i += 3) {
 			MapLocation[] denList = new MapLocation[3];
 			int listLen = 0;
@@ -353,10 +353,16 @@ public class BotArchon extends Globals {
 			Messages.sendUpToThreeZombieDens(denList, listLen, 2);
 		}
 		
-		// tell scout known enemy archon
+		// tell baby known enemy archon
 		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
 			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
 			Messages.sendRobotLocation(bri, 2);
+		}
+		
+		// tell baby known neutral archon locations
+		for (int i = 0; i < knownNeutralArchons.size; ++i) {
+			MapLocation archonLoc = knownNeutralArchons.locations[i];
+			Messages.sendNeutralLocation(archonLoc, RobotType.ARCHON, 2);
 		}
 		
 		educateBabyAboutAntiTurtleCharge();
