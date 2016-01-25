@@ -35,7 +35,7 @@ public class BotArchon extends Globals {
 	//private static boolean pullMode = false;
 	
 	public static void loop() throws GameActionException {
-		Debug.init("archons");
+		Debug.init("baby");
 		
 		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
 		
@@ -538,6 +538,10 @@ public class BotArchon extends Globals {
 						}
 					}
 					break;
+					
+				case Messages.CHANNEL_ZOMBIE_DEN_LIST:
+					receiveZombieDenList(data, sig.getLocation());
+					break;
 
 				case Messages.CHANNEL_ROBOT_LOCATION:
 					Messages.processRobotLocation(sig, data);
@@ -569,6 +573,15 @@ public class BotArchon extends Globals {
 //		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
 		
+	private static void receiveZombieDenList(int[] data, MapLocation origin) {
+		MapLocation[] denList = new MapLocation[3];
+		int numDens = Messages.parseUpToThreeZombieDens(data, origin, denList);
+		for (int i = 0; i < numDens; ++i) {
+			knownZombieDens.add(denList[i]);
+//			Debug.indicateAppend("dens", 2, ", " + denList[i]);
+		}
+	}
+	
 	private static void pickDestination() throws GameActionException {
 		// check if the thing we are going for is gone
 		if (currentDestination != null) {
