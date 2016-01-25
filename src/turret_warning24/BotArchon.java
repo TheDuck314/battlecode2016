@@ -346,10 +346,10 @@ public class BotArchon extends Globals {
 	}
 	
 	private static void educateBabyScoutOrArchon() throws GameActionException {
-		// tell scout known map edges
+		// tell baby known map edges
 		Messages.sendKnownMapEdges(2);
 		
-		// tell scout known zombie dens
+		// tell baby known zombie dens
 		for (int i = 0; i < knownZombieDens.size; i += 3) {
 			MapLocation[] denList = new MapLocation[3];
 			int listLen = 0;
@@ -360,15 +360,21 @@ public class BotArchon extends Globals {
 			Messages.sendUpToThreeZombieDens(denList, listLen, 2);
 		}
 		
-		// tell scout known enemy archon
+		// tell baby known enemy archon
 		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
 			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
 			Messages.sendRobotLocation(bri, 2);
 		}
-		// tell scout closest known enemy turret
+		// tell baby closest known enemy turret
 		Radar.updateClosestEnemyTurretInfo();
 		Messages.sendRobotLocation(Radar.closestEnemyTurretInfo, 2);
-		
+	
+		// tell baby known neutral archon locations
+		for (int i = 0; i < knownNeutralArchons.size; ++i) {
+			MapLocation archonLoc = knownNeutralArchons.locations[i];
+			Messages.sendNeutralLocation(archonLoc, RobotType.ARCHON, 2);
+		}
+
 		educateBabyAboutAntiTurtleCharge();
 	}
 	
@@ -556,6 +562,10 @@ public class BotArchon extends Globals {
 						}
 					}
 					break;
+					
+				case Messages.CHANNEL_ZOMBIE_DEN_LIST:
+					receiveZombieDenList(data, sig.getLocation());
+					break;
 
 				case Messages.CHANNEL_ROBOT_LOCATION:
 					Messages.processRobotLocation(sig, data);
@@ -587,6 +597,15 @@ public class BotArchon extends Globals {
 //		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
 		
+	private static void receiveZombieDenList(int[] data, MapLocation origin) {
+		MapLocation[] denList = new MapLocation[3];
+		int numDens = Messages.parseUpToThreeZombieDens(data, origin, denList);
+		for (int i = 0; i < numDens; ++i) {
+			knownZombieDens.add(denList[i]);
+//			Debug.indicateAppend("dens", 2, ", " + denList[i]);
+		}
+	}
+	
 	private static void pickDestination() throws GameActionException {
 		// check if the thing we are going for is gone
 		if (currentDestination != null) {

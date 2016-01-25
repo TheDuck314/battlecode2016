@@ -174,8 +174,11 @@ public class BotSoldier extends Globals {
 				switch(data[0] & Messages.CHANNEL_MASK) {
 				case Messages.CHANNEL_RADAR:
 					if (processRadar) {
-						MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
-						addAttackTarget(closest, false);
+						//MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
+						MapLocation closest = Messages.getClosestNonScoutRadarHit(data, sig.getLocation());
+						if (closest != null) {
+							addAttackTarget(closest, false);
+						}
 					}
 					break;
 					

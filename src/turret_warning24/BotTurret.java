@@ -221,11 +221,13 @@ public class BotTurret extends Globals {
 				switch(data[0] & Messages.CHANNEL_MASK) {
 				case Messages.CHANNEL_RADAR:
 					if (processRadar) {
-						MapLocation closest = Messages.addRadarDataToEnemyCacheAndReturnClosestHit(data, 
-								sig.getLocation(), myAttackRadiusSquared);
-						if (attackTarget == null
-								|| here.distanceSquaredTo(closest) < here.distanceSquaredTo(attackTarget)) {
-							attackTarget = closest;
+						//MapLocation closest = Messages.addRadarDataToEnemyCacheAndReturnClosestHit(data, sig.getLocation(), myAttackRadiusSquared);
+						MapLocation closest = Messages.addRadarDataToEnemyCacheAndReturnClosestNonScoutHit(data, sig.getLocation(), myAttackRadiusSquared);
+						if (closest != null) {
+							if (attackTarget == null
+									|| here.distanceSquaredTo(closest) < here.distanceSquaredTo(attackTarget)) {
+								attackTarget = closest;
+							}
 						}
 					}
 					break;
