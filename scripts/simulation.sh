@@ -1,6 +1,8 @@
 #!/bin/bash
 
 teams=""
+teams+="turret_warning24 "
+teams+="dont_chase_scouts24 "
 teams+="antiturtle23 "
 teams+="ttm_dense_pure_11 "
 teams+="ttm_dense_9 "
