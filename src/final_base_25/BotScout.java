@@ -239,7 +239,7 @@ public class BotScout extends Globals {
 				RobotInfo robot = rc.senseRobotAtLocation(closestKnownNeutralArchon);
 				if (robot == null || robot.team != Team.NEUTRAL) {
 					Debug.indicate("archons", 0, "neutral archon at " + closestKnownNeutralArchon + " is missing!");
-					rangeSq = MapEdges.maxBroadcastDistSq();
+					rangeSq = MapEdges.maxRangeSq;
 					Messages.sendNeutralWasActivated(closestKnownNeutralArchon, RobotType.ARCHON, rangeSq);
 					knownNeutralArchons.remove(closestKnownNeutralArchon);
 					return;
@@ -253,7 +253,7 @@ public class BotScout extends Globals {
 			if (neutral.type == RobotType.ARCHON) {
 				if (!knownNeutralArchons.contains(neutral.location)) {
 					Debug.indicate("archons", 0, "found new neutral archon at " + neutral.location);
-					rangeSq = MapEdges.maxBroadcastDistSq();
+					rangeSq = MapEdges.maxRangeSq;
 					Messages.sendNeutralLocation(neutral.location, neutral.type, rangeSq);
 					knownNeutralArchons.add(neutral.location);
 					lastPartsOrNeutralSignalRound = rc.getRoundNum();
@@ -319,7 +319,7 @@ public class BotScout extends Globals {
 				if (robot == null || robot.type != RobotType.ZOMBIEDEN) {
 //					Debug.indicate("dens", 0, "sending message that den at " + denLoc + " was destroyed!");
 					knownZombieDens.remove(denLoc);
-					Messages.sendZombieDenDestroyed(denLoc, MapEdges.maxBroadcastDistSq());
+					Messages.sendZombieDenDestroyed(denLoc, MapEdges.maxRangeSq);
 				}
 			}
 		}
@@ -332,7 +332,7 @@ public class BotScout extends Globals {
 					MapLocation denLoc = zombie.location;
 //					Debug.indicate("dens", 0, "sending message about new den at " + denLoc);
 					knownZombieDens.add(denLoc);
-					Messages.sendZombieDenLocation(denLoc, MapEdges.maxBroadcastDistSq());
+					Messages.sendZombieDenLocation(denLoc, MapEdges.maxRangeSq);
 				}
 			}
 		}		
@@ -361,7 +361,7 @@ public class BotScout extends Globals {
 		}
 		
 		if (rc.getRoundNum() - lastGlobalRadarBroadcastRound > 400) {
-			radarRangeSq = MapEdges.maxBroadcastDistSq();
+			radarRangeSq = MapEdges.maxRangeSq;
 			lastGlobalRadarBroadcastRound = rc.getRoundNum();
 			lastLongRangeRadarBroadcastRound = rc.getRoundNum();
 			Radar.clearEnemyCache();
@@ -401,8 +401,7 @@ public class BotScout extends Globals {
 				boolean isNewID = Radar.bigRobotInfoById[hostile.ID] == null;
 				BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, Globals.roundNum);
 				if (bri != null) {
-					int rangeSq = Globals.broadCastRangeSqWhenSeen;
-					if (isNewID) rangeSq = MapEdges.maxBroadcastDistSq();
+					int rangeSq = Math.min(MapEdges.maxRangeSq, Globals.broadCastRangeSqWhenSeen);
 					Messages.sendRobotLocation(bri, rangeSq);
 					Debug.indicate("turret", 0, "sent turret discover message");
 				}
@@ -411,7 +410,7 @@ public class BotScout extends Globals {
 				BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, Globals.roundNum);
 				if (Globals.isSendingEnemyArchonLocation && bri != null) {
 					int rangeSq = Globals.broadCastRangeSqWhenSeen;
-					if (isNewID) rangeSq = MapEdges.maxBroadcastDistSq();
+					if (isNewID) rangeSq = MapEdges.maxRangeSq;
 					Messages.sendRobotLocation(bri, rangeSq);
 					Debug.indicate("archon", 0, "sent archon discover message");
 				}
@@ -455,7 +454,8 @@ public class BotScout extends Globals {
 				// bri.round is the round we learned the original location
 				bri.round += 1;
 				if (Globals.isSendingEnemyArchonLocation) {
-					Messages.sendRobotLocation(bri, Globals.broadCastRangeSqWhenDisappear);
+					int rangeSq = Math.min(MapEdges.maxRangeSq, Globals.broadCastRangeSqWhenDisappear);
+					Messages.sendRobotLocation(bri, rangeSq);
 				}
 			}
 		}
@@ -468,7 +468,8 @@ public class BotScout extends Globals {
 				bri.location = null;
 				// bri.round is the round we learned the original location
 				bri.round += 1;
-				Messages.sendRobotLocation(bri, Globals.broadCastRangeSqWhenDisappear);
+				int rangeSq = Math.min(MapEdges.maxRangeSq, Globals.broadCastRangeSqWhenDisappear);
+				Messages.sendRobotLocation(bri, rangeSq);
 			}
 		}
 	}

@@ -41,7 +41,7 @@ public class AntiTurtleCharge extends Globals {
 	
 	public static void proposeCharge(MapLocation proposalCenter) throws GameActionException {
 		planCharge(proposalCenter, rc.getRoundNum() + GATHER_WAIT_ROUNDS);
-		Messages.proposeAntiTurtleChargePlan(proposalCenter, chargeRound, MapEdges.maxBroadcastDistSq());
+		Messages.proposeAntiTurtleChargePlan(proposalCenter, chargeRound, MapEdges.maxRangeSq);
 	}
 	
 	public static boolean enemyMightBeATurtle = true;
@@ -91,7 +91,7 @@ public class AntiTurtleCharge extends Globals {
 					}
 				}
 				if (!dangerousHostileNearby) {
-					Messages.sendNotATurtle(MapEdges.maxBroadcastDistSq());
+					Messages.sendNotATurtle(MapEdges.maxRangeSq);
 					chargeCenter = null;
 					haveBroadcastedNotATurtle = true;
 				}

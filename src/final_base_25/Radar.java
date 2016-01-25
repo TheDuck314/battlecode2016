@@ -241,7 +241,7 @@ public class Radar extends Globals {
 			if (bri.round <= Globals.roundNum - Globals.infoOutOfDateIntervalTurret) continue;
 //			Debug.indicateLine("robotinfo", here, bri.location, red, green, blue);
 			Debug.indicateDot("robotinfo", bri.location, red, green, blue);
-			Debug.indicateAppend("robotinfo", 2, " id=" + bri.id + " loc=" + bri.location);
+//			Debug.indicateAppend("robotinfo", 2, " id=" + bri.id + " loc=" + bri.location);
 		}
 	}
 	

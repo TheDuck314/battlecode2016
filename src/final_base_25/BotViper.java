@@ -348,7 +348,7 @@ public class BotViper extends Globals {
 			rc.attackLocation(bestTarget.location);
 			if (bestTarget.type == RobotType.ZOMBIEDEN) {
 				if (rc.senseRobotAtLocation(bestTarget.location) == null) {
-					rc.broadcastSignal(20000);
+					rc.broadcastSignal(MapEdges.maxRangeSq);
 				}
 			}
 		}

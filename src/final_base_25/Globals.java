@@ -76,6 +76,7 @@ public class Globals {
 	public static void update() {
 		here = rc.getLocation();
 		roundNum = rc.getRoundNum();
+		MapEdges.maxRangeSq = MapEdges.maxBroadcastDistSq();
 	}
 	
 	public static void updateRobotInfos() {

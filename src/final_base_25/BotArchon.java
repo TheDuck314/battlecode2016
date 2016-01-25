@@ -185,7 +185,7 @@ public class BotArchon extends Globals {
 		MapLocation closestDen = knownZombieDens.findClosestMemberToLocation(startingLocation);
 		if (closestDen != null) {
 //			Debug.indicate("dens", 0, "sending command to attack den at " + closestDen);
-			Messages.sendDenAttackCommand(closestDen, MapEdges.maxBroadcastDistSq());
+			Messages.sendDenAttackCommand(closestDen, MapEdges.maxRangeSq);
 			lastGlobalZombieDenBroadcastRound = rc.getRoundNum();
 			lastDenTarget = closestDen;
 		}
@@ -448,7 +448,7 @@ public class BotArchon extends Globals {
 			educateBaby(neutral.type);
 
 			if (neutral.type == RobotType.ARCHON) {
-				int rangeSq = MapEdges.maxBroadcastDistSq();
+				int rangeSq = MapEdges.maxRangeSq;
 				if (rc.senseHostileRobots(here, mySensorRadiusSquared).length > 0) {
 					rangeSq = 30 * mySensorRadiusSquared;
 				}

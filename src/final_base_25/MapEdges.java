@@ -10,6 +10,8 @@ public class MapEdges extends Globals {
 	public static int minY = UNKNOWN;
 	public static int maxY = UNKNOWN;
 	
+	public static int maxRangeSq = 12800;
+	
 	// returns the maximum possible length-squared of the diagonal
 	// of the map, given what we currently know about the locations
 	// of the boundaries
@@ -117,7 +119,7 @@ public class MapEdges extends Globals {
 	    };
 	    
 	    MapLocation closestCorner = null;	    
-	    int smallestDistSq = 20000;
+	    int smallestDistSq = 12800;
 	    for (MapLocation corner : corners) {
 	    	int distSq = here.distanceSquaredTo(corner);
 	    	if (distSq < smallestDistSq) {
