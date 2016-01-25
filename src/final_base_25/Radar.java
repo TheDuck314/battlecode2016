@@ -196,7 +196,7 @@ public class Radar extends Globals {
 			BigRobotInfo bri = bigRobotInfoById[theirTurretIdList[i]];
 			if (bri.location == null) continue;
 			int distSq = bri.location.distanceSquaredTo(here);
-			if (distSq > Globals.infoOutOfDataRangeSqTurret) {
+			if (distSq > Globals.infoOutOfRangeSqTurret) {
 				bri.location = null;
 				continue;
 			}
