@@ -493,7 +493,8 @@ public class BotScout extends Globals {
 					break;
 
 				case Messages.CHANNEL_RADAR:
-					Messages.addRadarDataToEnemyCacheAndReturnClosestHit(data, sig.getLocation(), mySensorRadiusSquared);
+					//Messages.addRadarDataToEnemyCacheAndReturnClosestHit(data, sig.getLocation(), mySensorRadiusSquared);
+					Messages.addRadarDataToEnemyCache(data, sig.getLocation(), mySensorRadiusSquared);
 					break;
 					
 				// TODO: Maybe we need this ???
