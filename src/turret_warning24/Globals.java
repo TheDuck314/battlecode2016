@@ -86,9 +86,9 @@ public class Globals {
 		attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 	}
 	
-	public static final boolean isSendingEnemyArchonLocation = true;
+	public static final boolean isSendingEnemyArchonLocation = false;
 	
-	public static final boolean isRebroadcasting = true;
+	public static final boolean isRebroadcasting = false;
 	public static final int broadCastRangeSqWhenSeen = 477;
 	public static final int broadCastRangeSqWhenSeenByArchon = 315;
 	public static final int broadCastRangeSqWhenHeard = 477;
