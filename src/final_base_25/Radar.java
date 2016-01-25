@@ -195,9 +195,13 @@ public class Radar extends Globals {
 		for (int i = 0; i < theirTurretIdListLength; ++i) {
 			BigRobotInfo bri = bigRobotInfoById[theirTurretIdList[i]];
 			if (bri.location == null) continue;
+			int distSq = bri.location.distanceSquaredTo(here);
+			if (distSq > Globals.infoOutOfDataRangeSqTurret) {
+				bri.location = null;
+				continue;
+			}
 			if (roundDelay <= Globals.infoOutOfDateIntervalTurret) {
 				if (round - bri.round <= Globals.infoOutOfDateIntervalTurret) {
-					int distSq = bri.location.distanceSquaredTo(here);
 					if (distSq < bestDistSq) {
 						bestInfo = bri;
 						bestDistSq = distSq;
@@ -207,7 +211,7 @@ public class Radar extends Globals {
 			} else {
 				if (round - bri.round < roundDelay) {
 					bestInfo = bri;
-					bestDistSq = bri.location.distanceSquaredTo(here);
+					bestDistSq = distSq;
 					roundDelay = round - bri.round;
 				}
 			}

@@ -98,6 +98,7 @@ public class Globals {
 	public static final int rebroadCastUpdateInterval = 50;
 	public static final int infoOutOfDateIntervalArchon = 100;
 	public static final int infoOutOfDateIntervalTurret = 300;
+	public static final int infoOutOfDataRangeSqTurret = 477;
 	
 	public static int zombieScarinessMultiplier(RobotType type) {
 		switch (type) {
