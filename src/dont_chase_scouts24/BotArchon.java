@@ -232,16 +232,6 @@ public class BotArchon extends Globals {
 	private static void trySpawn() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 
-		/*RobotType spawnType = RobotType.SOLDIER;
-		if (rc.getRoundNum() > 400) {
-			if (spawnCount % 4 == 0) {
-				spawnType = RobotType.TURRET;
-			}
-		}
-		if (spawnCount % 10 == 0) {
-			spawnType = RobotType.SCOUT;
-		}*/
-		
 		RobotType spawnType = RobotType.SOLDIER;
 		if (rc.getRoundNum() < 250) {
 			if (spawnCount % 8 == 0) {
@@ -253,7 +243,7 @@ public class BotArchon extends Globals {
 				spawnType = RobotType.VIPER;
 			}
 		} else {
-			if (lastUnpairedScoutCount < 2) {
+			if (lastUnpairedScoutCount == 0) {
 				switch (spawnCount % 4) {
 				case 0:
 					spawnType = RobotType.SOLDIER;
@@ -261,18 +251,7 @@ public class BotArchon extends Globals {
 				case 2:
 					spawnType = RobotType.TURRET;
 					break;
-				default:
-					spawnType = RobotType.SCOUT;
-				}
-			} else if (lastUnpairedScoutCount < 5) {
-				switch (spawnCount % 3) {
-				case 0:
-					spawnType = RobotType.SOLDIER;
-					break;
-				case 1:
-					spawnType = RobotType.TURRET;
-					break;
-				default:
+				default: // 1 or 3
 					spawnType = RobotType.SCOUT;
 				}
 			} else {
@@ -283,7 +262,7 @@ public class BotArchon extends Globals {
 				case 1:
 					spawnType = RobotType.TURRET;
 					break;
-				default:
+				default: // usued
 					spawnType = RobotType.SCOUT;
 				}
 			}
