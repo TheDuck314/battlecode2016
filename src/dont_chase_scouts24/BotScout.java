@@ -39,7 +39,7 @@ public class BotScout extends Globals {
 	//private static int birthRound;
 	
 	public static void loop() {
-		Debug.init("detector");
+		Debug.init("archons");
 
     	origin = here;
     	exploredGrid[50][50] = true;   
@@ -246,6 +246,21 @@ public class BotScout extends Globals {
 		
 		int rangeSq = 9*mySensorRadiusSquared;
 
+		// check for missing neutral archons
+		MapLocation closestKnownNeutralArchon = knownNeutralArchons.findClosestMemberToLocation(here);
+		if (closestKnownNeutralArchon != null) {
+			if (rc.canSenseLocation(closestKnownNeutralArchon)) {
+				RobotInfo robot = rc.senseRobotAtLocation(closestKnownNeutralArchon);
+				if (robot == null || robot.team != Team.NEUTRAL) {
+					Debug.indicate("archons", 0, "neutral archon at " + closestKnownNeutralArchon + " is missing!");
+					rangeSq = MapEdges.maxBroadcastDistSq();
+					Messages.sendNeutralWasActivated(closestKnownNeutralArchon, RobotType.ARCHON, rangeSq);
+					knownNeutralArchons.remove(closestKnownNeutralArchon);
+					return;
+				}
+			}
+		}
+		
 		RobotInfo[] nearbyNeutrals = rc.senseNearbyRobots(mySensorRadiusSquared, Team.NEUTRAL);
 		// look for neutral archons
 		for (RobotInfo neutral : nearbyNeutrals) {
