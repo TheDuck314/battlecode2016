@@ -461,6 +461,7 @@ public class Nav extends Globals {
 			Nav.goToDirectSafelyAvoidingTurret(dest, turretLocation);
 			return;
 		}
+		Debug.indicate("retreat", 1, "sTAAAT: dest=" + dest + ", turretLocation=" + turretLocation);
 
 		MapLocation[] nearbyArchons = new MapLocation[10];
 		int numArchons = 0;
@@ -482,10 +483,10 @@ public class Nav extends Globals {
 				if (dirLoc.isAdjacentTo(nearbyArchons[i])) {
 					continue dirSearch;
 				}
-				if (turretLocation != null &&
-						dirLoc.distanceSquaredTo(turretLocation) <= getEffectiveEnemyTurretAttackRadiusSq()) {
-					continue dirSearch;
-				}
+			}
+			if (turretLocation != null &&
+					dirLoc.distanceSquaredTo(turretLocation) <= getEffectiveEnemyTurretAttackRadiusSq()) {
+				continue;
 			}
 			if (rc.canMove(dir)) {
 				rc.move(dir);
