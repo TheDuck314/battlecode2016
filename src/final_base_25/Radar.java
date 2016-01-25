@@ -200,8 +200,8 @@ public class Radar extends Globals {
 				bri.location = null;
 				continue;
 			}
-			if (roundDelay <= Globals.infoOutOfDateIntervalTurret) {
-				if (round - bri.round <= Globals.infoOutOfDateIntervalTurret) {
+			if (roundDelay <= Globals.infoOutOfDateIntervalTurret || AntiTurtleCharge.enemyMightBeATurtle) {
+				if (round - bri.round <= Globals.infoOutOfDateIntervalTurret || AntiTurtleCharge.enemyMightBeATurtle) {
 					if (distSq < bestDistSq) {
 						bestInfo = bri;
 						bestDistSq = distSq;
