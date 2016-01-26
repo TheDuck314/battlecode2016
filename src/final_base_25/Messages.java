@@ -77,6 +77,7 @@ public class Messages extends Globals {
 	
 	public static void sendBeginEducation(int radiusSq) throws GameActionException {
 		rc.broadcastMessageSignal(CHANNEL_BEGIN_EDUCATION, 0, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendBeginEducation " + radiusSq);
 	}
 	
 	public static void sendTurretTarget(MapLocation loc, int radiusSq) throws GameActionException {
@@ -328,8 +329,8 @@ public class Messages extends Globals {
 		int data0 = (int)(data >> 32);
 		int data1 = (int)(data & 0x00000000ffffffffL);
 		rc.broadcastMessageSignal(CHANNEL_RADAR | (CHANNEL_MASK_INVERSE & data0), data1, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendRadarData " + radiusSq);
-		Debug.indicate("radar", 2, "sent radar data with radiusSq = " + radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendRadarData " + radiusSq);
+//		Debug.indicate("radar", 2, "sent radar data with radiusSq = " + radiusSq);
 	}
 	
 	// adds radar hits within maxDistSq to the enemy cache.
@@ -496,11 +497,13 @@ public class Messages extends Globals {
 		int data0 = chargeRound;
 		int data1 = intFromMapLocation(chargeCenter);
 		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | data0, data1, radiusSq);
+		Debug.indicate("msg", msgDILN(), "proposeAntiTurtleChargePlan " + radiusSq);
 	}
 	
-	public static void vetoAntiTurtleCharge(int radiusSq) throws GameActionException {
-		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | ANTI_TURTLE_CHARGE_VETO_FLAG, 0, radiusSq);
-	}
+//	public static void vetoAntiTurtleCharge(int radiusSq) throws GameActionException {
+//		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | ANTI_TURTLE_CHARGE_VETO_FLAG, 0, radiusSq);
+//		Debug.indicate("msg", msgDILN(), "vetoAntiTurtleCharge " + radiusSq);
+//	}
 
 	public static void sendNotATurtle(int radiusSq) throws GameActionException {
 		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | ANTI_TURTLE_CHARGE_NOT_A_TURTLE_FLAG, 0, radiusSq);

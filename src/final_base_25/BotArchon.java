@@ -124,7 +124,16 @@ public class BotArchon extends Globals {
 		tryRepairAlly();
 		tryConvertNeutrals();		
 		
-		sendRadarInfo();
+		boolean isSendingRadar = true;
+		if (Globals.roundNum - lastFleeOtherTeamRound < 10 || Globals.roundNum - lastFleeZombiesRound < 10 ) {
+			if (Globals.roundNum % 5 != 0) {
+				isSendingRadar = false;
+			}
+		}
+		if (isSendingRadar) {
+			sendRadarInfo();
+		}
+		
 //		Radar.indicateEnemyArchonLocation(0, 100, 100);
 		Radar.indicateEnemyTurretLocation(0, 200, 200);
 
@@ -321,6 +330,13 @@ public class BotArchon extends Globals {
 				spawnType = RobotType.SOLDIER;
 			}
 		} else if (rc.getRoundNum() - lastFleeOtherTeamRound < 100) {
+			if (spawnType == RobotType.TURRET) {
+//				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
+				//System.out.println("converted " + spawnType + " spawn into soldier");
+				spawnType = RobotType.SOLDIER;
+			}
+		}
+		if (rc.getRobotCount() < 15) {
 			if (spawnType == RobotType.TURRET) {
 //				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
 				//System.out.println("converted " + spawnType + " spawn into soldier");
