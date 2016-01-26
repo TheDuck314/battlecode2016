@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotTurret extends Globals {
 	public static void loop() {
-		Debug.init("robotinfo");
+		Debug.init("heal");
 		rc.emptySignalQueue(); // flush signal backlog
 		int maxBytecodesUsed = 0;
 		int maxBytecodeUsedTurn = 0;
@@ -15,7 +15,9 @@ public class BotTurret extends Globals {
 				Debug.indicate("bytecodes", 0, "start: " + Clock.getBytecodeNum());
 				processSignals();
 				Debug.indicateAppend("bytecodes", 0, "; after processSignals: " + Clock.getBytecodeNum());
+				Radar.updateClosestEnemyTurretInfo();
 				Radar.indicateEnemyTurretLocation(0, 200, 200);
+				manageHealingState();
 				if (rc.getType() == RobotType.TURRET) {
 				    turnTurret();
 				} else {
@@ -52,6 +54,9 @@ public class BotTurret extends Globals {
 	private static int numAttacksOnRememberedTurret = 0;
 	
 	private static MapLocation lastAttackLocation = null;
+	
+	private static boolean inHealingState = false;
+	
 	
 	private static void turnTurret() throws GameActionException {
 		if (!rc.isWeaponReady() && !rc.isCoreReady()) return;
@@ -100,7 +105,65 @@ public class BotTurret extends Globals {
 			}
 		}
 		
+		if (inHealingState) {
+			if (tryToHealAtArchon()) {
+				return;
+			}
+		}
+		
 		lookForAFight();
+	}
+	
+	private static void manageHealingState() {
+		if (rc.getHealth() < 0.46 * myType.maxHealth) {
+			inHealingState = true;
+		}
+		if (rc.getHealth() == myType.maxHealth) {
+			inHealingState = false;
+		}
+		Debug.indicate("heal", 0, "inHealingState = " + inHealingState);
+	}
+	
+	private static void locateNearestArchon() throws GameActionException {
+		// first look for our favorite archon
+		if (rc.canSenseRobot(lastKnownArchonId)) {
+			RobotInfo archon = rc.senseRobot(lastKnownArchonId);
+			lastKnownArchonLocation = archon.location;
+			lastKnownArchonLocationRound = rc.getRoundNum();
+			return;
+		}
+		
+		// else look for any nearby archon
+		RobotInfo[] nearbyAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
+		for (RobotInfo ally : nearbyAllies) {
+			if (ally.type == RobotType.ARCHON) {
+				lastKnownArchonLocation = ally.location;
+				lastKnownArchonLocationRound = rc.getRoundNum();
+				lastKnownArchonId = ally.ID;
+				return;
+			}
+		}
+		
+		// else hope that we have gotten an archon location broadcast
+	}
+	
+	private static boolean tryToHealAtArchon() throws GameActionException {
+		if (!rc.isCoreReady()) return false;
+		
+		locateNearestArchon();
+		
+		if (lastKnownArchonLocation == null) {
+			return false;
+		}
+		
+		//Nav.swarmToAvoidingArchonsAndTurret(lastKnownArchonLocation, Radar.closestEnemyTurretLocation);
+		if (here.distanceSquaredTo(lastKnownArchonLocation) > 24) {
+			Nav.goToBug(lastKnownArchonLocation);			
+		} else {
+			Nav.swarmToAvoidingArchonsAndTurret(lastKnownArchonLocation, Radar.closestEnemyTurretLocation);
+		}
+		Debug.indicate("heal", 1, "going to heal at " + lastKnownArchonLocation);
+		return true;
 	}
 
 	private static double enemyScore(RobotType type, double health) {
