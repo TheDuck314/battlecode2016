@@ -196,7 +196,10 @@ public class Radar extends Globals {
 			BigRobotInfo bri = bigRobotInfoById[theirTurretIdList[i]];
 			if (bri.location == null) continue;
 			int distSq = bri.location.distanceSquaredTo(here);
-			if (!AntiTurtleCharge.enemyMightBeATurtle && distSq > Globals.infoOutOfRangeSqTurret) {
+			if (distSq > Globals.infoOutOfRangeSqTurret
+					&& myType != RobotType.SCOUT // scout do not need to forget
+					&& !AntiTurtleCharge.enemyMightBeATurtle // turtle shouldn't move
+					) {
 				bri.location = null;
 				continue;
 			}
