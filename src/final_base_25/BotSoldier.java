@@ -360,11 +360,11 @@ public class BotSoldier extends Globals {
 			}
 			// we can't shoot anyone. try to help an ally or attack a helpless target
 			if (rc.isCoreReady()) {
-				if (tryMoveToHelpAlly(visibleHostiles, currentlyChargingTurtle)) {
+				if (tryMoveToHelpAlly(visibleHostiles, currentlyChargeTurtleOrGathering)) {
 					Debug.indicate("micro", 0, "moving to help ally");
 					return true;
 				}
-				if (tryMoveToAttackHelplessTarget(visibleHostiles, currentlyChargingTurtle)) {
+				if (tryMoveToAttackHelplessTarget(visibleHostiles, currentlyChargeTurtleOrGathering)) {
 					Debug.indicate("micro", 0, "moving to attack helpless target");
 					return true;
 				}

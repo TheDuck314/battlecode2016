@@ -5,7 +5,7 @@ import battlecode.common.*;
 public class BotViper extends Globals {
 	public static void loop() {
 		FastMath.initRand(rc);
-		Debug.init("robotinfo");
+		Debug.init("retreat");
     	try {
     		processSignals(true);
     	} catch (Exception e) {
@@ -157,8 +157,21 @@ public class BotViper extends Globals {
 	}
 
 	private static boolean tryToMicro() throws GameActionException {		
+		boolean currentlyChargeTurtleOrGathering = (AntiTurtleCharge.chargeCenter != null)
+				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
+		boolean currentlyChargingTurtle = currentlyChargeTurtleOrGathering 
+				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
+
 		RobotInfo[] visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
-		if (visibleHostiles.length == 0) return false;
+		
+		if (visibleHostiles.length == 0) {
+			if (rc.isCoreReady() && !currentlyChargingTurtle) {
+				if (retreatFromEnemyTurretRange(visibleHostiles)) {
+					return true;
+				}
+			}
+			return false;
+		}
 
 		if (rc.isCoreReady()) {
 			double leftHealth = rc.getHealth() - rc.getViperInfectedTurns() * 2.0;
@@ -180,9 +193,6 @@ public class BotViper extends Globals {
 			}
 		}
 		
-		boolean currentlyChargingTurtle = (AntiTurtleCharge.chargeCenter != null)
-				&& (rc.getRoundNum() > AntiTurtleCharge.chargeRound) 
-				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
 		
 		if (inHealingState && !currentlyChargingTurtle) {
 			// if we are in the healing state, then if we are under attack we should retreat.
@@ -202,6 +212,12 @@ public class BotViper extends Globals {
 				}
 			}
 			return false;
+		}
+		
+		if (rc.isCoreReady() && !currentlyChargingTurtle) {
+			if (retreatFromEnemyTurretRange(visibleHostiles)) {
+				return true;
+			}
 		}
 
 		if (rc.isWeaponReady()) {
@@ -223,10 +239,10 @@ public class BotViper extends Globals {
 						return true;
 					}
 				}
-				if (tryMoveToHelpAlly(visibleHostiles)) {
+				if (tryMoveToHelpAlly(visibleHostiles, currentlyChargeTurtleOrGathering)) {
 					return true;
 				}
-				if (tryMoveToAttackHelplessTarget(visibleHostiles)) {
+				if (tryMoveToAttackHelplessTarget(visibleHostiles, currentlyChargeTurtleOrGathering)) {
 					return true;
 				}
 			}
@@ -247,15 +263,56 @@ public class BotViper extends Globals {
 				return true; // we are fighting, don't move
 			}
 			// otherwise try to help an ally or attack a helpless target
-			if (tryMoveToHelpAlly(visibleHostiles)) {
+			if (tryMoveToHelpAlly(visibleHostiles, currentlyChargeTurtleOrGathering)) {
 				return true;
 			}
-			if (tryMoveToAttackHelplessTarget(visibleHostiles)) {
+			if (tryMoveToAttackHelplessTarget(visibleHostiles, currentlyChargeTurtleOrGathering)) {
 				return true;
 			}
 		}
 		
 		return false;
+	}
+	
+	private static boolean retreatFromEnemyTurretRange(RobotInfo[] visibleHostiles) throws GameActionException {
+		if (Radar.closestEnemyTurretLocation == null) {
+			Debug.indicate("retreat", 0, "no known enemy turret");
+			return false;
+		}
+		
+		int currentDistSq = Radar.closestEnemyTurretLocation.distanceSquaredTo(here);
+		if (currentDistSq > RobotType.TURRET.attackRadiusSquared) {
+			Debug.indicate("retreat", 0, "not in range of " + Radar.closestEnemyTurretLocation);
+			return false;
+		}
+		
+		Direction awayDir = Radar.closestEnemyTurretLocation.directionTo(here);
+		Direction[] dirs = { awayDir, awayDir.rotateLeft(), awayDir.rotateRight(),
+				awayDir.rotateLeft().rotateLeft(), awayDir.rotateRight().rotateRight() };
+		
+		dirSearch: for (Direction dir : dirs) {
+			MapLocation dirLoc = here.add(dir);
+			if (!rc.canMove(dir)) continue;
+			if (Radar.closestEnemyTurretLocation.distanceSquaredTo(dirLoc) <= currentDistSq) continue;
+			
+			for (RobotInfo hostile : visibleHostiles) {
+				if (hostile.type.canAttack()) {
+					if (hostile.location.distanceSquaredTo(dirLoc) <= hostile.type.attackRadiusSquared) {
+						continue dirSearch;
+					}
+				}
+			}
+			
+			Debug.indicate("retreat", 0, "retreating out from under turret at " + Radar.closestEnemyTurretLocation);
+			Debug.println("retreat", "retreating out from under turret at " + Radar.closestEnemyTurretLocation);
+			Debug.indicateLine("retreat", here, Radar.closestEnemyTurretLocation, 0, 255, 255);
+			rc.move(dir);
+			return true;
+		}
+
+		Debug.indicate("retreat", 0, "couldn't find a direction to retreat from " + Radar.closestEnemyTurretLocation);
+		Debug.println("retreat", "couldn't find a direction to retreat from " + Radar.closestEnemyTurretLocation);
+	    return false;
 	}
 	
 	private static boolean tryChargeToEnemy() throws GameActionException {
@@ -553,15 +610,18 @@ public class BotViper extends Globals {
 		return false;
 	}
 	
-	private static boolean tryMoveToHelpAlly(RobotInfo[] visibleHostiles) throws GameActionException {
-		MapLocation closestHostile = Util.closest(visibleHostiles).location;
+	private static boolean tryMoveToHelpAlly(RobotInfo[] visibleHostiles,
+			boolean ignoreZombieDens) throws GameActionException {
+		RobotInfo closestHostile = Util.closest(visibleHostiles);
+		if (ignoreZombieDens && closestHostile.type == RobotType.ZOMBIEDEN) return false;
+		MapLocation closestHostileLocation = closestHostile.location;
 		
 		boolean allyIsFighting = false;
 		RobotInfo[] alliesAroundHostile = 
-				rc.senseNearbyRobots(closestHostile, myAttackRadiusSquared, us);
+				rc.senseNearbyRobots(closestHostileLocation, myAttackRadiusSquared, us);
 		for (RobotInfo ally : alliesAroundHostile) {
 			if (ally.type.canAttack()) {
-				if (ally.location.distanceSquaredTo(closestHostile) <= ally.type.attackRadiusSquared) {
+				if (ally.location.distanceSquaredTo(closestHostileLocation) <= ally.type.attackRadiusSquared) {
 					allyIsFighting = true;
 					break;
 				}
@@ -569,7 +629,7 @@ public class BotViper extends Globals {
 		}
 		
 		if (allyIsFighting) {
-			if (Nav.tryMoveInDirection(here.directionTo(closestHostile))) {
+			if (Nav.tryMoveInDirection(here.directionTo(closestHostileLocation))) {
 //				Debug.indicate("micro", 0, "moving to help ally fight hostile at " + closestHostile);
 				return true;
 			}
@@ -577,12 +637,14 @@ public class BotViper extends Globals {
 		return false;
 	}
 	
-	private static boolean tryMoveToAttackHelplessTarget(RobotInfo[] visibleHostiles) throws GameActionException {
+	private static boolean tryMoveToAttackHelplessTarget(RobotInfo[] visibleHostiles,
+			boolean ignoreZombieDens) throws GameActionException {
 		RobotInfo closestHostile = Util.closest(visibleHostiles);
 		if (closestHostile.type.canAttack()) {
 			return false;
 		}
-		
+		if (ignoreZombieDens && closestHostile.type == RobotType.ZOMBIEDEN) return false;
+
 		if (Nav.tryMoveInDirection(here.directionTo(closestHostile.location))) {
 //			Debug.indicate("micro", 0, "moving to attack helpless " + closestHostile.type + " at " + closestHostile.location);
 			return true;
