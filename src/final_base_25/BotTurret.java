@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotTurret extends Globals {
 	public static void loop() {
-		Debug.init("heal");
+		Debug.init("robotinfo");
 		rc.emptySignalQueue(); // flush signal backlog
 		int maxBytecodesUsed = 0;
 		int maxBytecodeUsedTurn = 0;
@@ -15,7 +15,6 @@ public class BotTurret extends Globals {
 				Debug.indicate("bytecodes", 0, "start: " + Clock.getBytecodeNum());
 				processSignals();
 				Debug.indicateAppend("bytecodes", 0, "; after processSignals: " + Clock.getBytecodeNum());
-				Radar.updateClosestEnemyTurretInfo();
 				Radar.indicateEnemyTurretLocation(0, 200, 200);
 				manageHealingState();
 				if (rc.getType() == RobotType.TURRET) {
@@ -86,7 +85,7 @@ public class BotTurret extends Globals {
 	
 	private static void turnTTM() throws GameActionException {
 		if (!rc.isCoreReady()) return;
-		
+				
 //		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
 		//Radar.removeOldEnemyTurrets(Radar.TURRET_MEMORY_ROUNDS);
 		
@@ -106,6 +105,8 @@ public class BotTurret extends Globals {
 		}
 		
 		if (inHealingState) {
+			Radar.updateClosestEnemyTurretInfo();
+
 			if (tryToHealAtArchon()) {
 				return;
 			}

@@ -5,7 +5,7 @@ import battlecode.common.*;
 public class BotViper extends Globals {
 	public static void loop() {
 		FastMath.initRand(rc);
-		Debug.init("retreat");
+		Debug.init("robotinfo");
     	try {
     		processSignals(true);
     	} catch (Exception e) {
@@ -17,7 +17,7 @@ public class BotViper extends Globals {
 			try {
 				Globals.update();
 				turn();
-
+				Radar.indicateEnemyTurretLocation(0, 200, 200);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -49,18 +49,20 @@ public class BotViper extends Globals {
 
 		processSignals(false);
 		
-		Radar.indicateEnemyTurretLocation(0, 200, 200);
-
 		manageHealingState();
+		
+		if (rc.isCoreReady()) {
+			Radar.updateClosestEnemyTurretInfo();
+		}
 		
 		if (tryToMicro()) {
 			return;
 		}
 		
 //		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
-		Radar.updateClosestEnemyTurretInfo();
 
 		if (rc.isCoreReady()) {
+
 			if (tryDoAntiTurtleCharge()) {
 				return;
 			}

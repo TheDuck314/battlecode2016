@@ -36,7 +36,7 @@ public class BotArchon extends Globals {
 	//private static boolean pullMode = false;
 	
 	public static void loop() throws GameActionException {
-		Debug.init("msg");
+		Debug.init("robotinfo");
 		
 		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
 		
@@ -52,6 +52,7 @@ public class BotArchon extends Globals {
 			try {
 				Globals.update();
 			    turn();
+				Radar.indicateEnemyTurretLocation(0, 200, 200);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -100,9 +101,12 @@ public class BotArchon extends Globals {
 		processSignals();
 		
 		if (rc.getRoundNum() >= scheduledEducationRound) {
+			Radar.updateClosestEnemyTurretInfo();
 			educateBaby(scheduledEducationType);
 			Debug.indicate("education", 0, "educated a " + scheduledEducationType + " as scheduled");
 			scheduledEducationRound = 999999;
+		} else if (rc.isCoreReady()) {
+			Radar.updateClosestEnemyTurretInfo();
 		}
 		
 		if (rc.getRoundNum() >= 40) {
@@ -135,13 +139,10 @@ public class BotArchon extends Globals {
 		}
 		
 //		Radar.indicateEnemyArchonLocation(0, 100, 100);
-		Radar.indicateEnemyTurretLocation(0, 200, 200);
 
 		if (rc.isCoreReady()) {
 //			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
 			//Radar.removeOldEnemyTurrets(Radar.TURRET_MEMORY_ROUNDS);
-			
-			Radar.updateClosestEnemyTurretInfo();
 			
 			if (fleeOverwhelmingEnemies()) {
 				return;
@@ -391,7 +392,6 @@ public class BotArchon extends Globals {
 			Messages.sendRobotLocation(bri, 2);
 		}
 		// tell baby closest known enemy turret
-		Radar.updateClosestEnemyTurretInfo();
 		Messages.sendRobotLocation(Radar.closestEnemyTurretInfo, 2);
 	
 		// tell baby known neutral archon locations
@@ -410,7 +410,6 @@ public class BotArchon extends Globals {
 			Messages.sendRobotLocation(bri, 2);
 		}
 		// tell scout closest known enemy turret
-		Radar.updateClosestEnemyTurretInfo();
 		Messages.sendRobotLocation(Radar.closestEnemyTurretInfo, 2);
 		educateBabyAboutAntiTurtleCharge();
 	}

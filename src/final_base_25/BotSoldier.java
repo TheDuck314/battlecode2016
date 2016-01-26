@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("retreat");		
+		Debug.init("robotinfo");		
 		FastMath.initRand(rc);
     	try {
     		processSignals(true);
@@ -19,7 +19,8 @@ public class BotSoldier extends Globals {
 			try {
 				Globals.update();
 				turn();
-				setIndicator();
+				Radar.indicateEnemyTurretLocation(0, 200, 200);
+//				setIndicator();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -68,9 +69,12 @@ public class BotSoldier extends Globals {
 			Debug.indicateLine("bug", here, attackTarget, 0, 255, 0);
 		}
 		
-		Radar.indicateEnemyTurretLocation(0, 200, 200);
 
 		manageHealingState();
+		
+		if (rc.isCoreReady()) {
+			Radar.updateClosestEnemyTurretInfo();
+		}
 		
 		if (tryToMicro()) {
 			Debug.indicate("bug", 2, "microed");
@@ -81,7 +85,6 @@ public class BotSoldier extends Globals {
 
 		if (rc.isCoreReady()) {
 //			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
-			Radar.updateClosestEnemyTurretInfo();
 			Debug.indicateAppend("bytecodes", 0, "; after turrets: " + Clock.getBytecodeNum());
 
 			if (tryDoAntiTurtleCharge()) {
