@@ -39,7 +39,7 @@ public class BotScout extends Globals {
 	//private static int birthRound;
 	
 	public static void loop() {
-		Debug.init("robotinfo");
+		Debug.init("block");
 
     	origin = here;
     	exploredGrid[50][50] = true;   
@@ -201,7 +201,15 @@ public class BotScout extends Globals {
 			if (rc.canSenseRobot(archonFollowId)) {
 				MapLocation archonLoc = rc.senseRobot(archonFollowId).location;
 				if (here.isAdjacentTo(archonLoc)) {
-					Nav.goToDirectSafelyAvoidingTurret(archonLoc, Radar.closestEnemyTurretLocation);
+					boolean moved = Nav.goToDirectSafelyAvoidingTurret(archonLoc, 
+							Radar.closestEnemyTurretLocation);
+					if (!moved) {
+						if (rc.senseParts(here) > 0) {
+							// we should move off these parts so our archon can get them
+							moveAround();
+//							Debug.println("block", "moving around because we are blocking some parts");
+						}
+					}
 					if (rc.getRoundNum() - lastTurretOwnershipBroadcastRound > 40) {
 						Messages.sendTurretOwnershipClaim(archonFollowId, 2*mySensorRadiusSquared);
 						lastTurretOwnershipBroadcastRound = rc.getRoundNum();
