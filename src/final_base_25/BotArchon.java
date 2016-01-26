@@ -420,8 +420,9 @@ public class BotArchon extends Globals {
 	private static double repairScore(RobotInfo ally) {
 		switch (ally.type) {
 		case TURRET: 
-			return 1000000.0 + ally.health;
-			
+			return 1000000.0 - ally.health; // note sign: try to heal turrets which are under attack
+		case TTM:
+			return 100000.0 + ally.health;			
 		case VIPER:
 			return 10000.0 + ally.health;
 			
