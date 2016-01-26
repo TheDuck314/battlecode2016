@@ -39,7 +39,7 @@ public class BotScout extends Globals {
 	//private static int birthRound;
 	
 	public static void loop() {
-		Debug.init("block");
+		Debug.init("robotinfo");
 
     	origin = here;
     	exploredGrid[50][50] = true;   
