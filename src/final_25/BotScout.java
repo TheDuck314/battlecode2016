@@ -54,6 +54,7 @@ public class BotScout extends Globals {
 			try {
 				Globals.update();
 			    turn();
+//				Radar.indicateEnemyTurretLocation(0, 200, 200);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -415,6 +416,16 @@ public class BotScout extends Globals {
 					}
 					Messages.sendRobotLocation(bri, rangeSq);
 //					Debug.indicate("turret", 0, "sent turret discover message");
+				}
+			} else if (hostile.type == RobotType.TTM) {
+				BigRobotInfo bri = Radar.addRobot(hostile.ID, RobotType.TURRET, hostile.team, null, Globals.roundNum);
+				if (bri != null) {
+					int rangeSq = Math.min(MapEdges.maxRangeSq, Globals.broadCastRangeSqWhenSeen);
+					if (AntiTurtleCharge.enemyMightBeATurtle) {
+						rangeSq = MapEdges.maxRangeSq;
+					}
+					Messages.sendRobotLocation(bri, rangeSq);
+//					Debug.indicate("turret", 0, "sent ttm discover message");
 				}
 			} else if (hostile.type == RobotType.ARCHON) {
 				boolean isNewID = Radar.bigRobotInfoById[hostile.ID] == null;
