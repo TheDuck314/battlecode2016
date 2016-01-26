@@ -313,8 +313,18 @@ public class BotArchon extends Globals {
 					spawnType = RobotType.SCOUT;
 				}
 			}
-			if (spawnCount % 15 == 14) {
-				spawnType = RobotType.VIPER;
+			// decide how often to build vipers
+			if (rc.getRoundNum() > 1000 && rc.getRobotCount() <= 20) {
+				// if we are losing, build a lot of vipers to hold off
+				// pursuers and to make the game more random
+				if (spawnCount % 4 == 0) {
+					spawnType = RobotType.VIPER;
+					//if (rc.hasBuildRequirements(RobotType.VIPER)) System.out.println("built a viper because we are losing");
+				} 
+			} else {
+				if (spawnCount % 15 == 14) {
+					spawnType = RobotType.VIPER;
+				}
 			}
 		}
 		/*if (pullMode && rc.getRoundNum() <= 500) {
