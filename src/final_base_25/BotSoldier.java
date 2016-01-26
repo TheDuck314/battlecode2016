@@ -138,14 +138,14 @@ public class BotSoldier extends Globals {
 			}
 			
 			Debug.indicate("retreat", 0, "retreating out from under turret at " + Radar.closestEnemyTurretLocation);
-			Debug.println("retreat", "retreating out from under turret at " + Radar.closestEnemyTurretLocation);
+//			Debug.println("retreat", "retreating out from under turret at " + Radar.closestEnemyTurretLocation);
 			Debug.indicateLine("retreat", here, Radar.closestEnemyTurretLocation, 0, 255, 255);
 			rc.move(dir);
 			return true;
 		}
 
 		Debug.indicate("retreat", 0, "couldn't find a direction to retreat from " + Radar.closestEnemyTurretLocation);
-		Debug.println("retreat", "couldn't find a direction to retreat from " + Radar.closestEnemyTurretLocation);
+//		Debug.println("retreat", "couldn't find a direction to retreat from " + Radar.closestEnemyTurretLocation);
 	    return false;
 	}
 	
