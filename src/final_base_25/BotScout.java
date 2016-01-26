@@ -385,8 +385,8 @@ public class BotScout extends Globals {
 	}
 	
 	private static void sendRobotInfo() throws GameActionException {
-		int turretWarningRangeSq = 9*mySensorRadiusSquared;
-		boolean first = true;
+//		int turretWarningRangeSq = 9*mySensorRadiusSquared;
+//		boolean first = true;
 		for (RobotInfo hostile : visibleHostiles) {
 			if (hostile.type == RobotType.TURRET) {
 //				if (!Radar.turretIsKnown(hostile.ID, hostile.location)) {
@@ -398,7 +398,7 @@ public class BotScout extends Globals {
 //					Radar.addEnemyTurret(hostile.ID, hostile.location);
 //					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, turretWarningRangeSq);
 //				}
-				boolean isNewID = Radar.bigRobotInfoById[hostile.ID] == null;
+//				boolean isNewID = Radar.bigRobotInfoById[hostile.ID] == null;
 				BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, Globals.roundNum);
 				if (bri != null) {
 					int rangeSq = Math.min(MapEdges.maxRangeSq, Globals.broadCastRangeSqWhenSeen);
