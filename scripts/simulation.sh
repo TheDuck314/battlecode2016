@@ -1,18 +1,19 @@
 #!/bin/bash
 
 teams=""
-teams+="final_base_25 "
-# teams+="turret_warning24 "
+teams+="final_25 "
+teams+="sprint_11 "
 teams+="dont_chase_scouts24 "
-# teams+="antiturtle23 "
+teams+="seeding_18 "
+teams+="felix15 "
+teams+="final_original_25 "
 teams+="ttm_dense_pure_11 "
+# teams+="post_seeding_19 "
+# teams+="postsprint_13 "
+# teams+="turret_warning24 "
+# teams+="antiturtle23 "
 # teams+="ttm_dense_9 "
 # teams+="ttm_heal "
-teams+="seeding_18 "
-# teams+="post_seeding_19 "
-teams+="sprint_11 "
-# teams+="postsprint_13 "
-teams+="felix15 "
 # teams+="focused16 "
 # teams+="simplesoldier18 "
 # teams+="sodier "
@@ -51,6 +52,9 @@ teams+="felix15 "
 simulate() {
     local team_a="$1"
     local team_b="$2"
+    if [ "$team_a" = "$team_b" ] ; then
+        return
+    fi
     local logtmp="logs/tmplog"
     local log="logs/log--$team_a--$team_b"
     if [ -f "$log" ] ; then
