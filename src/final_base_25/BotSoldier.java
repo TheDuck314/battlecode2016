@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("robotinfo");		
+		Debug.init("retreat");		
 		FastMath.initRand(rc);
     	try {
     		processSignals(true);
@@ -89,10 +89,10 @@ public class BotSoldier extends Globals {
 				return;
 			}
 			
-			if (retreatFromEnemyTurretRange()) {
+			/*if (retreatFromEnemyTurretRange()) {
 				Debug.indicate("turrets", 0, "retreating from enemy turret range");
 				return;
-			}
+			}*/
 			
 			//		Debug.indicate("micro", 2, "inHealingState = " + inHealingState);
 			if (inHealingState) {
@@ -108,13 +108,15 @@ public class BotSoldier extends Globals {
 		}
 	}
 	
-	private static boolean retreatFromEnemyTurretRange() {
+	private static boolean retreatFromEnemyTurretRange() throws GameActionException {
 		if (Radar.closestEnemyTurretLocation == null) {
+			Debug.indicate("retreat", 0, "no known enemy turret");
 			return false;
 		}
 		
 		int currentDistSq = Radar.closestEnemyTurretLocation.distanceSquaredTo(here);
 		if (currentDistSq > RobotType.TURRET.attackRadiusSquared) {
+			Debug.indicate("retreat", 0, "not in range of " + Radar.closestEnemyTurretLocation);
 			return false;
 		}
 		
@@ -122,7 +124,28 @@ public class BotSoldier extends Globals {
 		Direction[] dirs = { awayDir, awayDir.rotateLeft(), awayDir.rotateRight(),
 				awayDir.rotateLeft().rotateLeft(), awayDir.rotateRight().rotateRight() };
 		
-	
+		dirSearch: for (Direction dir : dirs) {
+			MapLocation dirLoc = here.add(dir);
+			if (!rc.canMove(dir)) continue;
+			if (Radar.closestEnemyTurretLocation.distanceSquaredTo(dirLoc) <= currentDistSq) continue;
+			
+			for (RobotInfo hostile : visibleHostiles) {
+				if (hostile.type.canAttack()) {
+					if (hostile.location.distanceSquaredTo(dirLoc) <= hostile.type.attackRadiusSquared) {
+						continue dirSearch;
+					}
+				}
+			}
+			
+			Debug.indicate("retreat", 0, "retreating out from under turret at " + Radar.closestEnemyTurretLocation);
+			Debug.println("retreat", "retreating out from under turret at " + Radar.closestEnemyTurretLocation);
+			Debug.indicateLine("retreat", here, Radar.closestEnemyTurretLocation, 0, 255, 255);
+			rc.move(dir);
+			return true;
+		}
+
+		Debug.indicate("retreat", 0, "couldn't find a direction to retreat from " + Radar.closestEnemyTurretLocation);
+		Debug.println("retreat", "couldn't find a direction to retreat from " + Radar.closestEnemyTurretLocation);
 	    return false;
 	}
 	
@@ -255,8 +278,20 @@ public class BotSoldier extends Globals {
 		}
 	}
 
-	private static boolean tryToMicro() throws GameActionException {		
-		if (visibleHostiles.length == 0) return false;
+	private static boolean tryToMicro() throws GameActionException {			
+		boolean currentlyChargeTurtleOrGathering = (AntiTurtleCharge.chargeCenter != null)
+				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
+		boolean currentlyChargingTurtle = currentlyChargeTurtleOrGathering 
+				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
+		
+		if (visibleHostiles.length == 0) {
+			if (rc.isCoreReady() && !currentlyChargingTurtle) {
+				if (retreatFromEnemyTurretRange()) {
+					return true;
+				}
+			}
+			return false;
+		}
 
 		if (rc.isCoreReady()) {
 			double leftHealth = rc.getHealth() - rc.getViperInfectedTurns() * 2.0;
@@ -277,11 +312,6 @@ public class BotSoldier extends Globals {
 				}
 			}
 		}
-		
-		boolean currentlyChargeTurtleOrGathering = (AntiTurtleCharge.chargeCenter != null)
-				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
-		boolean currentlyChargingTurtle = currentlyChargeTurtleOrGathering 
-				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
 				
 		if (inHealingState && !currentlyChargingTurtle) {
 			// if we are in the healing state, then if we are under attack we should retreat.
@@ -307,6 +337,9 @@ public class BotSoldier extends Globals {
 		if (rc.isCoreReady() && !currentlyChargingTurtle) {
 			if (retreatIfOutnumbered(visibleHostiles)) {
 				Debug.indicate("micro", 0, "retreating because outnumbered");
+				return true;
+			}
+			if (retreatFromEnemyTurretRange()) {
 				return true;
 			}
 		}
