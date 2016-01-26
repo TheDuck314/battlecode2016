@@ -498,7 +498,7 @@ public class BotViper extends Globals {
 			}
 		}
 		
-		if (closestHostileDistSq > 5) return false;
+		if (closestHostileDistSq > 10) return false;
 		
 		Direction bestRetreatDir = null;
 		int bestDistSq = closestHostileDistSq;

@@ -6,8 +6,8 @@ public class BotTurret extends Globals {
 	public static void loop() {
 //		Debug.init("robotinfo");
 		rc.emptySignalQueue(); // flush signal backlog
-		int maxBytecodesUsed = 0;
-		int maxBytecodeUsedTurn = 0;
+//		int maxBytecodesUsed = 0;
+//		int maxBytecodeUsedTurn = 0;
 		while (true) {
 			int startTurn = rc.getRoundNum();
 			try {
@@ -15,13 +15,13 @@ public class BotTurret extends Globals {
 //				Debug.indicate("bytecodes", 0, "start: " + Clock.getBytecodeNum());
 				processSignals();
 //				Debug.indicateAppend("bytecodes", 0, "; after processSignals: " + Clock.getBytecodeNum());
-//				Radar.indicateEnemyTurretLocation(0, 200, 200);
 				manageHealingState();
 				if (rc.getType() == RobotType.TURRET) {
 				    turnTurret();
 				} else {
 					turnTTM();
 				}
+//				Radar.indicateEnemyTurretLocation(0, 200, 200);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -29,12 +29,12 @@ public class BotTurret extends Globals {
 			if (startTurn != endTurn) {
 				System.out.println("OVER BYTECODE LIMIT");
 			} else {
-				int bytecodesUsed = Clock.getBytecodeNum();
-				if (bytecodesUsed > maxBytecodesUsed) {
-					maxBytecodesUsed = bytecodesUsed;
-					maxBytecodeUsedTurn = rc.getRoundNum();
-//					Debug.println("bytecodes", "new max bytecode use = " + maxBytecodesUsed + " on turn " + maxBytecodeUsedTurn);
-				}
+//				int bytecodesUsed = Clock.getBytecodeNum();
+//				if (bytecodesUsed > maxBytecodesUsed) {
+//					maxBytecodesUsed = bytecodesUsed;
+//					maxBytecodeUsedTurn = rc.getRoundNum();
+////					Debug.println("bytecodes", "new max bytecode use = " + maxBytecodesUsed + " on turn " + maxBytecodeUsedTurn);
+//				}
 			}
 			Clock.yield();
 		}

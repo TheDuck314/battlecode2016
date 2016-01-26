@@ -12,8 +12,8 @@ public class BotSoldier extends Globals {
     		System.out.println("EXCEPTION IN INITIAL PROCESSSIGNALS:");
 			e.printStackTrace();    		
     	}
-		int maxBytecodesUsed = 0;
-		int maxBytecodeUsedTurn = 0;
+//		int maxBytecodesUsed = 0;
+//		int maxBytecodeUsedTurn = 0;
     	while (true) {
 			int startTurn = rc.getRoundNum();
 			try {
@@ -28,12 +28,12 @@ public class BotSoldier extends Globals {
 			if (startTurn != endTurn) {
 				System.out.println("OVER BYTECODE LIMIT");
 			} else {
-				int bytecodesUsed = Clock.getBytecodeNum();
-				if (bytecodesUsed > maxBytecodesUsed) {
-					maxBytecodesUsed = bytecodesUsed;
-					maxBytecodeUsedTurn = rc.getRoundNum();
-//					Debug.println("bytecodes", "new max bytecode use = " + maxBytecodesUsed + " on turn " + maxBytecodeUsedTurn);
-				}
+//				int bytecodesUsed = Clock.getBytecodeNum();
+//				if (bytecodesUsed > maxBytecodesUsed) {
+//					maxBytecodesUsed = bytecodesUsed;
+//					maxBytecodeUsedTurn = rc.getRoundNum();
+////					Debug.println("bytecodes", "new max bytecode use = " + maxBytecodesUsed + " on turn " + maxBytecodeUsedTurn);
+//				}
 			}
 			Clock.yield();
 		}
@@ -576,7 +576,7 @@ public class BotSoldier extends Globals {
 		int numNearbyAllies = 1;
 		RobotInfo[] nearbyAllies = rc.senseNearbyRobots(closestHostile.location, 24, us);
 		for (RobotInfo ally : nearbyAllies) {
-			if (ally.type.canAttack()) {
+			if (ally.type.canAttack() && ally.health >= ally.type.maxHealth / 2) {
 				numNearbyAllies += 1;
 			}
 		}

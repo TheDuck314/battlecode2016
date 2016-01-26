@@ -121,7 +121,7 @@ public class Radar extends Globals {
 		if (loc == null) {
 			// loc == null means the robot disappeared from where it was discovered,
 			// in which case round = 1 + (the round it was discovered)
-			if (bri.location == null) return null;
+			if (bri.round > round - Globals.rebroadCastUpdateInterval && bri.location == null) return null;
 			bri.location = null;
 			bri.round = round;
 			return bri;
