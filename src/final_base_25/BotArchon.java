@@ -10,6 +10,7 @@ public class BotArchon extends Globals {
 	private static int spawnCount = 0;
 
 	private static int lastArchonLocationMessageRound = 0;
+	private static int lastGlobalArchonLocationMessageRound = 0;
 
 	private static MapLocation startingLocation = null;
 	
@@ -35,7 +36,7 @@ public class BotArchon extends Globals {
 	//private static boolean pullMode = false;
 	
 	public static void loop() throws GameActionException {
-		Debug.init("robotinfo");
+		Debug.init("archonloc");
 		
 		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
 		
@@ -230,7 +231,15 @@ public class BotArchon extends Globals {
 	
 	private static void trySendArchonLocationMessage() throws GameActionException {
 		if (lastArchonLocationMessageRound < rc.getRoundNum() - 60) {
-			Messages.sendArchonLocation(here, 900);
+			int rangeSq = 900;
+			if (lastGlobalArchonLocationMessageRound < rc.getRoundNum() - 150
+					&& visibleHostiles.length == 0
+					&& rc.getTeamParts() < 50) {
+				rangeSq = MapEdges.maxBroadcastDistSq();
+				lastGlobalArchonLocationMessageRound = rc.getRoundNum();
+			}
+			Messages.sendArchonLocation(here, rangeSq);
+			Debug.indicate("archonloc", 0, "sending archon location message with rangesq = " + rangeSq);
 			lastArchonLocationMessageRound = rc.getRoundNum();
 //			Debug.indicate("heal", 0, "sent archon location");
 		}
