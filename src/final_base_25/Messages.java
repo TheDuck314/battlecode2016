@@ -81,7 +81,7 @@ public class Messages extends Globals {
 	
 	public static void sendTurretTarget(MapLocation loc, int radiusSq) throws GameActionException {
 		sendMapLocation(CHANNEL_TURRET_TARGET, loc, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendTurretTarget " + radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendTurretTarget " + radiusSq);
 	}
 	
 	public static MapLocation parseTurretTarget(int[] data) {
@@ -90,13 +90,13 @@ public class Messages extends Globals {
 
 	public static void sendZombieDenLocation(MapLocation loc, int radiusSq) throws GameActionException {
 		rc.broadcastMessageSignal(CHANNEL_ZOMBIE_DEN, intFromMapLocation(loc), radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendZombieDenLocation " + radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendZombieDenLocation " + radiusSq);
 	}
 	
 	public static void sendZombieDenDestroyed(MapLocation loc, int radiusSq) throws GameActionException {
 		rc.broadcastMessageSignal(CHANNEL_ZOMBIE_DEN | ZOMBIE_DEN_DESTROYED_FLAG, 
 				intFromMapLocation(loc), radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendZombieDenDestroyed " + radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendZombieDenDestroyed " + radiusSq);
 	}
 	
 	public static boolean parseZombieDenWasDestroyed(int[] data) {
@@ -119,7 +119,7 @@ public class Messages extends Globals {
 		int data0 = (int)(data >> 32) & CHANNEL_MASK_INVERSE;
 		int data1 = (int)(data & 0x00000000ffffffffL);
 		rc.broadcastMessageSignal(CHANNEL_ZOMBIE_DEN_LIST | data0, data1, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendUpToThreeZombieDens " + radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendUpToThreeZombieDens " + radiusSq);
 	}
 	
 	// locationsOut should have length at least three.
@@ -143,7 +143,7 @@ public class Messages extends Globals {
 	
 	public static void sendDenAttackCommand(MapLocation loc, int radiusSq) throws GameActionException {
 		sendMapLocation(CHANNEL_DEN_ATTACK_COMMAND, loc, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendUpToThreeZombieDens " + radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendUpToThreeZombieDens " + radiusSq);
 	}
 	
 	public static MapLocation parseDenAttackCommand(int[] data) {
@@ -152,7 +152,7 @@ public class Messages extends Globals {
 	
 	public static void sendArchonLocation(MapLocation loc, int radiusSq) throws GameActionException {
 		sendMapLocation(CHANNEL_ARCHON_LOCATION, loc, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendArchonLocation " + radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendArchonLocation " + radiusSq);
 	}
 	
 	public static MapLocation parseArchonLocation(int[] data) {
@@ -163,7 +163,7 @@ public class Messages extends Globals {
 		int data0 = CHANNEL_FOUND_PARTS | (CHANNEL_MASK_INVERSE & numParts);
 		int data1 = intFromMapLocation(loc);
 		rc.broadcastMessageSignal(data0, data1, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendPartsLocation " + radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendPartsLocation " + radiusSq);
 	}
 	
 	// outPartsLoc is set to the MapLocation of the found parts
@@ -178,14 +178,14 @@ public class Messages extends Globals {
 		int data0 = type.ordinal();
 		int data1 = intFromMapLocation(loc);
 		rc.broadcastMessageSignal(CHANNEL_FOUND_NEUTRAL | data0, data1, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendNeutralLocation " + radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendNeutralLocation " + radiusSq);
 	}
 	
 	public static void sendNeutralWasActivated(MapLocation loc, RobotType type, int radiusSq) throws GameActionException {
 		int data0 = type.ordinal() | NEUTRAL_WAS_ACTIVATED_FLAG;
 		int data1 = intFromMapLocation(loc);
 		rc.broadcastMessageSignal(CHANNEL_FOUND_NEUTRAL | data0, data1, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendNeutralWasActivated " + radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendNeutralWasActivated " + radiusSq);
 	}
 	
 	public static NeutralRobotInfo parseNeutralLocation(int[] data) {
@@ -234,7 +234,7 @@ public class Messages extends Globals {
 		int value = minX << 24 | maxX << 16 | minY << 8 | maxY;
 		sendInt(CHANNEL_MAP_EDGES, value, radiusSq);
 //		Debug.indicate("edges", 1, "send: value=" + Integer.toHexString(value) + " MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
-//		Debug.indicate("msg", msgDILN(), "sendKnownMapEdges " + radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendKnownMapEdges " + radiusSq);
 	}
 	
 	public static void processMapEdges(int[] data) {
@@ -285,7 +285,7 @@ public class Messages extends Globals {
 		int data1 = intFromMapLocation(bri.location) | (bri.type.ordinal() & 0xf) << 20 | (bri.team.ordinal() & 0xf) << 24;
 		rc.broadcastMessageSignal(CHANNEL_ROBOT_LOCATION | data0, data1, radiusSq);
 //		Debug.println("rebroadcast", "sendRobotLocation " + radiusSq + " enemyId=" + bri.id + " enemyLoc=" + bri.location + " round=" + bri.round);
-//		Debug.indicate("msg", msgDILN(), "sendRobotLocation " + radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendRobotLocation " + radiusSq);
 		return bri;
 	}
 	
@@ -329,7 +329,7 @@ public class Messages extends Globals {
 		int data1 = (int)(data & 0x00000000ffffffffL);
 		rc.broadcastMessageSignal(CHANNEL_RADAR | (CHANNEL_MASK_INVERSE & data0), data1, radiusSq);
 //		Debug.indicate("msg", msgDILN(), "sendRadarData " + radiusSq);
-//		Debug.indicate("radar", 2, "sent radar data with radiusSq = " + radiusSq);
+		Debug.indicate("radar", 2, "sent radar data with radiusSq = " + radiusSq);
 	}
 	
 	// adds radar hits within maxDistSq to the enemy cache.
@@ -463,7 +463,7 @@ public class Messages extends Globals {
 	
 	public static void sendTurretOwnershipClaim(int turretId, int radiusSq) throws GameActionException {
 		sendInt(CHANNEL_TURRET_OWNERSHIP, turretId, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendTurretOwnershipClaim " + radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendTurretOwnershipClaim " + radiusSq);
 	}
 	
 	public static int parseTurretOwnershipClaim(int[] data) {
@@ -472,7 +472,7 @@ public class Messages extends Globals {
 	
 	public static void sendUnpairedScoutReport(int radiusSq) throws GameActionException {
 		rc.broadcastMessageSignal(CHANNEL_UNPAIRED_SCOUT_REPORT, 0, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendUnpairedScoutReport " + radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendUnpairedScoutReport " + radiusSq);
 	}	
 	
 	public static void sendPartRegion(MapLocation partsCenter, int totalParts, int avgTurnsToUncover,
@@ -482,6 +482,7 @@ public class Messages extends Globals {
 		int data1 = (avgTurnsToUncover << 20) | locInt;
 		int data0 = totalParts & CHANNEL_MASK_INVERSE;
 		rc.broadcastMessageSignal(CHANNEL_PART_REGIONS | data0, data1, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendPartRegion " + radiusSq);
 	}
 	
 	public static PartRegion parsePartRegion(int[] data) {
@@ -503,6 +504,7 @@ public class Messages extends Globals {
 
 	public static void sendNotATurtle(int radiusSq) throws GameActionException {
 		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | ANTI_TURTLE_CHARGE_NOT_A_TURTLE_FLAG, 0, radiusSq);
+		Debug.indicate("msg", msgDILN(), "sendNotATurtle " + radiusSq);
 	}
 	
 	public static AntiTurtleChargePlan parseAntiTurtleChargePlan(int[] data) {

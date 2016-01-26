@@ -36,7 +36,7 @@ public class BotArchon extends Globals {
 	//private static boolean pullMode = false;
 	
 	public static void loop() throws GameActionException {
-		Debug.init("archonloc");
+		Debug.init("msg");
 		
 		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
 		
@@ -214,17 +214,17 @@ public class BotArchon extends Globals {
 		}
 		
 		for (RobotInfo hostile : visibleHostiles) {
-//			if (hostile.type == RobotType.TURRET) {
+			if (hostile.type == RobotType.TURRET) {
 //				if (!Radar.turretIsKnown(hostile.ID, hostile.location)) {
 //					Radar.addEnemyTurret(hostile.ID, hostile.location);
 //					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, 9*mySensorRadiusSquared);
 //				}
-//			}
-			boolean isNewID = Radar.bigRobotInfoById[hostile.ID] == null;
-			BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, Globals.roundNum);
-			if (bri != null) {
-				Messages.sendRobotLocation(bri, Globals.broadCastRangeSqWhenSeenByArchon);
-				Debug.indicate("turret", 0, "sent turret discover message");
+//				boolean isNewID = Radar.bigRobotInfoById[hostile.ID] == null;
+				BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, Globals.roundNum);
+				if (bri != null) {
+					Messages.sendRobotLocation(bri, Globals.broadCastRangeSqWhenSeenByArchon);
+					Debug.indicate("turret", 0, "sent turret discover message");
+				}
 			}
 		}
 	}
