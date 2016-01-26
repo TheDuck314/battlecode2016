@@ -39,7 +39,7 @@ public class BotScout extends Globals {
 	//private static int birthRound;
 	
 	public static void loop() {
-		Debug.init("robotinfo");
+//		Debug.init("robotinfo");
 
     	origin = here;
     	exploredGrid[50][50] = true;   
@@ -76,9 +76,9 @@ public class BotScout extends Globals {
 		sendRadarInfo();
 		sendRobotInfo();
 		manageAntiTurtleChargeProposals();		
-		Debug.indicate("detector", 2, "AntiTurtleCharge.enemyMightBeATurtle = " + AntiTurtleCharge.enemyMightBeATurtle);
+//		Debug.indicate("detector", 2, "AntiTurtleCharge.enemyMightBeATurtle = " + AntiTurtleCharge.enemyMightBeATurtle);
 		//Radar.indicateEnemyArchonLocation(0, 200, 200);
-		Radar.indicateEnemyTurretLocation(0, 200, 200);
+//		Radar.indicateEnemyTurretLocation(0, 200, 200);
 		if (rc.isCoreReady()) {
 //			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);			
 //			Radar.updateClosestEnemyTurretLocation();
@@ -124,23 +124,23 @@ public class BotScout extends Globals {
 								here.directionTo(Radar.closestEnemyTurretLocation), 3);
 						// propose a charge
 						AntiTurtleCharge.proposeCharge(proposalCenter);
-						Debug.indicate("charge", 2, "proposed anti turtle charge at " + proposalCenter);
+//						Debug.indicate("charge", 2, "proposed anti turtle charge at " + proposalCenter);
 					} else {
-						Debug.indicate("charge", 1, "no enemy turret visible");
+//						Debug.indicate("charge", 1, "no enemy turret visible");
 					}
 				} else {
-					Debug.indicate("charge", 1, "not enough friends near");
+//					Debug.indicate("charge", 1, "not enough friends near");
 				}
 			} else {
-				Debug.indicate("charge", 1, "too early, or not enough gathered, or not %10");
+//				Debug.indicate("charge", 1, "too early, or not enough gathered, or not %10");
 			}
 		} else {
-			Debug.indicate("charge", 1, "last proposal too recent");
+//			Debug.indicate("charge", 1, "last proposal too recent");
 		}
 		
-		if (AntiTurtleCharge.chargeCenter != null) {
-			Debug.indicateLine("charge", here, AntiTurtleCharge.chargeCenter, 0, 255, 0);
-		}
+//		if (AntiTurtleCharge.chargeCenter != null) {
+////			Debug.indicateLine("charge", here, AntiTurtleCharge.chargeCenter, 0, 255, 0);
+//		}
 	}
 
 	private static void tryBroadcastUnpairedScoutSignal() throws GameActionException {
@@ -246,7 +246,7 @@ public class BotScout extends Globals {
 			if (rc.canSenseLocation(closestKnownNeutralArchon)) {
 				RobotInfo robot = rc.senseRobotAtLocation(closestKnownNeutralArchon);
 				if (robot == null || robot.team != Team.NEUTRAL) {
-					Debug.indicate("archons", 0, "neutral archon at " + closestKnownNeutralArchon + " is missing!");
+//					Debug.indicate("archons", 0, "neutral archon at " + closestKnownNeutralArchon + " is missing!");
 					rangeSq = MapEdges.maxRangeSq;
 					Messages.sendNeutralWasActivated(closestKnownNeutralArchon, RobotType.ARCHON, rangeSq);
 					knownNeutralArchons.remove(closestKnownNeutralArchon);
@@ -260,14 +260,14 @@ public class BotScout extends Globals {
 		for (RobotInfo neutral : nearbyNeutrals) {
 			if (neutral.type == RobotType.ARCHON) {
 				if (!knownNeutralArchons.contains(neutral.location)) {
-					Debug.indicate("archons", 0, "found new neutral archon at " + neutral.location);
+//					Debug.indicate("archons", 0, "found new neutral archon at " + neutral.location);
 					rangeSq = MapEdges.maxRangeSq;
 					Messages.sendNeutralLocation(neutral.location, neutral.type, rangeSq);
 					knownNeutralArchons.add(neutral.location);
 					lastPartsOrNeutralSignalRound = rc.getRoundNum();
 					return;				
 				} else {
-					Debug.indicate("archons", 0, "already know about neutral archon at " + neutral.location);
+//					Debug.indicate("archons", 0, "already know about neutral archon at " + neutral.location);
 				}
 			}
 		}
@@ -414,7 +414,7 @@ public class BotScout extends Globals {
 						rangeSq = MapEdges.maxRangeSq;
 					}
 					Messages.sendRobotLocation(bri, rangeSq);
-					Debug.indicate("turret", 0, "sent turret discover message");
+//					Debug.indicate("turret", 0, "sent turret discover message");
 				}
 			} else if (hostile.type == RobotType.ARCHON) {
 				boolean isNewID = Radar.bigRobotInfoById[hostile.ID] == null;
@@ -423,7 +423,7 @@ public class BotScout extends Globals {
 					int rangeSq = Globals.broadCastRangeSqWhenSeen;
 					if (isNewID) rangeSq = MapEdges.maxRangeSq;
 					Messages.sendRobotLocation(bri, rangeSq);
-					Debug.indicate("archon", 0, "sent archon discover message");
+//					Debug.indicate("archon", 0, "sent archon discover message");
 				}
 			}
 		}
@@ -548,11 +548,11 @@ public class BotScout extends Globals {
 					NeutralRobotInfo neutral = Messages.parseNeutralLocation(data);
 					if (neutral.type == RobotType.ARCHON) {
 						if (Messages.parseNeutralWasActivated(data)) {
-							Debug.indicate("archons",  1, "heard that " + neutral.type + " at " + neutral.location + " was activated");
+//							Debug.indicate("archons",  1, "heard that " + neutral.type + " at " + neutral.location + " was activated");
 							knownNeutralArchons.remove(neutral.location);
 						} else {
 							knownNeutralArchons.add(neutral.location);
-							Debug.indicate("archons", 1, "heard about a neutral archon at " + neutral.location);
+//							Debug.indicate("archons", 1, "heard about a neutral archon at " + neutral.location);
 						}
 					}
 					break;
@@ -567,7 +567,7 @@ public class BotScout extends Globals {
 
 				case Messages.CHANNEL_BEGIN_EDUCATION:
 					if (justBorn) {
-						Debug.indicate("education", 0, "got begin education signal!");
+//						Debug.indicate("education", 0, "got begin education signal!");
 						// we read our education backwards, and we are finished
 						// when we reach the BEGIN_EDUCATION signal
 						return;
@@ -685,9 +685,9 @@ public class BotScout extends Globals {
 		
 		// Follow it
 		if (Nav.goToDirectSafely(loc)) {
-			Debug.indicateLine("chaseArchon", here, loc, 30, 30, 30);
-			Debug.indicate("chaseArchon", 0, "chasing from=" + here + " to loc=" + loc);
-			Debug.println("chaseArchon", "chasing from=" + here + " to loc=" + loc);
+//			Debug.indicateLine("chaseArchon", here, loc, 30, 30, 30);
+//			Debug.indicate("chaseArchon", 0, "chasing from=" + here + " to loc=" + loc);
+//			Debug.println("chaseArchon", "chasing from=" + here + " to loc=" + loc);
 			return true;
 		} else {
 			// If it is too far away, maybe we are not yet following it?

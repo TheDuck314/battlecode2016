@@ -461,7 +461,7 @@ public class Nav extends Globals {
 			Nav.goToDirectSafelyAvoidingTurret(dest, turretLocation);
 			return;
 		}
-		Debug.indicate("retreat", 1, "sTAAAT: dest=" + dest + ", turretLocation=" + turretLocation);
+//		Debug.indicate("retreat", 1, "sTAAAT: dest=" + dest + ", turretLocation=" + turretLocation);
 
 		MapLocation[] nearbyArchons = new MapLocation[10];
 		int numArchons = 0;

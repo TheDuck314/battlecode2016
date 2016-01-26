@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotTurret extends Globals {
 	public static void loop() {
-		Debug.init("robotinfo");
+//		Debug.init("robotinfo");
 		rc.emptySignalQueue(); // flush signal backlog
 		int maxBytecodesUsed = 0;
 		int maxBytecodeUsedTurn = 0;
@@ -12,10 +12,10 @@ public class BotTurret extends Globals {
 			int startTurn = rc.getRoundNum();
 			try {
 				Globals.update();
-				Debug.indicate("bytecodes", 0, "start: " + Clock.getBytecodeNum());
+//				Debug.indicate("bytecodes", 0, "start: " + Clock.getBytecodeNum());
 				processSignals();
-				Debug.indicateAppend("bytecodes", 0, "; after processSignals: " + Clock.getBytecodeNum());
-				Radar.indicateEnemyTurretLocation(0, 200, 200);
+//				Debug.indicateAppend("bytecodes", 0, "; after processSignals: " + Clock.getBytecodeNum());
+//				Radar.indicateEnemyTurretLocation(0, 200, 200);
 				manageHealingState();
 				if (rc.getType() == RobotType.TURRET) {
 				    turnTurret();
@@ -33,7 +33,7 @@ public class BotTurret extends Globals {
 				if (bytecodesUsed > maxBytecodesUsed) {
 					maxBytecodesUsed = bytecodesUsed;
 					maxBytecodeUsedTurn = rc.getRoundNum();
-					Debug.println("bytecodes", "new max bytecode use = " + maxBytecodesUsed + " on turn " + maxBytecodeUsedTurn);
+//					Debug.println("bytecodes", "new max bytecode use = " + maxBytecodesUsed + " on turn " + maxBytecodeUsedTurn);
 				}
 			}
 			Clock.yield();
@@ -61,18 +61,18 @@ public class BotTurret extends Globals {
 		if (!rc.isWeaponReady() && !rc.isCoreReady()) return;
 		
 //		Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
-		Debug.indicate("bytecodes", 1, "; after removeDistantTurrets: " + Clock.getBytecodeNum());
+//		Debug.indicate("bytecodes", 1, "; after removeDistantTurrets: " + Clock.getBytecodeNum());
 		//Radar.removeOldEnemyTurrets(Radar.TURRET_MEMORY_ROUNDS);
 		
 		RobotInfo[] attackableEnemies = rc.senseHostileRobots(here, myAttackRadiusSquared);
 		if (rc.isWeaponReady()) {
-			Debug.indicateAppend("bytecodes", 1, "; after tryToAttack: " + Clock.getBytecodeNum());
+//			Debug.indicateAppend("bytecodes", 1, "; after tryToAttack: " + Clock.getBytecodeNum());
 			if (tryToAttackAnEnemy(attackableEnemies)) {
-				Debug.indicateAppend("bytecodes", 1, "; after tryToAttack: " + Clock.getBytecodeNum());
+//				Debug.indicateAppend("bytecodes", 1, "; after tryToAttack: " + Clock.getBytecodeNum());
 				packCountdown = PACK_DELAY;
 				return;
 			}
-			Debug.indicateAppend("bytecodes", 1, "; after tryToAttack: " + Clock.getBytecodeNum());
+//			Debug.indicateAppend("bytecodes", 1, "; after tryToAttack: " + Clock.getBytecodeNum());
 			if (attackableEnemies.length == 0 && rc.isCoreReady()) {
 				--packCountdown;
 				if (packCountdown == 0) {
@@ -122,7 +122,7 @@ public class BotTurret extends Globals {
 		if (rc.getHealth() == myType.maxHealth) {
 			inHealingState = false;
 		}
-		Debug.indicate("heal", 0, "inHealingState = " + inHealingState);
+//		Debug.indicate("heal", 0, "inHealingState = " + inHealingState);
 	}
 	
 	private static void locateNearestArchon() throws GameActionException {
@@ -163,7 +163,7 @@ public class BotTurret extends Globals {
 		} else {
 			Nav.swarmToAvoidingArchonsAndTurret(lastKnownArchonLocation, Radar.closestEnemyTurretLocation);
 		}
-		Debug.indicate("heal", 1, "going to heal at " + lastKnownArchonLocation);
+//		Debug.indicate("heal", 1, "going to heal at " + lastKnownArchonLocation);
 		return true;
 	}
 
@@ -191,7 +191,7 @@ public class BotTurret extends Globals {
 	}
 	
 	public static boolean tryToAttackAnEnemy(RobotInfo[] attackableEnemies) throws GameActionException {
-		Debug.indicateAppend("bytecodes", 1, "; tryToAttack start: " + Clock.getBytecodeNum());
+//		Debug.indicateAppend("bytecodes", 1, "; tryToAttack start: " + Clock.getBytecodeNum());
 		MapLocation bestTarget = null;
 		double maxScore = -99;
 		boolean weAreAttacked = false;
@@ -218,8 +218,8 @@ public class BotTurret extends Globals {
 			}
 		}
 //		Debug.indicate("target", 1, "radar targets: ");
-		Debug.indicateAppend("bytecodes", 1, "; after visible targets: " + Clock.getBytecodeNum());
-		Debug.indicate("bytecodes", 2, "; numCachedEnemies = " + Radar.numCachedEnemies);
+//		Debug.indicateAppend("bytecodes", 1, "; after visible targets: " + Clock.getBytecodeNum());
+//		Debug.indicate("bytecodes", 2, "; numCachedEnemies = " + Radar.numCachedEnemies);
 		for (int i = 0; i < Radar.numCachedEnemies; ++i) {
 			FastRobotInfo hostile = Radar.enemyCache[i];
 			if (here.distanceSquaredTo(hostile.location) <= mySensorRadiusSquared) continue;
@@ -247,7 +247,7 @@ public class BotTurret extends Globals {
 				bestTarget = hostile.location;	
 			}			
 		}
-		Debug.indicateAppend("bytecodes", 1, "; after radar targets: " + Clock.getBytecodeNum());
+//		Debug.indicateAppend("bytecodes", 1, "; after radar targets: " + Clock.getBytecodeNum());
 		if (bestTarget == null) {
 			BigRobotInfo closestEnemyTurret = Radar.updateClosestEnemyTurretInfo();
 			if (closestEnemyTurret != null && rc.canAttackLocation(closestEnemyTurret.location)) {
@@ -263,7 +263,7 @@ public class BotTurret extends Globals {
 		}
 		lastAttackLocation = bestTarget;
 //		Debug.indicate("target", 2, "bestTarget = " + bestTarget);
-		Debug.indicateAppend("bytecodes", 1, "; after selection: " + Clock.getBytecodeNum());
+//		Debug.indicateAppend("bytecodes", 1, "; after selection: " + Clock.getBytecodeNum());
 		if (bestTarget != null) {
 			rc.attackLocation(bestTarget);
 			return true;
@@ -276,7 +276,7 @@ public class BotTurret extends Globals {
 		boolean processRadar = (rc.getType() == RobotType.TTM) || rc.isWeaponReady();
 		
 		Signal[] signals = rc.emptySignalQueue();
-		Debug.indicateAppend("bytecodes", 0, "; signals.length=" + signals.length);
+//		Debug.indicateAppend("bytecodes", 0, "; signals.length=" + signals.length);
 		for (Signal sig : signals) {
 			if (sig.getTeam() != us) continue;
 

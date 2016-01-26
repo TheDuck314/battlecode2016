@@ -5,7 +5,7 @@ import battlecode.common.*;
 public class BotViper extends Globals {
 	public static void loop() {
 		FastMath.initRand(rc);
-		Debug.init("robotinfo");
+//		Debug.init("robotinfo");
     	try {
     		processSignals(true);
     	} catch (Exception e) {
@@ -17,7 +17,7 @@ public class BotViper extends Globals {
 			try {
 				Globals.update();
 				turn();
-				Radar.indicateEnemyTurretLocation(0, 200, 200);
+//				Radar.indicateEnemyTurretLocation(0, 200, 200);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -79,14 +79,14 @@ public class BotViper extends Globals {
 	}
 
 	private static boolean tryDoAntiTurtleCharge() throws GameActionException {
-		Debug.indicate("charge", 0, "center = " + AntiTurtleCharge.chargeCenter + ", chargeRound = " + AntiTurtleCharge.chargeRound + ", endRound = " + AntiTurtleCharge.endRound);
+//		Debug.indicate("charge", 0, "center = " + AntiTurtleCharge.chargeCenter + ", chargeRound = " + AntiTurtleCharge.chargeRound + ", endRound = " + AntiTurtleCharge.endRound);
 		if (AntiTurtleCharge.chargeCenter != null && rc.getRoundNum() < AntiTurtleCharge.endRound) {
 			if (rc.getRoundNum() > AntiTurtleCharge.chargeRound) {
-				Debug.indicate("charge", 1, "charging!!!");
+//				Debug.indicate("charge", 1, "charging!!!");
 				Nav.goToDirect(AntiTurtleCharge.chargeCenter);
 				return true;
 			} else  {
-				Debug.indicate("charge", 1, "gathering for charge");
+//				Debug.indicate("charge", 1, "gathering for charge");
 				Nav.goToDirectSafelyAvoidingTurret(AntiTurtleCharge.chargeCenter, Radar.closestEnemyTurretLocation);
 				return true;
 			} 
@@ -148,7 +148,7 @@ public class BotViper extends Globals {
 
 				case Messages.CHANNEL_BEGIN_EDUCATION:
 					if (justBorn) {
-						Debug.indicate("education", 0, "reached begin education signal!");
+//						Debug.indicate("education", 0, "reached begin education signal!");
 					}
 					return;
 
@@ -278,13 +278,13 @@ public class BotViper extends Globals {
 	
 	private static boolean retreatFromEnemyTurretRange(RobotInfo[] visibleHostiles) throws GameActionException {
 		if (Radar.closestEnemyTurretLocation == null) {
-			Debug.indicate("retreat", 0, "no known enemy turret");
+//			Debug.indicate("retreat", 0, "no known enemy turret");
 			return false;
 		}
 		
 		int currentDistSq = Radar.closestEnemyTurretLocation.distanceSquaredTo(here);
 		if (currentDistSq > RobotType.TURRET.attackRadiusSquared) {
-			Debug.indicate("retreat", 0, "not in range of " + Radar.closestEnemyTurretLocation);
+//			Debug.indicate("retreat", 0, "not in range of " + Radar.closestEnemyTurretLocation);
 			return false;
 		}
 		
@@ -305,14 +305,14 @@ public class BotViper extends Globals {
 				}
 			}
 			
-			Debug.indicate("retreat", 0, "retreating out from under turret at " + Radar.closestEnemyTurretLocation);
+//			Debug.indicate("retreat", 0, "retreating out from under turret at " + Radar.closestEnemyTurretLocation);
 //			Debug.println("retreat", "retreating out from under turret at " + Radar.closestEnemyTurretLocation);
-			Debug.indicateLine("retreat", here, Radar.closestEnemyTurretLocation, 0, 255, 255);
+//			Debug.indicateLine("retreat", here, Radar.closestEnemyTurretLocation, 0, 255, 255);
 			rc.move(dir);
 			return true;
 		}
 
-		Debug.indicate("retreat", 0, "couldn't find a direction to retreat from " + Radar.closestEnemyTurretLocation);
+//		Debug.indicate("retreat", 0, "couldn't find a direction to retreat from " + Radar.closestEnemyTurretLocation);
 //		Debug.println("retreat", "couldn't find a direction to retreat from " + Radar.closestEnemyTurretLocation);
 	    return false;
 	}

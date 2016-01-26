@@ -36,7 +36,7 @@ public class BotArchon extends Globals {
 	//private static boolean pullMode = false;
 	
 	public static void loop() throws GameActionException {
-		Debug.init("robotinfo");
+//		Debug.init("robotinfo");
 		
 		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
 		
@@ -52,7 +52,7 @@ public class BotArchon extends Globals {
 			try {
 				Globals.update();
 			    turn();
-				Radar.indicateEnemyTurretLocation(0, 200, 200);
+//				Radar.indicateEnemyTurretLocation(0, 200, 200);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -103,7 +103,7 @@ public class BotArchon extends Globals {
 		if (rc.getRoundNum() >= scheduledEducationRound) {
 			Radar.updateClosestEnemyTurretInfo();
 			educateBaby(scheduledEducationType);
-			Debug.indicate("education", 0, "educated a " + scheduledEducationType + " as scheduled");
+//			Debug.indicate("education", 0, "educated a " + scheduledEducationType + " as scheduled");
 			scheduledEducationRound = 999999;
 		} else if (rc.isCoreReady()) {
 			Radar.updateClosestEnemyTurretInfo();
@@ -116,11 +116,11 @@ public class BotArchon extends Globals {
 		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == Globals.checkUnpairedScoutInterval - 1) {
 			lastUnpairedScoutCount = nextUnpairedScoutCount;
 			nextUnpairedScoutCount = 0;
-			Debug.indicate("unpaired", 2, "unpaired scout ids: ");
+//			Debug.indicate("unpaired", 2, "unpaired scout ids: ");
 		}
 		
-		Debug.indicate("unpaired", 0, "lastUnpairedScoutCount = " + lastUnpairedScoutCount);
-		Debug.indicate("unpaired", 1, "nextUnpairedScoutCount = " + nextUnpairedScoutCount);
+//		Debug.indicate("unpaired", 0, "lastUnpairedScoutCount = " + lastUnpairedScoutCount);
+//		Debug.indicate("unpaired", 1, "nextUnpairedScoutCount = " + nextUnpairedScoutCount);
 
 		visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		visibleAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
@@ -233,7 +233,7 @@ public class BotArchon extends Globals {
 				BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, Globals.roundNum);
 				if (bri != null) {
 					Messages.sendRobotLocation(bri, Globals.broadCastRangeSqWhenSeenByArchon);
-					Debug.indicate("turret", 0, "sent turret discover message");
+//					Debug.indicate("turret", 0, "sent turret discover message");
 				}
 			}
 		}
@@ -249,7 +249,7 @@ public class BotArchon extends Globals {
 				lastGlobalArchonLocationMessageRound = rc.getRoundNum();
 			}
 			Messages.sendArchonLocation(here, rangeSq);
-			Debug.indicate("archonloc", 0, "sending archon location message with rangesq = " + rangeSq);
+//			Debug.indicate("archonloc", 0, "sending archon location message with rangesq = " + rangeSq);
 			lastArchonLocationMessageRound = rc.getRoundNum();
 //			Debug.indicate("heal", 0, "sent archon location");
 		}
@@ -353,7 +353,7 @@ public class BotArchon extends Globals {
 				rc.build(dir, spawnType);
 				scheduledEducationRound = rc.getRoundNum() + spawnType.buildTurns;
 				scheduledEducationType = spawnType;
-				Debug.indicate("education", 1, "scheduling education of " + scheduledEducationType + " for " + scheduledEducationRound);
+//				Debug.indicate("education", 1, "scheduling education of " + scheduledEducationType + " for " + scheduledEducationRound);
 				++spawnCount;
 				return;
 			}
@@ -478,7 +478,7 @@ public class BotArchon extends Globals {
 					rangeSq = 30 * mySensorRadiusSquared;
 				}
 				Messages.sendNeutralWasActivated(neutral.location, neutral.type, rangeSq);
-				Debug.indicate("archons", 2, "sending message that I activated a neutral archon! rangeSq = " + rangeSq);
+//				Debug.indicate("archons", 2, "sending message that I activated a neutral archon! rangeSq = " + rangeSq);
 			}
 			return;
 		}
@@ -543,13 +543,13 @@ public class BotArchon extends Globals {
 				case Messages.CHANNEL_FOUND_NEUTRAL:
 					NeutralRobotInfo neutral = Messages.parseNeutralLocation(data);
 					if (Messages.parseNeutralWasActivated(data)) {
-						Debug.indicate("archons",  1, "heard that " + neutral.type + " at " + neutral.location + " was activated");
+//						Debug.indicate("archons",  1, "heard that " + neutral.type + " at " + neutral.location + " was activated");
 						knownNeutralArchons.remove(neutral.location);
 						if (neutral.location.equals(currentDestination)) {
 							currentDestination = null;
 						}
 					} else {
-						Debug.indicate("archons", 1, "heard about " + neutral.type + " at " + neutral.location);
+//						Debug.indicate("archons", 1, "heard about " + neutral.type + " at " + neutral.location);
 						considerDestination(neutral.location, DestinationType.NEUTRAL);
 						if (neutral.type == RobotType.ARCHON) {
 							knownNeutralArchons.add(neutral.location);
@@ -563,8 +563,8 @@ public class BotArchon extends Globals {
 					
 				case Messages.CHANNEL_UNPAIRED_SCOUT_REPORT:
 					nextUnpairedScoutCount += 1;
-					Debug.indicateAppend("unpaired", 2, ", " + sig.getID());
-					Debug.indicateLine("unpaired", here, sig.getLocation(), 0, 255, 0);
+//					Debug.indicateAppend("unpaired", 2, ", " + sig.getID());
+//					Debug.indicateLine("unpaired", here, sig.getLocation(), 0, 255, 0);
 					break;
 					
 				case Messages.CHANNEL_ZOMBIE_DEN:
@@ -661,7 +661,7 @@ public class BotArchon extends Globals {
 				}
 			}
 			if (stillExists) {
-				Debug.indicate("archons", 0, "dest = neutral archon at " + closestNeutralArchon);
+//				Debug.indicate("archons", 0, "dest = neutral archon at " + closestNeutralArchon);
 				currentDestination = closestNeutralArchon;
 				currentDestinationType = DestinationType.NEUTRALARCHON;
 				return;

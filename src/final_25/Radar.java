@@ -228,29 +228,29 @@ public class Radar extends Globals {
 		return bestInfo;
 	}
 	
-	public static void indicateEnemyArchonLocation(int red, int green, int blue) {
-		Debug.indicate("robotinfo", 2, "");
-		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
-			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
-			if (bri.location == null) continue;
-			if (bri.round <= Globals.roundNum - Globals.infoOutOfDateIntervalArchon) continue;
-			Debug.indicateLine("robotinfo", here, bri.location, red, green, blue);
-			Debug.indicateAppend("robotinfo", 2, " id=" + bri.id + " loc=" + bri.location);
-		}
-	}
-	
-	public static void indicateEnemyTurretLocation(int red, int green, int blue) {
-		Debug.indicate("robotinfo", 2, "");
-		for (int i = 0; i < Radar.theirTurretIdListLength; ++i) {
-			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirTurretIdList[i]];
-			if (bri.location == null) continue;
-			Debug.indicateDot("robotinfo", bri.location, 200, 0, 0);
-			if (bri.round <= Globals.roundNum - Globals.infoOutOfDateIntervalTurret) continue;
+//	public static void indicateEnemyArchonLocation(int red, int green, int blue) {
+//		Debug.indicate("robotinfo", 2, "");
+//		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
+//			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
+//			if (bri.location == null) continue;
+//			if (bri.round <= Globals.roundNum - Globals.infoOutOfDateIntervalArchon) continue;
 //			Debug.indicateLine("robotinfo", here, bri.location, red, green, blue);
-			Debug.indicateDot("robotinfo", bri.location, red, green, blue);
 //			Debug.indicateAppend("robotinfo", 2, " id=" + bri.id + " loc=" + bri.location);
-		}
-	}
+//		}
+//	}
+	
+//	public static void indicateEnemyTurretLocation(int red, int green, int blue) {
+//		Debug.indicate("robotinfo", 2, "");
+//		for (int i = 0; i < Radar.theirTurretIdListLength; ++i) {
+//			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirTurretIdList[i]];
+//			if (bri.location == null) continue;
+//			Debug.indicateDot("robotinfo", bri.location, 200, 0, 0);
+//			if (bri.round <= Globals.roundNum - Globals.infoOutOfDateIntervalTurret) continue;
+////			Debug.indicateLine("robotinfo", here, bri.location, red, green, blue);
+//			Debug.indicateDot("robotinfo", bri.location, red, green, blue);
+////			Debug.indicateAppend("robotinfo", 2, " id=" + bri.id + " loc=" + bri.location);
+//		}
+//	}
 	
 	// store the index in enemyCache, but plus one
 	public static int[][] haveSeenEnemyLoc = new int[100][100];
