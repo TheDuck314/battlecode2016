@@ -76,6 +76,7 @@ public class Globals {
 	public static void update() {
 		here = rc.getLocation();
 		roundNum = rc.getRoundNum();
+		MapEdges.maxRangeSq = MapEdges.maxBroadcastDistSq();
 	}
 	
 	public static void updateRobotInfos() {
@@ -86,14 +87,21 @@ public class Globals {
 		attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 	}
 	
-	public static final boolean isSendingEnemyArchonLocation = true;
-	public static final boolean isRebroadcasting = true;
+	public static final boolean isSendingEnemyArchonLocation = false;
+	
+	public static final boolean isRebroadcasting = false;
+	
+	// Doing global broadcast if enemy might be a turtle.
 	public static final int broadCastRangeSqWhenSeen = 477;
-	public static final int broadCastRangeSqWhenHeard = 477;
 	public static final int broadCastRangeSqWhenDisappear = 477;
+	
+	public static final int broadCastRangeSqWhenSeenByArchon = 315;
+	public static final int broadCastRangeSqWhenHeard = 477;
 	public static final int rebroadCastRangeSq = 106;
 	public static final int rebroadCastUpdateInterval = 50;
-	public static final int infoOutOfDateInterval = 100;
+	public static final int infoOutOfDateIntervalArchon = 100;
+	public static final int infoOutOfDateIntervalTurret = 300;
+	public static final int infoOutOfRangeSqTurret = 477;
 	
 	public static int zombieScarinessMultiplier(RobotType type) {
 		switch (type) {

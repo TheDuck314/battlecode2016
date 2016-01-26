@@ -17,7 +17,7 @@ public class Messages extends Globals {
 	public static final int CHANNEL_TURRET_TARGET = 0x10000000;
 	public static final int CHANNEL_ZOMBIE_DEN = 0x20000000;
 	public static final int CHANNEL_FOUND_PARTS = 0x30000000;
-	public static final int CHANNEL_ENEMY_TURRET_WARNING = 0x40000000;
+//	public static final int CHANNEL_ENEMY_TURRET_WARNING = 0x40000000;
 	public static final int CHANNEL_UNPAIRED_SCOUT_REPORT = 0x50000000;
 	public static final int CHANNEL_DEN_ATTACK_COMMAND = 0x60000000;
 	public static final int CHANNEL_ZOMBIE_DEN_LIST = 0x70000000;
@@ -43,6 +43,10 @@ public class Messages extends Globals {
 	public static final int ANTI_TURTLE_CHARGE_VETO_FLAG = 0x00100000;
 	public static final int ANTI_TURTLE_CHARGE_NOT_A_TURTLE_FLAG = 0x00300000;
 	
+	// used by some radar functions
+	private static int SCOUT_ORDINAL = RobotType.SCOUT.ordinal();
+	
+
 	public static int intFromMapLocation(MapLocation loc) {
 		if (loc == null) return 0xfffff;
 		return (loc.x << 10) | (loc.y);
@@ -73,6 +77,7 @@ public class Messages extends Globals {
 	
 	public static void sendBeginEducation(int radiusSq) throws GameActionException {
 		rc.broadcastMessageSignal(CHANNEL_BEGIN_EDUCATION, 0, radiusSq);
+//		Debug.indicate("msg", msgDILN(), "sendBeginEducation " + radiusSq);
 	}
 	
 	public static void sendTurretTarget(MapLocation loc, int radiusSq) throws GameActionException {
@@ -249,30 +254,30 @@ public class Messages extends Globals {
 //		Debug.indicate("edges", 2, "receive: value=" + Integer.toHexString(parseInt(data)) + " MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
 	
-	public static void sendEnemyTurretWarning(int id, MapLocation loc, int radiusSq) throws GameActionException {
-		int data0 = id & CHANNEL_MASK_INVERSE;
-		int data1 = intFromMapLocation(loc);
-		rc.broadcastMessageSignal(CHANNEL_ENEMY_TURRET_WARNING | data0, data1, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendEnemyTurretWarning " + radiusSq);
-	}
-	
-	public static void sendEnemyTurretMissing(int id, int radiusSq) throws GameActionException {
-		int data0 = id & CHANNEL_MASK_INVERSE;
-		int data1 = ENEMY_TURRET_MISSING_VALUE;
-		rc.broadcastMessageSignal(CHANNEL_ENEMY_TURRET_WARNING | data0, data1, radiusSq);
-//		Debug.indicate("msg", msgDILN(), "sendEnemyTurretMissing " + radiusSq);
-	}
-	
-	public static void processEnemyTurretWarning(int[] data) {
-		int id = data[0] ^ CHANNEL_ENEMY_TURRET_WARNING;
-		int locInt = data[1];
-		if (locInt == ENEMY_TURRET_MISSING_VALUE) {
-			Radar.removeEnemyTurret(id);
-		} else {
-			MapLocation loc = mapLocationFromInt(data[1]);
-			Radar.addEnemyTurret(id, loc);
-		}
-	}
+//	public static void sendEnemyTurretWarning(int id, MapLocation loc, int radiusSq) throws GameActionException {
+//		int data0 = id & CHANNEL_MASK_INVERSE;
+//		int data1 = intFromMapLocation(loc);
+//		rc.broadcastMessageSignal(CHANNEL_ENEMY_TURRET_WARNING | data0, data1, radiusSq);
+////		Debug.indicate("msg", msgDILN(), "sendEnemyTurretWarning " + radiusSq);
+//	}
+//	
+//	public static void sendEnemyTurretMissing(int id, int radiusSq) throws GameActionException {
+//		int data0 = id & CHANNEL_MASK_INVERSE;
+//		int data1 = ENEMY_TURRET_MISSING_VALUE;
+//		rc.broadcastMessageSignal(CHANNEL_ENEMY_TURRET_WARNING | data0, data1, radiusSq);
+////		Debug.indicate("msg", msgDILN(), "sendEnemyTurretMissing " + radiusSq);
+//	}
+//	
+//	public static void processEnemyTurretWarning(int[] data) {
+//		int id = data[0] ^ CHANNEL_ENEMY_TURRET_WARNING;
+//		int locInt = data[1];
+//		if (locInt == ENEMY_TURRET_MISSING_VALUE) {
+//			Radar.removeEnemyTurret(id);
+//		} else {
+//			MapLocation loc = mapLocationFromInt(data[1]);
+//			Radar.addEnemyTurret(id, loc);
+//		}
+//	}
 	
 	public static BigRobotInfo sendRobotLocation(BigRobotInfo bri, int radiusSq) throws GameActionException {
 		if (bri == null) return null;
@@ -328,41 +333,18 @@ public class Messages extends Globals {
 //		Debug.indicate("radar", 2, "sent radar data with radiusSq = " + radiusSq);
 	}
 	
-	/*public static void addRadarDataToEnemyCache(int[] intData, MapLocation origin, int maxDistSq) {
-		long data = (((long)(CHANNEL_RADAR ^ intData[0])) << 32) 
-				| (((long)intData[1]) & 0x00000000ffffffffL);
-		
-		int round = rc.getRoundNum();
-		RobotType[] types = RobotType.values();		
-		while (data != 0) {
-			int y = origin.y - 8 + (int)(data & 0xfL);
-			int x = origin.x - 8 + (int)((data >> 4) & 0xfL);
-			MapLocation loc = new MapLocation(x, y);
-			if (here.distanceSquaredTo(loc) <= maxDistSq) {
-				int typeOrdinal = (int)((data >> 8) & 0xfL) - 1;		
-				RobotType type = types[typeOrdinal];
-				FastRobotInfo info = new FastRobotInfo(loc, type, round);
-				Radar.addEnemyToCache(info);
-			}
-			data >>= 12;
-		}
-	}*/
-	
 	// adds radar hits within maxDistSq to the enemy cache.
 	// returns the closest radar hit, whether or not it is within maxDistSq
-	public static MapLocation addRadarDataToEnemyCacheAndReturnClosestHit(int[] intData, 
+	/*public static MapLocation addRadarDataToEnemyCacheAndReturnClosestHit(int[] intData, 
 			MapLocation origin, int maxDistSq) {
 		long data = (((long)(CHANNEL_RADAR ^ intData[0])) << 32) 
 				| (((long)intData[1]) & 0x00000000ffffffffL);
 		
-		//int DEBUG_bytecodesStart = Clock.getBytecodeNum();
-		//int DEBUG_numHits = 0;
 		int round = rc.getRoundNum();
 		RobotType[] types = RobotType.values();		
 		MapLocation closestHit = null;
 		int closestDistSq = Integer.MAX_VALUE;
 		while (data != 0) {
-			//DEBUG_numHits += 1;
 			int y = origin.y - 8 + (int)(data & 0xfL);
 			int x = origin.x - 8 + (int)((data >> 4) & 0xfL);
 			MapLocation loc = new MapLocation(x, y);
@@ -379,12 +361,61 @@ public class Messages extends Globals {
 			}
 			data >>= 12;
 		}
-		//int DEBUG_bytecodesEnd = Clock.getBytecodeNum();
-		//Debug.println("bytecodes", "processed " + DEBUG_numHits + "hits in " + (DEBUG_bytecodesEnd - DEBUG_bytecodesStart) + " bytecodes.");
+		return closestHit;
+	}*/
+	
+	public static MapLocation addRadarDataToEnemyCacheAndReturnClosestNonScoutHit(int[] intData, 
+			MapLocation origin, int maxDistSq) {
+		long data = (((long)(CHANNEL_RADAR ^ intData[0])) << 32) 
+				| (((long)intData[1]) & 0x00000000ffffffffL);
+		
+		int round = rc.getRoundNum();
+		RobotType[] types = RobotType.values();		
+		MapLocation closestHit = null;
+		int closestDistSq = Integer.MAX_VALUE;
+		while (data != 0) {
+			int y = origin.y - 8 + (int)(data & 0xfL);
+			int x = origin.x - 8 + (int)((data >> 4) & 0xfL);
+			int typeOrdinal = (int)((data >> 8) & 0xfL) - 1;		
+			MapLocation loc = new MapLocation(x, y);
+			int distSq = here.distanceSquaredTo(loc);
+			if (distSq <= maxDistSq) {
+				RobotType type = types[typeOrdinal];
+				FastRobotInfo info = new FastRobotInfo(loc, type, round);
+				Radar.addEnemyToCache(info);
+			}
+			if (typeOrdinal != SCOUT_ORDINAL && distSq < closestDistSq) {
+				closestDistSq = distSq;
+				closestHit = loc;
+			}
+			data >>= 12;
+		}
 		return closestHit;
 	}
 	
-	public static MapLocation getClosestRadarHit(int[] intData, MapLocation origin) {
+	public static void addRadarDataToEnemyCache(int[] intData, 
+			MapLocation origin, int maxDistSq) {
+		long data = (((long)(CHANNEL_RADAR ^ intData[0])) << 32) 
+				| (((long)intData[1]) & 0x00000000ffffffffL);
+		
+		int round = rc.getRoundNum();
+		RobotType[] types = RobotType.values();		
+		while (data != 0) {
+			int y = origin.y - 8 + (int)(data & 0xfL);
+			int x = origin.x - 8 + (int)((data >> 4) & 0xfL);
+			MapLocation loc = new MapLocation(x, y);
+			int distSq = here.distanceSquaredTo(loc);
+			if (distSq <= maxDistSq) {
+				int typeOrdinal = (int)((data >> 8) & 0xfL) - 1;		
+				RobotType type = types[typeOrdinal];
+				FastRobotInfo info = new FastRobotInfo(loc, type, round);
+				Radar.addEnemyToCache(info);
+			}
+			data >>= 12;
+		}
+	}
+	
+	/*public static MapLocation getClosestRadarHit(int[] intData, MapLocation origin) {
 		MapLocation closest = null;
 		int bestDistSq = Integer.MAX_VALUE;
 		
@@ -399,6 +430,31 @@ public class Messages extends Globals {
 			if (distSq < bestDistSq) {
 				bestDistSq = distSq;
 				closest = loc;
+			}
+			data >>= 12;
+		}
+		
+		return closest;
+	}*/
+	
+	public static MapLocation getClosestNonScoutRadarHit(int[] intData, MapLocation origin) {
+		MapLocation closest = null;
+		int bestDistSq = Integer.MAX_VALUE;
+		
+		long data = (((long)(CHANNEL_RADAR ^ intData[0])) << 32) 
+				| (((long)intData[1]) & 0x00000000ffffffffL);
+		
+		while (data != 0) {
+			int typeOrdinal = (int)((data >> 8) & 0xfL) - 1;	
+			if (typeOrdinal != SCOUT_ORDINAL) {
+				int y = origin.y - 8 + (int)(data & 0xfL);
+				int x = origin.x - 8 + (int)((data >> 4) & 0xfL);
+				MapLocation loc = new MapLocation(x, y);
+				int distSq = here.distanceSquaredTo(loc);
+				if (distSq < bestDistSq) {
+					bestDistSq = distSq;
+					closest = loc;
+				}
 			}
 			data >>= 12;
 		}
@@ -427,6 +483,7 @@ public class Messages extends Globals {
 		int data1 = (avgTurnsToUncover << 20) | locInt;
 		int data0 = totalParts & CHANNEL_MASK_INVERSE;
 		rc.broadcastMessageSignal(CHANNEL_PART_REGIONS | data0, data1, radiusSq);
+//		Debug.indicate("msg", msgDILN(), "sendPartRegion " + radiusSq);
 	}
 	
 	public static PartRegion parsePartRegion(int[] data) {
@@ -440,14 +497,17 @@ public class Messages extends Globals {
 		int data0 = chargeRound;
 		int data1 = intFromMapLocation(chargeCenter);
 		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | data0, data1, radiusSq);
+//		Debug.indicate("msg", msgDILN(), "proposeAntiTurtleChargePlan " + radiusSq);
 	}
 	
-	public static void vetoAntiTurtleCharge(int radiusSq) throws GameActionException {
-		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | ANTI_TURTLE_CHARGE_VETO_FLAG, 0, radiusSq);
-	}
+//	public static void vetoAntiTurtleCharge(int radiusSq) throws GameActionException {
+//		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | ANTI_TURTLE_CHARGE_VETO_FLAG, 0, radiusSq);
+//		Debug.indicate("msg", msgDILN(), "vetoAntiTurtleCharge " + radiusSq);
+//	}
 
 	public static void sendNotATurtle(int radiusSq) throws GameActionException {
 		rc.broadcastMessageSignal(CHANNEL_ANTI_TURTLE_CHARGE | ANTI_TURTLE_CHARGE_NOT_A_TURTLE_FLAG, 0, radiusSq);
+//		Debug.indicate("msg", msgDILN(), "sendNotATurtle " + radiusSq);
 	}
 	
 	public static AntiTurtleChargePlan parseAntiTurtleChargePlan(int[] data) {

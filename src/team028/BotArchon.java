@@ -10,6 +10,7 @@ public class BotArchon extends Globals {
 	private static int spawnCount = 0;
 
 	private static int lastArchonLocationMessageRound = 0;
+	private static int lastGlobalArchonLocationMessageRound = 0;
 
 	private static MapLocation startingLocation = null;
 	
@@ -35,9 +36,9 @@ public class BotArchon extends Globals {
 	//private static boolean pullMode = false;
 	
 	public static void loop() throws GameActionException {
-		Debug.init("education");
+//		Debug.init("robotinfo");
 		
-		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
+		rc.setIndicatorString(0, "32509230c87d51c9252dd41fa32f3197b00b93b7");
 		
 		FastMath.initRand(rc);
 		
@@ -51,6 +52,7 @@ public class BotArchon extends Globals {
 			try {
 				Globals.update();
 			    turn();
+//				Radar.indicateEnemyTurretLocation(0, 200, 200);
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -99,9 +101,12 @@ public class BotArchon extends Globals {
 		processSignals();
 		
 		if (rc.getRoundNum() >= scheduledEducationRound) {
+			Radar.updateClosestEnemyTurretInfo();
 			educateBaby(scheduledEducationType);
-			Debug.indicate("education", 0, "educated a " + scheduledEducationType + " as scheduled");
+//			Debug.indicate("education", 0, "educated a " + scheduledEducationType + " as scheduled");
 			scheduledEducationRound = 999999;
+		} else if (rc.isCoreReady()) {
+			Radar.updateClosestEnemyTurretInfo();
 		}
 		
 		if (rc.getRoundNum() >= 40) {
@@ -111,11 +116,11 @@ public class BotArchon extends Globals {
 		if (rc.getRoundNum() % Globals.checkUnpairedScoutInterval == Globals.checkUnpairedScoutInterval - 1) {
 			lastUnpairedScoutCount = nextUnpairedScoutCount;
 			nextUnpairedScoutCount = 0;
-			Debug.indicate("unpaired", 2, "unpaired scout ids: ");
+//			Debug.indicate("unpaired", 2, "unpaired scout ids: ");
 		}
 		
-		Debug.indicate("unpaired", 0, "lastUnpairedScoutCount = " + lastUnpairedScoutCount);
-		Debug.indicate("unpaired", 1, "nextUnpairedScoutCount = " + nextUnpairedScoutCount);
+//		Debug.indicate("unpaired", 0, "lastUnpairedScoutCount = " + lastUnpairedScoutCount);
+//		Debug.indicate("unpaired", 1, "nextUnpairedScoutCount = " + nextUnpairedScoutCount);
 
 		visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		visibleAllies = rc.senseNearbyRobots(mySensorRadiusSquared, us);
@@ -123,14 +128,21 @@ public class BotArchon extends Globals {
 		tryRepairAlly();
 		tryConvertNeutrals();		
 		
-		sendRadarInfo();
-		Radar.indicateEnemyArchonLocation(0, 100, 100);
+		boolean isSendingRadar = true;
+		if (Globals.roundNum - lastFleeOtherTeamRound < 10 || Globals.roundNum - lastFleeZombiesRound < 10 ) {
+			if (Globals.roundNum % 5 != 0) {
+				isSendingRadar = false;
+			}
+		}
+		if (isSendingRadar) {
+			sendRadarInfo();
+		}
+		
+//		Radar.indicateEnemyArchonLocation(0, 100, 100);
 
 		if (rc.isCoreReady()) {
-			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+//			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
 			//Radar.removeOldEnemyTurrets(Radar.TURRET_MEMORY_ROUNDS);
-			
-			Radar.updateClosestEnemyTurretLocation();
 			
 			if (fleeOverwhelmingEnemies()) {
 				return;
@@ -184,7 +196,7 @@ public class BotArchon extends Globals {
 		MapLocation closestDen = knownZombieDens.findClosestMemberToLocation(startingLocation);
 		if (closestDen != null) {
 //			Debug.indicate("dens", 0, "sending command to attack den at " + closestDen);
-			Messages.sendDenAttackCommand(closestDen, MapEdges.maxBroadcastDistSq());
+			Messages.sendDenAttackCommand(closestDen, MapEdges.maxRangeSq);
 			lastGlobalZombieDenBroadcastRound = rc.getRoundNum();
 			lastDenTarget = closestDen;
 		}
@@ -213,9 +225,15 @@ public class BotArchon extends Globals {
 		
 		for (RobotInfo hostile : visibleHostiles) {
 			if (hostile.type == RobotType.TURRET) {
-				if (!Radar.turretIsKnown(hostile.ID, hostile.location)) {
-					Radar.addEnemyTurret(hostile.ID, hostile.location);
-					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, 9*mySensorRadiusSquared);
+//				if (!Radar.turretIsKnown(hostile.ID, hostile.location)) {
+//					Radar.addEnemyTurret(hostile.ID, hostile.location);
+//					Messages.sendEnemyTurretWarning(hostile.ID, hostile.location, 9*mySensorRadiusSquared);
+//				}
+//				boolean isNewID = Radar.bigRobotInfoById[hostile.ID] == null;
+				BigRobotInfo bri = Radar.addRobot(hostile.ID, hostile.type, hostile.team, hostile.location, Globals.roundNum);
+				if (bri != null) {
+					Messages.sendRobotLocation(bri, Globals.broadCastRangeSqWhenSeenByArchon);
+//					Debug.indicate("turret", 0, "sent turret discover message");
 				}
 			}
 		}
@@ -223,7 +241,15 @@ public class BotArchon extends Globals {
 	
 	private static void trySendArchonLocationMessage() throws GameActionException {
 		if (lastArchonLocationMessageRound < rc.getRoundNum() - 60) {
-			Messages.sendArchonLocation(here, 900);
+			int rangeSq = 900;
+			if (lastGlobalArchonLocationMessageRound < rc.getRoundNum() - 150
+					&& visibleHostiles.length == 0
+					&& rc.getTeamParts() < 50) {
+				rangeSq = MapEdges.maxBroadcastDistSq();
+				lastGlobalArchonLocationMessageRound = rc.getRoundNum();
+			}
+			Messages.sendArchonLocation(here, rangeSq);
+//			Debug.indicate("archonloc", 0, "sending archon location message with rangesq = " + rangeSq);
 			lastArchonLocationMessageRound = rc.getRoundNum();
 //			Debug.indicate("heal", 0, "sent archon location");
 		}
@@ -311,6 +337,13 @@ public class BotArchon extends Globals {
 				spawnType = RobotType.SOLDIER;
 			}
 		}
+		if (rc.getRobotCount() < 15) {
+			if (spawnType == RobotType.TURRET) {
+//				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
+				//System.out.println("converted " + spawnType + " spawn into soldier");
+				spawnType = RobotType.SOLDIER;
+			}
+		}
 		
 		if (!rc.hasBuildRequirements(spawnType)) return;
 
@@ -320,7 +353,7 @@ public class BotArchon extends Globals {
 				rc.build(dir, spawnType);
 				scheduledEducationRound = rc.getRoundNum() + spawnType.buildTurns;
 				scheduledEducationType = spawnType;
-				Debug.indicate("education", 1, "scheduling education of " + scheduledEducationType + " for " + scheduledEducationRound);
+//				Debug.indicate("education", 1, "scheduling education of " + scheduledEducationType + " for " + scheduledEducationRound);
 				++spawnCount;
 				return;
 			}
@@ -339,10 +372,10 @@ public class BotArchon extends Globals {
 	}
 	
 	private static void educateBabyScoutOrArchon() throws GameActionException {
-		// tell scout known map edges
-		Messages.sendKnownMapEdges(2); 
+		// tell baby known map edges
+		Messages.sendKnownMapEdges(2);
 		
-		// tell scout known zombie dens
+		// tell baby known zombie dens
 		for (int i = 0; i < knownZombieDens.size; i += 3) {
 			MapLocation[] denList = new MapLocation[3];
 			int listLen = 0;
@@ -353,16 +386,31 @@ public class BotArchon extends Globals {
 			Messages.sendUpToThreeZombieDens(denList, listLen, 2);
 		}
 		
-		// tell scout known enemy archon
+		// tell baby known enemy archon
 		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
 			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
 			Messages.sendRobotLocation(bri, 2);
 		}
-		
+		// tell baby closest known enemy turret
+		Messages.sendRobotLocation(Radar.closestEnemyTurretInfo, 2);
+	
+		// tell baby known neutral archon locations
+		for (int i = 0; i < knownNeutralArchons.size; ++i) {
+			MapLocation archonLoc = knownNeutralArchons.locations[i];
+			Messages.sendNeutralLocation(archonLoc, RobotType.ARCHON, 2);
+		}
+
 		educateBabyAboutAntiTurtleCharge();
 	}
 	
 	private static void educateBabySoldierOrViper() throws GameActionException {
+		// tell soldirs known enemy archon
+		for (int i = 0; i < Radar.theirArchonIdListLength; ++i) {
+			BigRobotInfo bri = Radar.bigRobotInfoById[Radar.theirArchonIdList[i]];
+			Messages.sendRobotLocation(bri, 2);
+		}
+		// tell scout closest known enemy turret
+		Messages.sendRobotLocation(Radar.closestEnemyTurretInfo, 2);
 		educateBabyAboutAntiTurtleCharge();
 	}
 	
@@ -387,8 +435,9 @@ public class BotArchon extends Globals {
 	private static double repairScore(RobotInfo ally) {
 		switch (ally.type) {
 		case TURRET: 
-			return 1000000.0 + ally.health;
-			
+			return 1000000.0 - ally.health; // note sign: try to heal turrets which are under attack
+		case TTM:
+			return 100000.0 + ally.health;			
 		case VIPER:
 			return 10000.0 + ally.health;
 			
@@ -424,12 +473,12 @@ public class BotArchon extends Globals {
 			educateBaby(neutral.type);
 
 			if (neutral.type == RobotType.ARCHON) {
-				int rangeSq = MapEdges.maxBroadcastDistSq();
+				int rangeSq = MapEdges.maxRangeSq;
 				if (rc.senseHostileRobots(here, mySensorRadiusSquared).length > 0) {
 					rangeSq = 30 * mySensorRadiusSquared;
 				}
 				Messages.sendNeutralWasActivated(neutral.location, neutral.type, rangeSq);
-				Debug.indicate("archons", 2, "sending message that I activated a neutral archon! rangeSq = " + rangeSq);
+//				Debug.indicate("archons", 2, "sending message that I activated a neutral archon! rangeSq = " + rangeSq);
 			}
 			return;
 		}
@@ -494,13 +543,13 @@ public class BotArchon extends Globals {
 				case Messages.CHANNEL_FOUND_NEUTRAL:
 					NeutralRobotInfo neutral = Messages.parseNeutralLocation(data);
 					if (Messages.parseNeutralWasActivated(data)) {
-						Debug.indicate("archons",  1, "heard that " + neutral.type + " at " + neutral.location + " was activated");
+//						Debug.indicate("archons",  1, "heard that " + neutral.type + " at " + neutral.location + " was activated");
 						knownNeutralArchons.remove(neutral.location);
 						if (neutral.location.equals(currentDestination)) {
 							currentDestination = null;
 						}
 					} else {
-						Debug.indicate("archons", 1, "heard about " + neutral.type + " at " + neutral.location);
+//						Debug.indicate("archons", 1, "heard about " + neutral.type + " at " + neutral.location);
 						considerDestination(neutral.location, DestinationType.NEUTRAL);
 						if (neutral.type == RobotType.ARCHON) {
 							knownNeutralArchons.add(neutral.location);
@@ -508,14 +557,14 @@ public class BotArchon extends Globals {
 					}
 					break;
 					
-				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
-					Messages.processEnemyTurretWarning(data);
-					break;
+//				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
+//					Messages.processEnemyTurretWarning(data);
+//					break;
 					
 				case Messages.CHANNEL_UNPAIRED_SCOUT_REPORT:
 					nextUnpairedScoutCount += 1;
-					Debug.indicateAppend("unpaired", 2, ", " + sig.getID());
-					Debug.indicateLine("unpaired", here, sig.getLocation(), 0, 255, 0);
+//					Debug.indicateAppend("unpaired", 2, ", " + sig.getID());
+//					Debug.indicateLine("unpaired", here, sig.getLocation(), 0, 255, 0);
 					break;
 					
 				case Messages.CHANNEL_ZOMBIE_DEN:
@@ -537,6 +586,10 @@ public class BotArchon extends Globals {
 //							Debug.indicate("dense", 1, "heard about a new den at " + denLoc + ", but I already knew about it");
 						}
 					}
+					break;
+					
+				case Messages.CHANNEL_ZOMBIE_DEN_LIST:
+					receiveZombieDenList(data, sig.getLocation());
 					break;
 
 				case Messages.CHANNEL_ROBOT_LOCATION:
@@ -569,6 +622,15 @@ public class BotArchon extends Globals {
 //		Debug.indicate("edges", 0, "MinX=" + MapEdges.minX + " MaxX=" + MapEdges.maxX + " MinY=" + MapEdges.minY + " MaxY=" + MapEdges.maxY);
 	}
 		
+	private static void receiveZombieDenList(int[] data, MapLocation origin) {
+		MapLocation[] denList = new MapLocation[3];
+		int numDens = Messages.parseUpToThreeZombieDens(data, origin, denList);
+		for (int i = 0; i < numDens; ++i) {
+			knownZombieDens.add(denList[i]);
+//			Debug.indicateAppend("dens", 2, ", " + denList[i]);
+		}
+	}
+	
 	private static void pickDestination() throws GameActionException {
 		// check if the thing we are going for is gone
 		if (currentDestination != null) {
@@ -599,7 +661,7 @@ public class BotArchon extends Globals {
 				}
 			}
 			if (stillExists) {
-				Debug.indicate("archons", 0, "dest = neutral archon at " + closestNeutralArchon);
+//				Debug.indicate("archons", 0, "dest = neutral archon at " + closestNeutralArchon);
 				currentDestination = closestNeutralArchon;
 				currentDestinationType = DestinationType.NEUTRALARCHON;
 				return;

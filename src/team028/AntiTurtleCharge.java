@@ -30,18 +30,18 @@ public class AntiTurtleCharge extends Globals {
 		if (!enemyMightBeATurtle) return;
 		
 		if (Messages.parseAntiTurtleChargeVeto(data)) {
-			Debug.indicate("charge", 0, "received a charge veto!!");
+//			Debug.indicate("charge", 0, "received a charge veto!!");
 			chargeCenter = null;
 		} else {
 			AntiTurtleChargePlan plan = Messages.parseAntiTurtleChargePlan(data);
 			planCharge(plan.chargeCenter, plan.chargeRound);
-			Debug.indicate("charge", 0, "received a charge proposal! center = " + chargeCenter + ", chargeRound = " + chargeRound);
+//			Debug.indicate("charge", 0, "received a charge proposal! center = " + chargeCenter + ", chargeRound = " + chargeRound);
 		}
 	}
 	
 	public static void proposeCharge(MapLocation proposalCenter) throws GameActionException {
 		planCharge(proposalCenter, rc.getRoundNum() + GATHER_WAIT_ROUNDS);
-		Messages.proposeAntiTurtleChargePlan(proposalCenter, chargeRound, MapEdges.maxBroadcastDistSq());
+		Messages.proposeAntiTurtleChargePlan(proposalCenter, chargeRound, MapEdges.maxRangeSq);
 	}
 	
 	public static boolean enemyMightBeATurtle = true;
@@ -60,7 +60,7 @@ public class AntiTurtleCharge extends Globals {
 					if (numSeenEnemies > 0 
 							&& enemy.location.distanceSquaredTo(centerOfMassOfSeenEnemies) >= 150) {
 						enemyMightBeATurtle = false;
-						Debug.indicate("detector", 0, "enemy at " + enemy.location + " is too far from COM at " + centerOfMassOfSeenEnemies + " so NOT A TURTLE!");
+//						Debug.indicate("detector", 0, "enemy at " + enemy.location + " is too far from COM at " + centerOfMassOfSeenEnemies + " so NOT A TURTLE!");
 						return;
 					}
 					newCenterX += enemy.location.x;
@@ -72,13 +72,13 @@ public class AntiTurtleCharge extends Globals {
 					newCenterX /= numSeenEnemies;
 					newCenterY /= numSeenEnemies;
 					centerOfMassOfSeenEnemies = new MapLocation(newCenterX, newCenterY);
-					Debug.indicate("detector", 1, "saw " + numNewEnemies + " new enemies, new com at " + centerOfMassOfSeenEnemies);
-					Debug.indicateLine("detector", here, centerOfMassOfSeenEnemies, 0, 255, 0);
+//					Debug.indicate("detector", 1, "saw " + numNewEnemies + " new enemies, new com at " + centerOfMassOfSeenEnemies);
+//					Debug.indicateLine("detector", here, centerOfMassOfSeenEnemies, 0, 255, 0);
 				} else {
-					Debug.indicate("detector", 0, "only scouts and archons are visible");
+//					Debug.indicate("detector", 0, "only scouts and archons are visible");
 				}
 			} else {
-				Debug.indicate("detector", 0, "no enemies");
+//				Debug.indicate("detector", 0, "no enemies");
 			}
 
 		} else {
@@ -91,7 +91,7 @@ public class AntiTurtleCharge extends Globals {
 					}
 				}
 				if (!dangerousHostileNearby) {
-					Messages.sendNotATurtle(MapEdges.maxBroadcastDistSq());
+					Messages.sendNotATurtle(MapEdges.maxRangeSq);
 					chargeCenter = null;
 					haveBroadcastedNotATurtle = true;
 				}

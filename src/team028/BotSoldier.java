@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-		Debug.init("charge");		
+//		Debug.init("robotinfo");		
 		FastMath.initRand(rc);
     	try {
     		processSignals(true);
@@ -19,7 +19,8 @@ public class BotSoldier extends Globals {
 			try {
 				Globals.update();
 				turn();
-				setIndicator();
+//				Radar.indicateEnemyTurretLocation(0, 200, 200);
+//				setIndicator();
 			} catch (Exception e) {
 				e.printStackTrace();
 			}
@@ -31,7 +32,7 @@ public class BotSoldier extends Globals {
 				if (bytecodesUsed > maxBytecodesUsed) {
 					maxBytecodesUsed = bytecodesUsed;
 					maxBytecodeUsedTurn = rc.getRoundNum();
-					Debug.println("bytecodes", "new max bytecode use = " + maxBytecodesUsed + " on turn " + maxBytecodeUsedTurn);
+//					Debug.println("bytecodes", "new max bytecode use = " + maxBytecodesUsed + " on turn " + maxBytecodeUsedTurn);
 				}
 			}
 			Clock.yield();
@@ -55,61 +56,111 @@ public class BotSoldier extends Globals {
 	
 
 	private static void turn() throws GameActionException {
-		Debug.indicate("bytecodes", 0, "start: " + Clock.getBytecodeNum());
+//		Debug.indicate("bytecodes", 0, "start: " + Clock.getBytecodeNum());
 		attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 		visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
 		
 		detectIfAttackTargetIsGone();
 		processSignals(false);
-		Debug.indicateAppend("bytecodes", 0, "; after processSignals: " + Clock.getBytecodeNum());
+//		Debug.indicateAppend("bytecodes", 0, "; after processSignals: " + Clock.getBytecodeNum());
 
-		Debug.indicate("bug", 1, "attackTarget = " + attackTarget);
+//		Debug.indicate("bug", 1, "attackTarget = " + attackTarget);
 		if (attackTarget != null) {
-			Debug.indicateLine("bug", here, attackTarget, 0, 255, 0);
+//			Debug.indicateLine("bug", here, attackTarget, 0, 255, 0);
 		}
+		
 
 		manageHealingState();
 		
+		if (rc.isCoreReady()) {
+			Radar.updateClosestEnemyTurretInfo();
+		}
+		
 		if (tryToMicro()) {
-			Debug.indicate("bug", 2, "microed");
-			Debug.indicateAppend("bytecodes", 0, "; after tryToMicro: " + Clock.getBytecodeNum());
+//			Debug.indicate("bug", 2, "microed");
+//			Debug.indicateAppend("bytecodes", 0, "; after tryToMicro: " + Clock.getBytecodeNum());
 			return;
 		}
-		Debug.indicateAppend("bytecodes", 0, "; after tryToMicro: " + Clock.getBytecodeNum());
+//		Debug.indicateAppend("bytecodes", 0, "; after tryToMicro: " + Clock.getBytecodeNum());
 
 		if (rc.isCoreReady()) {
-			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
-			Radar.updateClosestEnemyTurretLocation();
-			Debug.indicateAppend("bytecodes", 0, "; after turrets: " + Clock.getBytecodeNum());
+//			Radar.removeDistantEnemyTurrets(9 * RobotType.SCOUT.sensorRadiusSquared);
+//			Debug.indicateAppend("bytecodes", 0, "; after turrets: " + Clock.getBytecodeNum());
 
 			if (tryDoAntiTurtleCharge()) {
-				Debug.indicate("bug", 2, "doing charge");
+//				Debug.indicate("bug", 2, "doing charge");
 				return;
 			}
+			
+			/*if (retreatFromEnemyTurretRange()) {
+				Debug.indicate("turrets", 0, "retreating from enemy turret range");
+				return;
+			}*/
 			
 			//		Debug.indicate("micro", 2, "inHealingState = " + inHealingState);
 			if (inHealingState) {
 				if (tryToHealAtArchon()) {
-					Debug.indicate("bug", 2, "healing");
-					Debug.indicateAppend("bytecodes", 0, "; after tTHAA: " + Clock.getBytecodeNum());
+//					Debug.indicate("bug", 2, "healing");
+//					Debug.indicateAppend("bytecodes", 0, "; after tTHAA: " + Clock.getBytecodeNum());
 					return;
 				}
 			}
 
 			lookForAttackTarget();
-			Debug.indicateAppend("bytecodes", 0, "; after lFAT: " + Clock.getBytecodeNum());
+//			Debug.indicateAppend("bytecodes", 0, "; after lFAT: " + Clock.getBytecodeNum());
 		}
 	}
 	
+	private static boolean retreatFromEnemyTurretRange() throws GameActionException {
+		if (Radar.closestEnemyTurretLocation == null) {
+//			Debug.indicate("retreat", 0, "no known enemy turret");
+			return false;
+		}
+		
+		int currentDistSq = Radar.closestEnemyTurretLocation.distanceSquaredTo(here);
+		if (currentDistSq > RobotType.TURRET.attackRadiusSquared) {
+//			Debug.indicate("retreat", 0, "not in range of " + Radar.closestEnemyTurretLocation);
+			return false;
+		}
+		
+		Direction awayDir = Radar.closestEnemyTurretLocation.directionTo(here);
+		Direction[] dirs = { awayDir, awayDir.rotateLeft(), awayDir.rotateRight(),
+				awayDir.rotateLeft().rotateLeft(), awayDir.rotateRight().rotateRight() };
+		
+		dirSearch: for (Direction dir : dirs) {
+			MapLocation dirLoc = here.add(dir);
+			if (!rc.canMove(dir)) continue;
+			if (Radar.closestEnemyTurretLocation.distanceSquaredTo(dirLoc) <= currentDistSq) continue;
+			
+			for (RobotInfo hostile : visibleHostiles) {
+				if (hostile.type.canAttack()) {
+					if (hostile.location.distanceSquaredTo(dirLoc) <= hostile.type.attackRadiusSquared) {
+						continue dirSearch;
+					}
+				}
+			}
+			
+//			Debug.indicate("retreat", 0, "retreating out from under turret at " + Radar.closestEnemyTurretLocation);
+//			Debug.println("retreat", "retreating out from under turret at " + Radar.closestEnemyTurretLocation);
+//			Debug.indicateLine("retreat", here, Radar.closestEnemyTurretLocation, 0, 255, 255);
+			rc.move(dir);
+			return true;
+		}
+
+//		Debug.indicate("retreat", 0, "couldn't find a direction to retreat from " + Radar.closestEnemyTurretLocation);
+//		Debug.println("retreat", "couldn't find a direction to retreat from " + Radar.closestEnemyTurretLocation);
+	    return false;
+	}
+	
 	private static boolean tryDoAntiTurtleCharge() throws GameActionException {
-		Debug.indicate("charge", 0, "center = " + AntiTurtleCharge.chargeCenter + ", chargeRound = " + AntiTurtleCharge.chargeRound + ", endRound = " + AntiTurtleCharge.endRound);
+//		Debug.indicate("charge", 0, "center = " + AntiTurtleCharge.chargeCenter + ", chargeRound = " + AntiTurtleCharge.chargeRound + ", endRound = " + AntiTurtleCharge.endRound);
 		if (AntiTurtleCharge.chargeCenter != null && rc.getRoundNum() < AntiTurtleCharge.endRound) {
 			if (rc.getRoundNum() > AntiTurtleCharge.chargeRound) {
-				Debug.indicate("charge", 1, "charging!!!");
+//				Debug.indicate("charge", 1, "charging!!!");
 				Nav.goToDirect(AntiTurtleCharge.chargeCenter);
 				return true;
 			} else {
-				Debug.indicate("charge", 1, "gathering for charge");
+//				Debug.indicate("charge", 1, "gathering for charge");
 				Nav.goToDirectSafelyAvoidingTurret(AntiTurtleCharge.chargeCenter, Radar.closestEnemyTurretLocation);
 				return true;
 			} 
@@ -172,8 +223,11 @@ public class BotSoldier extends Globals {
 				switch(data[0] & Messages.CHANNEL_MASK) {
 				case Messages.CHANNEL_RADAR:
 					if (processRadar) {
-						MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
-						addAttackTarget(closest, false);
+						//MapLocation closest = Messages.getClosestRadarHit(data, sig.getLocation());
+						MapLocation closest = Messages.getClosestNonScoutRadarHit(data, sig.getLocation());
+						if (closest != null) {
+							addAttackTarget(closest, false);
+						}
 					}
 					break;
 					
@@ -203,9 +257,9 @@ public class BotSoldier extends Globals {
 					}
 					break;
 					
-				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
-					Messages.processEnemyTurretWarning(data);
-					break;
+//				case Messages.CHANNEL_ENEMY_TURRET_WARNING:
+//					Messages.processEnemyTurretWarning(data);
+//					break;
 					
 				case Messages.CHANNEL_ROBOT_LOCATION:
 					Messages.processRobotLocation(sig, data);
@@ -217,7 +271,7 @@ public class BotSoldier extends Globals {
 					
 				case Messages.CHANNEL_BEGIN_EDUCATION:
 					if (justBorn) {
-						Debug.indicate("education", 0, "reached begin education signal!");
+//						Debug.indicate("education", 0, "reached begin education signal!");
 					}
 					return;
 					
@@ -227,8 +281,20 @@ public class BotSoldier extends Globals {
 		}
 	}
 
-	private static boolean tryToMicro() throws GameActionException {		
-		if (visibleHostiles.length == 0) return false;
+	private static boolean tryToMicro() throws GameActionException {			
+		boolean currentlyChargeTurtleOrGathering = (AntiTurtleCharge.chargeCenter != null)
+				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
+		boolean currentlyChargingTurtle = currentlyChargeTurtleOrGathering 
+				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
+		
+		if (visibleHostiles.length == 0) {
+			if (rc.isCoreReady() && !currentlyChargingTurtle) {
+				if (retreatFromEnemyTurretRange()) {
+					return true;
+				}
+			}
+			return false;
+		}
 
 		if (rc.isCoreReady()) {
 			double leftHealth = rc.getHealth() - rc.getViperInfectedTurns() * 2.0;
@@ -238,22 +304,17 @@ public class BotSoldier extends Globals {
 				}
 			}
 			if (leftHealth <= 0) {
-				Debug.indicate("micro", 0, "Doomed by infection");
+//				Debug.indicate("micro", 0, "Doomed by infection");
 				if (tryChargeToEnemy()) {
-					Debug.indicate("micro", 1, "Going for enemies");
+//					Debug.indicate("micro", 1, "Going for enemies");
 					return true;
 				}
 				if (tryGoAwayFromAlly()) {
-					Debug.indicate("micro", 1, "Cannot find enemy, keep distance from allies.");
+//					Debug.indicate("micro", 1, "Cannot find enemy, keep distance from allies.");
 					return true;
 				}
 			}
 		}
-		
-		boolean currentlyChargeTurtleOrGathering = (AntiTurtleCharge.chargeCenter != null)
-				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
-		boolean currentlyChargingTurtle = currentlyChargeTurtleOrGathering 
-				&& (rc.getRoundNum() < AntiTurtleCharge.endRound);
 				
 		if (inHealingState && !currentlyChargingTurtle) {
 			// if we are in the healing state, then if we are under attack we should retreat.
@@ -261,14 +322,14 @@ public class BotSoldier extends Globals {
 			if (rc.isCoreReady()) {
 				if (visibleHostiles.length > 0) {
 					if (fleeInHealingState(visibleHostiles)) {
-						Debug.indicate("micro", 0, "fleeing in healing state");
+//						Debug.indicate("micro", 0, "fleeing in healing state");
 						return true;
 					}
 				}
 			}
 			if (rc.isWeaponReady() && rc.getCoreDelay() >= myType.cooldownDelay) {
 				if (attackableHostiles.length > 0) {
-					Debug.indicate("micro", 0, "attacking in healing state");
+//					Debug.indicate("micro", 0, "attacking in healing state");
 					chooseTargetAndAttack(attackableHostiles);
 					return true;
 				}
@@ -278,7 +339,10 @@ public class BotSoldier extends Globals {
 
 		if (rc.isCoreReady() && !currentlyChargingTurtle) {
 			if (retreatIfOutnumbered(visibleHostiles)) {
-				Debug.indicate("micro", 0, "retreating because outnumbered");
+//				Debug.indicate("micro", 0, "retreating because outnumbered");
+				return true;
+			}
+			if (retreatFromEnemyTurretRange()) {
 				return true;
 			}
 		}
@@ -288,23 +352,23 @@ public class BotSoldier extends Globals {
  			    // retreat if there is slow zombie adjacent to us
 				if (rc.isCoreReady()) {
 					if (retreatFromSlowZombiesIfNecessary()) {
-						Debug.indicate("micro", 0, "retreating from slow zombies");
+//						Debug.indicate("micro", 0, "retreating from slow zombies");
 						return true;
 					}
 				}
 				// otherwise just shoot someone
-				Debug.indicate("micro", 0, "attacking");
+//				Debug.indicate("micro", 0, "attacking");
 				chooseTargetAndAttack(attackableHostiles);
 				return true;
 			}
 			// we can't shoot anyone. try to help an ally or attack a helpless target
 			if (rc.isCoreReady()) {
-				if (tryMoveToHelpAlly(visibleHostiles, currentlyChargingTurtle)) {
-					Debug.indicate("micro", 0, "moving to help ally");
+				if (tryMoveToHelpAlly(visibleHostiles, currentlyChargeTurtleOrGathering)) {
+//					Debug.indicate("micro", 0, "moving to help ally");
 					return true;
 				}
-				if (tryMoveToAttackHelplessTarget(visibleHostiles, currentlyChargingTurtle)) {
-					Debug.indicate("micro", 0, "moving to attack helpless target");
+				if (tryMoveToAttackHelplessTarget(visibleHostiles, currentlyChargeTurtleOrGathering)) {
+//					Debug.indicate("micro", 0, "moving to attack helpless target");
 					return true;
 				}
 			}
@@ -315,15 +379,15 @@ public class BotSoldier extends Globals {
 			// from a safer distance
 			if (attackableHostiles.length > 0) {
 				if (!currentlyChargingTurtle && tryToBackUpToMaintainMaxRange(attackableHostiles)) {
-					Debug.indicate("micro", 0, "backing up to maintain max range");
+//					Debug.indicate("micro", 0, "backing up to maintain max range");
 					return true;
 				}
 				if (tryMoveToAttackHelplessNonDenTarget(visibleHostiles)) {
-					Debug.indicate("micro", 0, "moving to attack helpless non den target");
+//					Debug.indicate("micro", 0, "moving to attack helpless non den target");
 					return true;
 				}
 				if (!currentlyChargeTurtleOrGathering && tryGetCloserToZombieDen(attackableHostiles)) {
-					Debug.indicate("micro", 0, "getting closer to zombie den");
+//					Debug.indicate("micro", 0, "getting closer to zombie den");
 					return true;
 				}
 				if (currentlyChargeTurtleOrGathering) {
@@ -337,7 +401,7 @@ public class BotSoldier extends Globals {
 						}
 					}
 					if (onlyAttackingDen) {
-						Debug.indicate("micro", 0, "returning false b/c charging and only attacking den");
+//						Debug.indicate("micro", 0, "returning false b/c charging and only attacking den");
 						return false;
 					}
 				}
@@ -346,20 +410,20 @@ public class BotSoldier extends Globals {
 			
 			// otherwise try to help an ally or attack a helpless target
 			if (tryMoveToHelpAlly(visibleHostiles, currentlyChargeTurtleOrGathering)) {
-				Debug.indicate("micro", 0, "moving to help ally");
+//				Debug.indicate("micro", 0, "moving to help ally");
 				return true;
 			}
 			if (tryMoveToEngageOutnumberedEnemy(visibleHostiles, currentlyChargeTurtleOrGathering)) {
-				Debug.indicate("micro", 0, "moving to engage outnumbered enemy");
+//				Debug.indicate("micro", 0, "moving to engage outnumbered enemy");
 				return true;
 			}
 			if (tryMoveToAttackHelplessTarget(visibleHostiles, currentlyChargeTurtleOrGathering)) {
-				Debug.indicate("micro", 0, "moving to attack helpless target");
+//				Debug.indicate("micro", 0, "moving to attack helpless target");
 				return true;
 			}
 		}
 		
-		Debug.indicate("micro", 0, "returnings false at end");
+//		Debug.indicate("micro", 0, "returnings false at end");
 		return false;
 	}
 	
@@ -427,7 +491,7 @@ public class BotSoldier extends Globals {
 			rc.attackLocation(bestTarget.location);
 			if (bestTarget.type == RobotType.ZOMBIEDEN) {
 				if (rc.senseRobotAtLocation(bestTarget.location) == null) {
-					rc.broadcastSignal(20000);
+					rc.broadcastSignal(MapEdges.maxRangeSq);
 				}
 			}
 		}
@@ -844,7 +908,7 @@ public class BotSoldier extends Globals {
 					if (isAttackingZombieDen) {
 						destroyedZombieDens.add(attackTarget);
 					}
-					Debug.indicate("bug", 0, "deleting old target since it is gone");
+//					Debug.indicate("bug", 0, "deleting old target since it is gone");
 					//RobotInfo[] closeTargets = rc.senseHostileRobots(attackTarget, 2);
 					attackTarget = null;
 					isAttackingZombieDen = false;
@@ -874,11 +938,11 @@ public class BotSoldier extends Globals {
 					numTurnsBlocked = 0;
 				}
 			}
-			Debug.indicate("bug", 2, "went toward target at " + attackTarget);
+//			Debug.indicate("bug", 2, "went toward target at " + attackTarget);
 			return;
 		}
 		
-		Debug.indicate("bug", 2, "no attack target, going to heal");
+//		Debug.indicate("bug", 2, "no attack target, going to heal");
 		tryToHealAtArchon();
 	}
 }
