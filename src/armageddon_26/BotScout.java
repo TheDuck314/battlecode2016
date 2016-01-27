@@ -22,7 +22,7 @@ public class BotScout extends Globals {
 	
 	private static int turretFollowId = -1;
 	private static int archonFollowId = -1;
-	private static final boolean enableArchonFollowing = true;
+	private static final boolean enableArchonFollowing = false;
 	private static int lastTurretOwnershipBroadcastRound = -999999;
 	private static int[] turretOwnershipReceiveRoundById = new int[32001];
 	//private static int lastFollowRound = -999999;
@@ -162,7 +162,7 @@ public class BotScout extends Globals {
 	
 	private static void trySuicide() {
 		if (rc.getInfectedTurns() == 0 
-				&& rc.getRoundNum() > 1000 
+				&& !rc.isArmageddonDaytime()
 				&& rc.senseNearbyRobots(2, Team.ZOMBIE).length > 0) {
 			//System.out.println("suiciding");
 			rc.disintegrate();
