@@ -269,91 +269,91 @@ public class BotArchon extends Globals {
 		}*/
 		
 		RobotType spawnType = RobotType.SOLDIER;
-		if (rc.getRoundNum() < 250) {
-			if (spawnCount % 8 == 0) {
-				spawnType = RobotType.SCOUT;
-			} else {
-				spawnType = RobotType.SOLDIER;			
-			}
-			if (spawnCount % 15 == 14) {
-				spawnType = RobotType.VIPER;
-			}
-		} else {
-			if (lastUnpairedScoutCount < 2) {
-				switch (spawnCount % 4) {
-				case 0:
-					spawnType = RobotType.SOLDIER;
-					break;
-				case 2:
-					spawnType = RobotType.TURRET;
-					break;
-				default:
-					spawnType = RobotType.SCOUT;
-				}
-			} else if (lastUnpairedScoutCount < 5) {
-				switch (spawnCount % 3) {
-				case 0:
-					spawnType = RobotType.SOLDIER;
-					break;
-				case 1:
-					spawnType = RobotType.TURRET;
-					break;
-				default:
-					spawnType = RobotType.SCOUT;
-				}
-			} else {
-				switch (spawnCount % 2) {
-				case 0:
-					spawnType = RobotType.SOLDIER;
-					break;
-				case 1:
-					spawnType = RobotType.TURRET;
-					break;
-				default:
-					spawnType = RobotType.SCOUT;
-				}
-			}
-			// decide how often to build vipers
-			if (rc.getRoundNum() > 1000 && rc.getRobotCount() <= 20) {
-				// if we are losing, build a lot of vipers to hold off
-				// pursuers and to make the game more random
-				if (spawnCount % 4 == 0) {
-					spawnType = RobotType.VIPER;
-					//if (rc.hasBuildRequirements(RobotType.VIPER)) System.out.println("built a viper because we are losing");
-				} 
-			} else {
-				if (spawnCount % 15 == 14) {
-					spawnType = RobotType.VIPER;
-				}
-			}
-		}
-		/*if (pullMode && rc.getRoundNum() <= 500) {
-			if (spawnCount % 2 == 0) {
-				spawnType = RobotType.SCOUT;
-			}
-		}*/
-		
-		if (rc.getRoundNum() - lastFleeZombiesRound < 100) {
-			if (spawnType == RobotType.VIPER || spawnType == RobotType.TURRET
-					|| spawnType == RobotType.SCOUT) {
-//				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
-				//System.out.println("converted " + spawnType + " spawn into soldier");
-				spawnType = RobotType.SOLDIER;
-			}
-		} else if (rc.getRoundNum() - lastFleeOtherTeamRound < 100) {
-			if (spawnType == RobotType.TURRET) {
-//				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
-				//System.out.println("converted " + spawnType + " spawn into soldier");
-				spawnType = RobotType.SOLDIER;
-			}
-		}
-		if (rc.getRobotCount() < 15) {
-			if (spawnType == RobotType.TURRET) {
-//				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
-				//System.out.println("converted " + spawnType + " spawn into soldier");
-				spawnType = RobotType.SOLDIER;
-			}
-		}
+//		if (rc.getRoundNum() < 250) {
+//			if (spawnCount % 8 == 0) {
+//				spawnType = RobotType.SCOUT;
+//			} else {
+//				spawnType = RobotType.SOLDIER;			
+//			}
+//			if (spawnCount % 15 == 14) {
+//				spawnType = RobotType.VIPER;
+//			}
+//		} else {
+//			if (lastUnpairedScoutCount < 2) {
+//				switch (spawnCount % 4) {
+//				case 0:
+//					spawnType = RobotType.SOLDIER;
+//					break;
+//				case 2:
+//					spawnType = RobotType.TURRET;
+//					break;
+//				default:
+//					spawnType = RobotType.SCOUT;
+//				}
+//			} else if (lastUnpairedScoutCount < 5) {
+//				switch (spawnCount % 3) {
+//				case 0:
+//					spawnType = RobotType.SOLDIER;
+//					break;
+//				case 1:
+//					spawnType = RobotType.TURRET;
+//					break;
+//				default:
+//					spawnType = RobotType.SCOUT;
+//				}
+//			} else {
+//				switch (spawnCount % 2) {
+//				case 0:
+//					spawnType = RobotType.SOLDIER;
+//					break;
+//				case 1:
+//					spawnType = RobotType.TURRET;
+//					break;
+//				default:
+//					spawnType = RobotType.SCOUT;
+//				}
+//			}
+//			// decide how often to build vipers
+//			if (rc.getRoundNum() > 1000 && rc.getRobotCount() <= 20) {
+//				// if we are losing, build a lot of vipers to hold off
+//				// pursuers and to make the game more random
+//				if (spawnCount % 4 == 0) {
+//					spawnType = RobotType.VIPER;
+//					//if (rc.hasBuildRequirements(RobotType.VIPER)) System.out.println("built a viper because we are losing");
+//				} 
+//			} else {
+//				if (spawnCount % 15 == 14) {
+//					spawnType = RobotType.VIPER;
+//				}
+//			}
+//		}
+//		/*if (pullMode && rc.getRoundNum() <= 500) {
+//			if (spawnCount % 2 == 0) {
+//				spawnType = RobotType.SCOUT;
+//			}
+//		}*/
+//		
+//		if (rc.getRoundNum() - lastFleeZombiesRound < 100) {
+//			if (spawnType == RobotType.VIPER || spawnType == RobotType.TURRET
+//					|| spawnType == RobotType.SCOUT) {
+////				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
+//				//System.out.println("converted " + spawnType + " spawn into soldier");
+//				spawnType = RobotType.SOLDIER;
+//			}
+//		} else if (rc.getRoundNum() - lastFleeOtherTeamRound < 100) {
+//			if (spawnType == RobotType.TURRET) {
+////				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
+//				//System.out.println("converted " + spawnType + " spawn into soldier");
+//				spawnType = RobotType.SOLDIER;
+//			}
+//		}
+//		if (rc.getRobotCount() < 15) {
+//			if (spawnType == RobotType.TURRET) {
+////				Debug.indicate("convert", 0, "converted " + spawnType + " spawn into soldier");
+//				//System.out.println("converted " + spawnType + " spawn into soldier");
+//				spawnType = RobotType.SOLDIER;
+//			}
+//		}
 		
 //		if (spawnType == RobotType.VIPER) {
 //			spawnType = RobotType.TURRET;
@@ -364,7 +364,7 @@ public class BotArchon extends Globals {
 //			spawnType = RobotType.SCOUT;
 //		}
 		spawnType = RobotType.SOLDIER;
-		if (rc.getRobotCount() > 50 && rc.isArmageddonDaytime() && rc.getRobotCount() % 20 == 0) {
+		if (rc.getRobotCount() > 30 && rc.isArmageddonDaytime() && rc.getRobotCount() % 10 == 0) {
 			spawnType = RobotType.SCOUT;
 		}
 		

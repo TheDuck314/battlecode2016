@@ -932,7 +932,7 @@ public class BotSoldier extends Globals {
 				numTurnsBlocked = 0;
 			} else {
 				numTurnsBlocked += 1;
-				if (numTurnsBlocked >= 40) {
+				if (numTurnsBlocked >= 20) {
 					attackTarget = null;
 					isAttackingZombieDen = false;
 					numTurnsBlocked = 0;
