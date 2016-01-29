@@ -364,7 +364,7 @@ public class BotArchon extends Globals {
 //			spawnType = RobotType.SCOUT;
 //		}
 		spawnType = RobotType.SOLDIER;
-		if (rc.getRobotCount() > 0 && rc.isArmageddonDaytime() && rc.getRobotCount() % 10 == 5) {
+		if (rc.getRobotCount() > 0 && rc.isArmageddonDaytime() && spawnCount % 10 == 0) {
 			spawnType = RobotType.SCOUT;
 		}
 		
