@@ -33,10 +33,12 @@ public class BotArchon extends Globals {
 	private static int scheduledEducationRound = 999999;
 	private static RobotType scheduledEducationType = null;
 
+	private static int numExtraScoutsToBuild = 0;
+	
 	//private static boolean pullMode = false;
 	
 	public static void loop() throws GameActionException {
-//		Debug.init("robotinfo");
+		Debug.init("extra");
 		
 		rc.setIndicatorString(0, "2b2f762a5f7c5c4647f846268c52e396370cdffc");
 		
@@ -98,6 +100,8 @@ public class BotArchon extends Globals {
 //	}
 	
 	private static void turn() throws GameActionException {
+		Debug.indicate("extra", 0, "numExtraScoutsToBuild = " + numExtraScoutsToBuild);
+		
 		processSignals();
 		
 		if (rc.getRoundNum() >= scheduledEducationRound) {
@@ -240,9 +244,9 @@ public class BotArchon extends Globals {
 	}
 	
 	private static void trySendArchonLocationMessage() throws GameActionException {
-		if (lastArchonLocationMessageRound < rc.getRoundNum() - 60) {
+		if (lastArchonLocationMessageRound < rc.getRoundNum() - 120) {
 			int rangeSq = 900;
-			if (lastGlobalArchonLocationMessageRound < rc.getRoundNum() - 150
+			if (lastGlobalArchonLocationMessageRound < rc.getRoundNum() - 300
 					&& visibleHostiles.length == 0
 					&& rc.getTeamParts() < 50) {
 				rangeSq = MapEdges.maxBroadcastDistSq();
@@ -366,6 +370,10 @@ public class BotArchon extends Globals {
 		spawnType = RobotType.SOLDIER;
 		if (spawnCount % 30 == 0) {
 			spawnType = RobotType.SCOUT;
+		}
+		if (numExtraScoutsToBuild > 0 && spawnType != RobotType.SCOUT && spawnCount % 2 == 0) {
+			spawnType = RobotType.SCOUT;
+			numExtraScoutsToBuild -= 1;
 		}
 		
 		if (!rc.hasBuildRequirements(spawnType)) return;
@@ -502,6 +510,12 @@ public class BotArchon extends Globals {
 				}
 				Messages.sendNeutralWasActivated(neutral.location, neutral.type, rangeSq);
 //				Debug.indicate("archons", 2, "sending message that I activated a neutral archon! rangeSq = " + rangeSq);
+			}
+			if (neutral.type == RobotType.TURRET || neutral.type == RobotType.TTM) {
+				numExtraScoutsToBuild += 1;
+			}
+			if (neutral.type == RobotType.SCOUT) {
+				numExtraScoutsToBuild -= 1;
 			}
 			return;
 		}
