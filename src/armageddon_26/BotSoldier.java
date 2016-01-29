@@ -630,6 +630,26 @@ public class BotSoldier extends Globals {
 					MapLocation forwardLoc = here.add(forward);
 					if (rc.senseRubble(forwardLoc) > GameConstants.RUBBLE_SLOW_THRESH) {
 						rc.clearRubble(forward);
+						return true;
+					}
+				}
+			}
+			
+			for (int i = 0; i < 8; ++i) {
+				Direction dir = Direction.values()[i];
+				if (rc.canMove(dir.opposite())) {
+					boolean dirIsBlocked = true;
+					for (int j = 1; j <= 3; ++j) {
+						MapLocation loc = here.add(dir, j);
+						RobotInfo robot = rc.senseRobotAtLocation(loc);
+						if (robot == null) {
+							dirIsBlocked = false;
+							break;
+						}
+					}
+					if (dirIsBlocked) {
+						rc.move(dir.opposite());
+						return true;
 					}
 				}
 			}
