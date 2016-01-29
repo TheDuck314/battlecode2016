@@ -764,39 +764,42 @@ public class BotScout extends Globals {
 		}*/
 		RobotInfo[] infos;
 		infos = visibleHostiles;
-		for (RobotInfo e : infos) {
-			if (!e.type.canAttack()) continue;
-			int hereDistSq = e.location.distanceSquaredTo(here);
-			int safeDistSq = 0;
-			switch (e.type) {
-			case STANDARDZOMBIE:
-			case BIGZOMBIE:
-			case GUARD:
-				safeDistSq = 9;
-				break;
-			case FASTZOMBIE:
-				safeDistSq = 17; // larger because it is fast
-				break;
-			case RANGEDZOMBIE:
-			case SOLDIER:
-				safeDistSq = 26;
-				break;
-			case VIPER:
-				safeDistSq = 35;
-				break;
-			case TURRET:
-				safeDistSq = 54; // Cannot be safe from TURRET
-				break;
-			default:
-			}
-			int attackRadiusSquared = e.type.attackRadiusSquared;
-			if (hereDistSq >= safeDistSq) continue;
-			for (int i = 0; i < ndirs; ++i) {
-				int distSq = e.location.distanceSquaredTo(locs[i]);
-				if (distSq <= attackRadiusSquared) {
-					attacks[i] += e.attackPower + 0.1 * (attackRadiusSquared - distSq);
-				} else if (distSq <= attackRadiusSquared * 2){
-					attacks[i] += e.attackPower / (5 * distSq / (attackRadiusSquared+1));
+		if (!rc.isArmageddonDaytime()
+				|| Globals.roundNumNightStart - Globals.roundNum <= 15 ) {
+			for (RobotInfo e : infos) {
+				if (!e.type.canAttack()) continue;
+				int hereDistSq = e.location.distanceSquaredTo(here);
+				int safeDistSq = 0;
+				switch (e.type) {
+				case STANDARDZOMBIE:
+				case BIGZOMBIE:
+				case GUARD:
+					safeDistSq = 9;
+					break;
+				case FASTZOMBIE:
+					safeDistSq = 17; // larger because it is fast
+					break;
+				case RANGEDZOMBIE:
+				case SOLDIER:
+					safeDistSq = 26;
+					break;
+				case VIPER:
+					safeDistSq = 35;
+					break;
+				case TURRET:
+					safeDistSq = 54; // Cannot be safe from TURRET
+					break;
+				default:
+				}
+				int attackRadiusSquared = e.type.attackRadiusSquared;
+				if (hereDistSq >= safeDistSq) continue;
+				for (int i = 0; i < ndirs; ++i) {
+					int distSq = e.location.distanceSquaredTo(locs[i]);
+					if (distSq <= attackRadiusSquared) {
+						attacks[i] += e.attackPower + 0.1 * (attackRadiusSquared - distSq);
+					} else if (distSq <= attackRadiusSquared * 2){
+						attacks[i] += e.attackPower / (5 * distSq / (attackRadiusSquared+1));
+					}
 				}
 			}
 		}
