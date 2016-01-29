@@ -592,7 +592,7 @@ public class BotSoldier extends Globals {
 		RobotInfo closestHostile = Util.closest(attackableHostiles);
 		if (closestHostile.type == RobotType.ZOMBIEDEN) {
 			int distSq = here.distanceSquaredTo(closestHostile.location);
-			if (distSq > 8) {
+			if (distSq > 2) {
 				return Nav.tryMoveInDirection(here.directionTo(closestHostile.location));
 			}
 		}
