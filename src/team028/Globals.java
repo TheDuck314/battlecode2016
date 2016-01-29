@@ -20,6 +20,9 @@ public class Globals {
 	
 	public static int numberOfInitialArchon;
 	
+	public static int roundNumLastMorning = -99999;
+	public static int roundNumNightStart = -99999;
+	
 	public static MapLocation[] ourInitialArchonLocations;
 	public static MapLocation[] theirInitialArchonLocations;
 	
@@ -77,6 +80,12 @@ public class Globals {
 		here = rc.getLocation();
 		roundNum = rc.getRoundNum();
 		MapEdges.maxRangeSq = MapEdges.maxBroadcastDistSq();
+		if (rc.isArmageddonDaytime()
+				&& roundNum - roundNumLastMorning >
+				GameConstants.ARMAGEDDON_DAY_TIMER + GameConstants.ARMAGEDDON_NIGHT_TIMER / 2) {
+			roundNumLastMorning = roundNum;
+		}
+		roundNumNightStart = roundNumLastMorning + GameConstants.ARMAGEDDON_DAY_TIMER;
 	}
 	
 	public static void updateRobotInfos() {

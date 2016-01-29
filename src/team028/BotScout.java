@@ -22,7 +22,7 @@ public class BotScout extends Globals {
 	
 	private static int turretFollowId = -1;
 	private static int archonFollowId = -1;
-	private static final boolean enableArchonFollowing = true;
+	private static final boolean enableArchonFollowing = false;
 	private static int lastTurretOwnershipBroadcastRound = -999999;
 	private static int[] turretOwnershipReceiveRoundById = new int[32001];
 	//private static int lastFollowRound = -999999;
@@ -162,10 +162,14 @@ public class BotScout extends Globals {
 	
 	private static void trySuicide() {
 		if (rc.getInfectedTurns() == 0 
-				&& rc.getRoundNum() > 1000 
-				&& rc.senseNearbyRobots(2, Team.ZOMBIE).length > 0) {
-			//System.out.println("suiciding");
-			rc.disintegrate();
+				&& !rc.isArmageddonDaytime()) {
+			RobotInfo[] nearByHostiles = rc.senseNearbyRobots(2, Team.ZOMBIE);
+			for (RobotInfo hostile : nearByHostiles) {
+				if (hostile.type.canAttack()) {
+					System.out.println("suiciding");
+					rc.disintegrate();
+				}
+			}
 		}
 	}
 	
@@ -613,12 +617,12 @@ public class BotScout extends Globals {
 		}
 	}
 	
-	private static boolean tryMicro() throws GameActionException {
-		if (tryLuringZombie()) {
-			return true;
-		}
-		return false;
-	}
+//	private static boolean tryMicro() throws GameActionException {
+//		if (tryLuringZombie()) {
+//			return true;
+//		}
+//		return false;
+//	}
 	
 	public static int numberOfVisibleCanAttackEnemies = 0;
 	
@@ -764,39 +768,42 @@ public class BotScout extends Globals {
 		}*/
 		RobotInfo[] infos;
 		infos = visibleHostiles;
-		for (RobotInfo e : infos) {
-			if (!e.type.canAttack()) continue;
-			int hereDistSq = e.location.distanceSquaredTo(here);
-			int safeDistSq = 0;
-			switch (e.type) {
-			case STANDARDZOMBIE:
-			case BIGZOMBIE:
-			case GUARD:
-				safeDistSq = 9;
-				break;
-			case FASTZOMBIE:
-				safeDistSq = 17; // larger because it is fast
-				break;
-			case RANGEDZOMBIE:
-			case SOLDIER:
-				safeDistSq = 26;
-				break;
-			case VIPER:
-				safeDistSq = 35;
-				break;
-			case TURRET:
-				safeDistSq = 54; // Cannot be safe from TURRET
-				break;
-			default:
-			}
-			int attackRadiusSquared = e.type.attackRadiusSquared;
-			if (hereDistSq >= safeDistSq) continue;
-			for (int i = 0; i < ndirs; ++i) {
-				int distSq = e.location.distanceSquaredTo(locs[i]);
-				if (distSq <= attackRadiusSquared) {
-					attacks[i] += e.attackPower + 0.1 * (attackRadiusSquared - distSq);
-				} else if (distSq <= attackRadiusSquared * 2){
-					attacks[i] += e.attackPower / (5 * distSq / (attackRadiusSquared+1));
+		if (!rc.isArmageddonDaytime()
+				|| Globals.roundNumNightStart - Globals.roundNum <= 15 ) {
+			for (RobotInfo e : infos) {
+				if (!e.type.canAttack()) continue;
+				int hereDistSq = e.location.distanceSquaredTo(here);
+				int safeDistSq = 0;
+				switch (e.type) {
+				case STANDARDZOMBIE:
+				case BIGZOMBIE:
+				case GUARD:
+					safeDistSq = 9;
+					break;
+				case FASTZOMBIE:
+					safeDistSq = 17; // larger because it is fast
+					break;
+				case RANGEDZOMBIE:
+				case SOLDIER:
+					safeDistSq = 26;
+					break;
+				case VIPER:
+					safeDistSq = 35;
+					break;
+				case TURRET:
+					safeDistSq = 54; // Cannot be safe from TURRET
+					break;
+				default:
+				}
+				int attackRadiusSquared = e.type.attackRadiusSquared;
+				if (hereDistSq >= safeDistSq) continue;
+				for (int i = 0; i < ndirs; ++i) {
+					int distSq = e.location.distanceSquaredTo(locs[i]);
+					if (distSq <= attackRadiusSquared) {
+						attacks[i] += e.attackPower + 0.1 * (attackRadiusSquared - distSq);
+					} else if (distSq <= attackRadiusSquared * 2){
+						attacks[i] += e.attackPower / (5 * distSq / (attackRadiusSquared+1));
+					}
 				}
 			}
 		}
@@ -919,74 +926,74 @@ public class BotScout extends Globals {
 		return false;
 	}
 	
-	private static boolean tryLuringZombie() throws GameActionException {
-		RobotInfo[] visibleZombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
-		if (visibleZombies.length == 0) return false;
-//		Debug.indicate("lure", 0, "hello from tryLuringZombie!");
-				
-		RobotInfo closestZombie = null;
-		int bestDistSq = Integer.MAX_VALUE;
-		boolean fastZombieIsAdjacent = false;
-		int zombieScore = 0;
-		for (RobotInfo zombie : visibleZombies) {
-			if (zombie.type == RobotType.ZOMBIEDEN) continue;
-			int distSq = here.distanceSquaredTo(zombie.location);
-			if (distSq < bestDistSq) {
-				bestDistSq = distSq;
-				closestZombie = zombie;
-			}
-			if (zombie.type == RobotType.FASTZOMBIE && zombie.location.isAdjacentTo(here)) {
-				fastZombieIsAdjacent = true;
-			}
-			switch (zombie.type) {
-			case STANDARDZOMBIE: zombieScore += 1; break;
-			case RANGEDZOMBIE: zombieScore += 2; break;
-			case FASTZOMBIE: zombieScore += 5; break;
-			case BIGZOMBIE: zombieScore += 10; break;
-			default:
-			}
-		}
-		if (zombieScore < 10) return false;
-		if (closestZombie == null) return false;
-		System.out.println("luring zombie!");
-//		Debug.indicate("lure", 1, "closestZombie = " + closestZombie.location);
-		
-		// if we are near the target, and we see an enemy,
-		// get infected and suicide
-		BigRobotInfo bri = Radar.updateClosestEnemyArchonInfo();
-		MapLocation target;
-		if (bri == null) {
-			target = centerOfTheirInitialArchons;
-		} else {
-			target = bri.location;
-		}
-//		Debug.indicateLine("lure", here, target, 255, 0, 0);
-		if (here.distanceSquaredTo(target) < here.distanceSquaredTo(centerOfOurInitialArchons)) {
-			if (rc.senseNearbyRobots(35, them).length > 0) {
-				if (rc.getInfectedTurns() > 0) {
-					rc.disintegrate();
-				} else {
-					Nav.goToDirect(closestZombie.location);
-				}
-				return true;
-			}			
-		} 
-
-		Direction lureDir = closestZombie.location.directionTo(target);
-		MapLocation lureLoc = closestZombie.location.add(lureDir, 2);
-		while (squareIsAttackedByAZombie(lureLoc, visibleZombies) && !lureLoc.equals(target)) {
-			lureLoc = lureLoc.add(lureDir);
-		}
-//		Debug.indicateLine("lure", here, lureLoc, 0, 0, 255);
-		//if (fastZombieIsAdjacent) {
-			Nav.goToDirect(lureLoc);
-		//} else {
-		//	goToCirclingZombies(lureLoc, visibleZombies);
-		//}
-//		Debug.indicate("lure", 2, "lureLoc = " + lureLoc);
-//		Debug.indicateLine("lure", here, lureLoc, 255, 0, 0);
-		return true;
-	}
+//	private static boolean tryLuringZombie() throws GameActionException {
+//		RobotInfo[] visibleZombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+//		if (visibleZombies.length == 0) return false;
+////		Debug.indicate("lure", 0, "hello from tryLuringZombie!");
+//				
+//		RobotInfo closestZombie = null;
+//		int bestDistSq = Integer.MAX_VALUE;
+//		boolean fastZombieIsAdjacent = false;
+//		int zombieScore = 0;
+//		for (RobotInfo zombie : visibleZombies) {
+//			if (zombie.type == RobotType.ZOMBIEDEN) continue;
+//			int distSq = here.distanceSquaredTo(zombie.location);
+//			if (distSq < bestDistSq) {
+//				bestDistSq = distSq;
+//				closestZombie = zombie;
+//			}
+//			if (zombie.type == RobotType.FASTZOMBIE && zombie.location.isAdjacentTo(here)) {
+//				fastZombieIsAdjacent = true;
+//			}
+//			switch (zombie.type) {
+//			case STANDARDZOMBIE: zombieScore += 1; break;
+//			case RANGEDZOMBIE: zombieScore += 2; break;
+//			case FASTZOMBIE: zombieScore += 5; break;
+//			case BIGZOMBIE: zombieScore += 10; break;
+//			default:
+//			}
+//		}
+//		if (zombieScore < 10) return false;
+//		if (closestZombie == null) return false;
+//		System.out.println("luring zombie!");
+////		Debug.indicate("lure", 1, "closestZombie = " + closestZombie.location);
+//		
+//		// if we are near the target, and we see an enemy,
+//		// get infected and suicide
+//		BigRobotInfo bri = Radar.updateClosestEnemyArchonInfo();
+//		MapLocation target;
+//		if (bri == null) {
+//			target = centerOfTheirInitialArchons;
+//		} else {
+//			target = bri.location;
+//		}
+////		Debug.indicateLine("lure", here, target, 255, 0, 0);
+//		if (here.distanceSquaredTo(target) < here.distanceSquaredTo(centerOfOurInitialArchons)) {
+//			if (rc.senseNearbyRobots(35, them).length > 0) {
+//				if (rc.getInfectedTurns() > 0) {
+//					rc.disintegrate();
+//				} else {
+//					Nav.goToDirect(closestZombie.location);
+//				}
+//				return true;
+//			}			
+//		} 
+//
+//		Direction lureDir = closestZombie.location.directionTo(target);
+//		MapLocation lureLoc = closestZombie.location.add(lureDir, 2);
+//		while (squareIsAttackedByAZombie(lureLoc, visibleZombies) && !lureLoc.equals(target)) {
+//			lureLoc = lureLoc.add(lureDir);
+//		}
+////		Debug.indicateLine("lure", here, lureLoc, 0, 0, 255);
+//		//if (fastZombieIsAdjacent) {
+//			Nav.goToDirect(lureLoc);
+//		//} else {
+//		//	goToCirclingZombies(lureLoc, visibleZombies);
+//		//}
+////		Debug.indicate("lure", 2, "lureLoc = " + lureLoc);
+////		Debug.indicateLine("lure", here, lureLoc, 255, 0, 0);
+//		return true;
+//	}
 	
 	private static boolean circleLeft = true;
 	

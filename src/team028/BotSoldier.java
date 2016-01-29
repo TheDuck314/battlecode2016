@@ -4,7 +4,7 @@ import battlecode.common.*;
 
 public class BotSoldier extends Globals {
 	public static void loop() {
-//		Debug.init("robotinfo");		
+		Debug.init("dens");		
 		FastMath.initRand(rc);
     	try {
     		processSignals(true);
@@ -54,11 +54,19 @@ public class BotSoldier extends Globals {
 	private static MapLocationHashSet destroyedZombieDens = new MapLocationHashSet();
 	private static boolean isAttackingZombieDen = false;
 	
+	private static MapLocationHashSet knownZombieDens = new MapLocationHashSet();
 
 	private static void turn() throws GameActionException {
 //		Debug.indicate("bytecodes", 0, "start: " + Clock.getBytecodeNum());
 		attackableHostiles = rc.senseHostileRobots(here, myAttackRadiusSquared);
 		visibleHostiles = rc.senseHostileRobots(here, mySensorRadiusSquared);
+		
+		Debug.indicate("dens", 0, "knownZombieDens.size = " + knownZombieDens.size);
+		
+		rememberZombieDens();
+		for (int i = 0; i < knownZombieDens.size; ++i) {
+			Debug.indicateDot("dens", knownZombieDens.locations[i], 0, 255, 255);
+		}
 		
 		detectIfAttackTargetIsGone();
 		processSignals(false);
@@ -108,6 +116,26 @@ public class BotSoldier extends Globals {
 
 			lookForAttackTarget();
 //			Debug.indicateAppend("bytecodes", 0, "; after lFAT: " + Clock.getBytecodeNum());
+		}
+	}
+	
+	private static void rememberZombieDens() throws GameActionException {
+		RobotInfo[] zombies = rc.senseNearbyRobots(mySensorRadiusSquared, Team.ZOMBIE);
+		for (RobotInfo zombie : zombies) {
+			if (zombie.type == RobotType.ZOMBIEDEN) {
+				knownZombieDens.add(zombie.location);
+			}
+		}
+		
+		MapLocation closestDen = knownZombieDens.findClosestMemberToLocation(here);
+		if (closestDen != null) {
+			if (rc.canSenseLocation(closestDen)) {
+				RobotInfo robot = rc.senseRobotAtLocation(closestDen);
+				if (robot == null || robot.type != RobotType.ZOMBIEDEN) {
+					knownZombieDens.remove(closestDen);
+					destroyedZombieDens.add(closestDen);
+				}
+			}
 		}
 	}
 	
@@ -244,6 +272,8 @@ public class BotSoldier extends Globals {
 							isAttackingZombieDen = false;
 							attackTarget = null;
 						}
+					} else {
+						knownZombieDens.add(denLoc);
 					}
 					break;
 					
@@ -276,6 +306,21 @@ public class BotSoldier extends Globals {
 					return;
 					
 				default:
+				}
+			} else {
+				// simple signal with no message
+				// for now these are only sent by soldiers who have just killed
+				// a zombie den. Check to see if we know of a zombie den within
+				// the soldier attack radius of the message origin.
+				MapLocation signalOrigin = sig.getLocation();
+				MapLocation killedDen = knownZombieDens.findClosestMemberToLocation(signalOrigin);
+//				Debug.indicate("kill", 0, "got kill message. signalOrigin = " + signalOrigin + ", killedDen = " + killedDen);
+				if (killedDen != null 
+						&& killedDen.distanceSquaredTo(signalOrigin) <= RobotType.SOLDIER.attackRadiusSquared) {
+					knownZombieDens.remove(killedDen);
+					if (killedDen.equals(attackTarget)) {
+						attackTarget = null;
+					}
 				}
 			}
 		}
@@ -592,8 +637,36 @@ public class BotSoldier extends Globals {
 		RobotInfo closestHostile = Util.closest(attackableHostiles);
 		if (closestHostile.type == RobotType.ZOMBIEDEN) {
 			int distSq = here.distanceSquaredTo(closestHostile.location);
-			if (distSq > 8) {
-				return Nav.tryMoveInDirection(here.directionTo(closestHostile.location));
+			if (distSq > 2) {
+				Direction forward = here.directionTo(closestHostile.location);
+				if (Nav.tryMoveInDirection(forward)) {
+					return true;
+				} else {
+					MapLocation forwardLoc = here.add(forward);
+					if (rc.senseRubble(forwardLoc) > GameConstants.RUBBLE_SLOW_THRESH) {
+						rc.clearRubble(forward);
+						return true;
+					}
+				}
+			}
+			
+			for (int i = 0; i < 8; ++i) {
+				Direction dir = Direction.values()[i];
+				if (rc.canMove(dir.opposite())) {
+					boolean dirIsBlocked = true;
+					for (int j = 1; j <= 3; ++j) {
+						MapLocation loc = here.add(dir, j);
+						RobotInfo robot = rc.senseRobotAtLocation(loc);
+						if (robot == null || robot.team != us) {
+							dirIsBlocked = false;
+							break;
+						}
+					}
+					if (dirIsBlocked) {
+						rc.move(dir.opposite());
+						return true;
+					}
+				}
 			}
 		}
 		return false;
@@ -907,6 +980,7 @@ public class BotSoldier extends Globals {
 				if (targetInfo == null || targetInfo.team == us) {
 					if (isAttackingZombieDen) {
 						destroyedZombieDens.add(attackTarget);
+						knownZombieDens.remove(attackTarget);
 					}
 //					Debug.indicate("bug", 0, "deleting old target since it is gone");
 					//RobotInfo[] closeTargets = rc.senseHostileRobots(attackTarget, 2);
@@ -926,13 +1000,19 @@ public class BotSoldier extends Globals {
 	private static void lookForAttackTarget() throws GameActionException {
 		if (!rc.isCoreReady()) return;
 		
+		if (attackTarget == null) {
+			attackTarget = knownZombieDens.findClosestMemberToLocation(here);
+			if (attackTarget != null) {
+				isAttackingZombieDen = true;
+			}
+		}
 		
 		if (attackTarget != null) {
 			if (Nav.goToDirectSafelyAvoidingTurret(attackTarget, Radar.closestEnemyTurretLocation)) {
 				numTurnsBlocked = 0;
 			} else {
 				numTurnsBlocked += 1;
-				if (numTurnsBlocked >= 40) {
+				if (numTurnsBlocked >= 20) {
 					attackTarget = null;
 					isAttackingZombieDen = false;
 					numTurnsBlocked = 0;
