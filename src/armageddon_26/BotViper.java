@@ -4,6 +4,8 @@ import battlecode.common.*;
 
 public class BotViper extends Globals {
 	public static void loop() {
+		rc.disintegrate();
+		
 		FastMath.initRand(rc);
 //		Debug.init("robotinfo");
     	try {
