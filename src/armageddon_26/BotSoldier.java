@@ -1018,6 +1018,7 @@ public class BotSoldier extends Globals {
 					numTurnsBlocked = 0;
 				}
 			}
+			//Nav.goToBugDig(attackTarget);
 //			Debug.indicate("bug", 2, "went toward target at " + attackTarget);
 			return;
 		}

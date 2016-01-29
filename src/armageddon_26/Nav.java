@@ -698,4 +698,118 @@ public class Nav extends Globals {
 	
 	
 	
+	private static boolean canMoveOrDig(Direction dir) throws GameActionException {
+		if (rc.canMove(dir)) return true;
+		MapLocation loc = here.add(dir);
+		if (!rc.onTheMap(loc)) return false;
+		if (rc.isLocationOccupied(loc)) return false;
+		return true;
+	}
+	
+	public static void goToBugDig(MapLocation theDest) throws GameActionException {
+		if (!theDest.equals(bugDest)) {
+			bugDest = theDest;
+			bugTracing = false;
+		}
+		
+		if (here.equals(bugDest)) {
+			return;
+		}
+		
+		if (!bugTracing) {
+			// try to go direct; start bugging on failure
+			Direction destDir = here.directionTo(bugDest);
+			if (tryMoveClearDir(destDir)) {
+				return;
+			} else {
+				bugStartTracingDig();
+			}
+		} else { // state == State.BUGGING
+			// try to stop bugging
+			if (here.distanceSquaredTo(bugDest) < closestDistWhileBugging) {
+				if (tryMoveClearDir(here.directionTo(bugDest))) {
+					bugTracing = false;
+					return;
+				}
+			}
+		}
+		bugTraceMoveDig(false);
+	    
+	    if (bugNumTurnsWithNoWall >= 2) {
+	    	bugTracing = false;
+	    }
+	}
+
+	public static void bugResetDig() {
+		bugTracing = false;
+	}
+
+	static void bugStartTracingDig() throws GameActionException {
+		bugTracing = true;
+		bugVisitedLocations = new boolean[100][100];
+		
+		closestDistWhileBugging = here.distanceSquaredTo(bugDest);
+		bugNumTurnsWithNoWall = 0;
+		
+		Direction dirToDest = here.directionTo(bugDest);
+		Direction leftDir = dirToDest;
+		int leftDistSq = Integer.MAX_VALUE;
+		for (int i = 0; i < 8; ++i) {
+			leftDir = leftDir.rotateLeft();
+			if (canMoveOrDig(leftDir)) {
+				leftDistSq = here.add(leftDir).distanceSquaredTo(bugDest);
+				break;
+			}
+		}
+		Direction rightDir = dirToDest;
+		int rightDistSq = Integer.MAX_VALUE;
+		for (int i = 0; i < 8; ++i) {
+			rightDir = rightDir.rotateRight();
+			if (canMoveOrDig(rightDir)) {
+				rightDistSq = here.add(rightDir).distanceSquaredTo(bugDest);
+				break;
+			}
+		}
+		if (rightDistSq < leftDistSq) {
+			bugWallOnLeft = true;
+			bugLastWall = here.add(rightDir.rotateLeft());
+		} else {
+			bugWallOnLeft = false;
+			bugLastWall = here.add(leftDir.rotateRight());
+		}
+	}
+	
+	static void bugTraceMoveDig(boolean recursed) throws GameActionException {
+		Direction tryDir = here.directionTo(bugLastWall);
+		bugVisitedLocations[here.x % 100][here.y % 100] = true;
+		if (canMoveOrDig(tryDir)) {
+			bugNumTurnsWithNoWall += 1;
+		} else {
+			bugNumTurnsWithNoWall = 0;
+		}
+		for (int i = 0; i < 8; ++i) {
+			if (bugWallOnLeft) {
+				tryDir = tryDir.rotateRight();
+			} else {
+				tryDir = tryDir.rotateLeft();
+			}
+			MapLocation dirLoc = here.add(tryDir);
+			if (!rc.onTheMap(dirLoc) && !recursed) {
+				// if we hit the edge of the map, reverse direction and recurse
+				bugWallOnLeft = !bugWallOnLeft;
+				bugTraceMoveDig(true);
+				return;
+			}
+			if (tryMoveClearDir(tryDir)) {
+				here = rc.getLocation(); // we just moved
+				if (bugVisitedLocations[here.x % 100][here.y % 100]) {
+					bugTracing = false;
+				}
+				return;
+			} else {
+				bugLastWall = here.add(tryDir);
+			}
+		}
+	}
+	
 }
