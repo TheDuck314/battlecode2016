@@ -307,6 +307,21 @@ public class BotSoldier extends Globals {
 					
 				default:
 				}
+			} else {
+				// simple signal with no message
+				// for now these are only sent by soldiers who have just killed
+				// a zombie den. Check to see if we know of a zombie den within
+				// the soldier attack radius of the message origin.
+				MapLocation signalOrigin = sig.getLocation();
+				MapLocation killedDen = knownZombieDens.findClosestMemberToLocation(signalOrigin);
+//				Debug.indicate("kill", 0, "got kill message. signalOrigin = " + signalOrigin + ", killedDen = " + killedDen);
+				if (killedDen != null 
+						&& killedDen.distanceSquaredTo(signalOrigin) <= RobotType.SOLDIER.attackRadiusSquared) {
+					knownZombieDens.remove(killedDen);
+					if (killedDen.equals(attackTarget)) {
+						attackTarget = null;
+					}
+				}
 			}
 		}
 	}
@@ -642,7 +657,7 @@ public class BotSoldier extends Globals {
 					for (int j = 1; j <= 3; ++j) {
 						MapLocation loc = here.add(dir, j);
 						RobotInfo robot = rc.senseRobotAtLocation(loc);
-						if (robot == null) {
+						if (robot == null || robot.team != us) {
 							dirIsBlocked = false;
 							break;
 						}
