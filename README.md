@@ -20,7 +20,7 @@ This is the code for our Battlecode 2016 entry as team "future perfect". Our fin
 
 **Messages.java:** Here you can see all our messaging functions. The first four bits of each message signal was a channel number, and each channel carried a different kind of message. All bots had a function called `processSignals` which looped through the signal queue and switched on the channel to process messages.
 
-**Anti-turtle charge:** Inspired by the seeding tournament games of [mid high diamonds](https://bitbucket.org/maxnelso/battlecode2016), we wrote some code to detect turtle teams, surround them, and then charge all at once with massed soldiers and vipers. Unfortunately we never faced a turtle team in the qualifying or final tournaments so this turned out to be a waste of time. At a high level this anti-turtle charge was controlled by the code in AntiTurtleCharge.java
+**Anti-turtle charge:** Inspired by the seeding tournament games of [mid high diamonds](https://bitbucket.org/maxnelso/battlecode2016), we wrote some code to detect turtle teams, surround them, and then charge all at once with massed soldiers and vipers. Unfortunately we never faced a turtle team in the qualifying or final tournaments so this turned out to be a waste of time. At a high level this anti-turtle charge was controlled by the code in `AntiTurtleCharge.java`. The code that decides when to charge is in `BotScout.java` and the actual charge is in `BotSoldier.java` and `BotViper.java`.
 
 **Nav.java:** Here you can see our navigation code. Our navigation wasn't too fancy this year, since in the worst case we could just dig through rubble to get where we wanted to go. TTMs couldn't dig, so they used Bug.
 
