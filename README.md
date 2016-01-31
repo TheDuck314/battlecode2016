@@ -30,7 +30,7 @@ This is the code for our Battlecode 2016 entry as team "future perfect". Our fin
 
 ###Other versions
 
-The [`src`](src) directory contains many other intermediate or testing versions of our bot. A few are named after strategies we saw other teams using. Numbers in bot names are the dates in January on which the version was made. 
+The [`src`](src) directory contains many other intermediate or testing versions of our bot. A few are named after strategies we saw other teams using. The number in a bot name is the date in January on which the version was made. 
 
 * The `supercowpowers` versions are direct ancestors of our final bot and were written to imitate "Super Cow Powers'" early bot. 
 * We tested a lot against our turtle bots `ttm_heal`, `ttm_dense_9`, and `ttm_dense_pure_9`. 
