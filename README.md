@@ -27,3 +27,7 @@ This is the code for our Battlecode 2016 entry as team "future perfect". Our fin
 **MapLocationHashSet.java:** This is a reasonably bytecode-efficient set we used for storing zombie den locations and neutral archon locations.
 
 **FastMath.java:** some vector math functions and also some silly functions implementing unnecessarily optimized square roots and random numbers via lookups into gigantic strings. See [here](http://www.anatid.net/2015/12/battlecode-idioms.html).
+
+###Other versions
+
+The [`src`](src) directory contains many other intermediate or testing versions of our bot. A few are named after strategies we saw other teams using. Numbers in bot names are the dates in January on which the version was made. The `supercowpowers` versions are direct ancestors of our final bot and were written to imitate "Super Cow Powers'" early bot. We tested a lot against our turtle bots `ttm_heal`, `ttm_dense_9`, and `ttm_dense_pure_9`. The `simplesoldier18` bot is an imitation of the scout-based zombie-pulling strategy we saw "The Simple Soldier" using on the scrimmage server; this strategy was used very successfully in the final tournament by "foundation." A frequent test opponent was `felix15`, our imitation of the aggressive soldier/viper strategy we first saw used very well by "Felix & The Buggers"; this strategy was very popular in the final tournament. 
