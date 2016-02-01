@@ -39,4 +39,4 @@ The [`src`](src) directory contains many other intermediate or testing versions 
 
 ###Other Battlecode 2016 repositories
 
-* [mid high diamonds](https://bitbucket.org/maxnelso/battlecode2016) (5th-6th place)
+http://battlecodeforum.org/t/post-finals-share-your-code/254
